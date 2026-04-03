@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useInternships } from '../../hooks/useFirestore'
+import { formatDate } from '../../utils/date'
 
 export default function InternBrowse() {
   const [search, setSearch] = useState('')
@@ -96,7 +97,7 @@ export default function InternBrowse() {
                   {job.applicants} applicants · {job.positions} position{job.positions > 1 ? 's' : ''}
                 </span>
                 <span style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>
-                  Deadline: {new Date(job.deadline).toLocaleDateString()}
+                  Deadline: {formatDate(job.deadline)}
                 </span>
               </div>
             </div>
@@ -145,7 +146,7 @@ export default function InternBrowse() {
               </div>
               <div>
                 <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Deadline</div>
-                <div style={{ fontSize: 14, fontWeight: 500 }}>{new Date(selected.deadline).toLocaleDateString()}</div>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>{formatDate(selected.deadline)}</div>
               </div>
               <div>
                 <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Positions</div>
