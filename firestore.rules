@@ -1,0 +1,32 @@
+// Firestore Security Rules for NRIVA Internship Portal
+// Deploy via: Firebase Console > Firestore > Rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'kalyank.123@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin'])
+      );
+    }
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+    match /internships/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (resource.data.employerUid == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+    match /applications/{docId} {
+      allow read: if request.auth != null && (resource.data.applicantUid == request.auth.uid || isAdmin());
+      allow create: if request.auth != null;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+  }
+}
