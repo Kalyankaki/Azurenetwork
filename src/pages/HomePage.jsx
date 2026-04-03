@@ -1,21 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { db } from '../firebase'
+import { collection, getDocs, getCountFromServer, query, where } from 'firebase/firestore'
 
 export default function HomePage() {
   const { isAuthenticated, activeRole, availableRoles, loginWithGoogle, loading } = useAuth()
   const [error, setError] = useState(null)
   const [loggingIn, setLoggingIn] = useState(false)
+  const [stats, setStats] = useState({ positions: 0, applications: 0, companies: 0 })
 
-  // If authenticated with a role, redirect to dashboard
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const openQ = query(collection(db, 'internships'), where('status', '==', 'open'))
+        const [internSnap, appSnap] = await Promise.all([
+          getCountFromServer(openQ),
+          getCountFromServer(collection(db, 'applications')),
+        ])
+        const allInterns = await getDocs(collection(db, 'internships'))
+        const companies = new Set()
+        allInterns.forEach(doc => {
+          const company = doc.data().company
+          if (company) companies.add(company)
+        })
+        setStats({
+          positions: internSnap.data().count,
+          applications: appSnap.data().count,
+          companies: companies.size,
+        })
+      } catch {
+        // Stats are non-critical, keep defaults
+      }
+    }
+    fetchStats()
+  }, [])
+
   if (isAuthenticated && activeRole) {
     return <Navigate to={`/${activeRole}`} replace />
   }
-  // If authenticated with multiple roles, go to role select
   if (isAuthenticated && availableRoles.length > 0) {
     return <Navigate to="/select-role" replace />
   }
-  // If authenticated but no roles assigned yet, go to role select (shows pending approval)
   if (isAuthenticated && !loading) {
     return <Navigate to="/select-role" replace />
   }
@@ -28,8 +54,6 @@ export default function HomePage() {
       setError(result.error)
       setLoggingIn(false)
     }
-    // On success, onAuthStateChanged handles the rest and isAuthenticated becomes true,
-    // triggering a redirect above on re-render
   }
 
   return (
@@ -150,9 +174,9 @@ export default function HomePage() {
 
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
           {[
-            { value: '50+', label: 'Active Positions' },
-            { value: '200+', label: 'Applications' },
-            { value: '30+', label: 'Partner Companies' },
+            { value: stats.positions, label: 'Open Positions' },
+            { value: stats.applications, label: 'Applications' },
+            { value: stats.companies, label: 'Partner Companies' },
           ].map(({ value, label }) => (
             <div key={label} style={{
               background: 'rgba(255,255,255,0.08)',
@@ -178,9 +202,9 @@ export default function HomePage() {
         width: '100%',
       }}>
         {[
-          { icon: '🎓', title: 'For Students (10th Grade - College)', desc: 'Browse internships, apply online, and track your application status. Open to students from 10th grade through college.' },
-          { icon: '🏢', title: 'For Employers', desc: 'Post opportunities, review applicants, and manage your hiring pipeline with AI-powered tools.' },
-          { icon: '⚙️', title: 'For Admins', desc: 'Oversee the program, manage users, assign coordinators, and view comprehensive analytics.' },
+          { icon: '\ud83c\udf93', title: 'For Students (10th Grade - College)', desc: 'Browse internships, apply online, and track your application status. Open to students from 10th grade through college.' },
+          { icon: '\ud83c\udfe2', title: 'For Employers', desc: 'Post opportunities, review applicants, and manage your hiring pipeline with AI-powered tools.' },
+          { icon: '\u2699\ufe0f', title: 'For Admins', desc: 'Oversee the program, manage users, assign coordinators, and view comprehensive analytics.' },
         ].map(({ icon, title, desc }) => (
           <div key={title} style={{
             background: 'rgba(255,255,255,0.06)',
