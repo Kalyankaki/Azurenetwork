@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { sampleInternships, sampleApplications } from '../../data'
+import { useInternships, useApplications } from '../../hooks/useFirestore'
 
 export default function AdminReports() {
+  const { data: sampleInternships } = useInternships()
+  const { data: sampleApplications } = useApplications()
   const [activeTab, setActiveTab] = useState('overview')
 
   const totalPositions = sampleInternships.reduce((sum, i) => sum + i.positions, 0)

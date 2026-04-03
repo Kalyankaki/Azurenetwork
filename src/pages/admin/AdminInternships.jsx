@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { sampleInternships } from '../../data'
+import { useInternships } from '../../hooks/useFirestore'
+import { updateInternship as updateInternshipDB, deleteInternship as deleteInternshipDB } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 export default function AdminInternships() {
-  const [internships, setInternships] = useState(sampleInternships)
+  const { data: internships } = useInternships()
   const [selected, setSelected] = useState(null)
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
@@ -16,18 +17,26 @@ export default function AdminInternships() {
     return matchSearch && matchStatus
   })
 
-  const updateStatus = (id, status) => {
-    setInternships(internships.map(i => i.id === id ? { ...i, status } : i))
-    setToast(`Internship status updated to ${status}`)
+  const updateStatus = async (id, status) => {
+    try {
+      await updateInternshipDB(id, { status })
+      setToast(`Internship status updated to ${status}`)
+    } catch (err) {
+      setToast('Error: ' + err.message)
+    }
   }
 
   const [confirmDelete, setConfirmDelete] = useState(null)
 
-  const deletePosting = (id) => {
-    setInternships(internships.filter(i => i.id !== id))
-    setSelected(null)
-    setConfirmDelete(null)
-    setToast('Internship posting removed')
+  const deletePosting = async (id) => {
+    try {
+      await deleteInternshipDB(id)
+      setSelected(null)
+      setConfirmDelete(null)
+      setToast('Internship posting removed')
+    } catch (err) {
+      setToast('Error: ' + err.message)
+    }
   }
 
   return (

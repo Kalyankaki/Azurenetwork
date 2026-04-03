@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { sampleApplications } from '../../data'
+import { useApplications } from '../../hooks/useFirestore'
+import { updateApplicationStatus } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 const statusLabels = {
@@ -19,7 +20,7 @@ const statusBadgeClass = {
 }
 
 export default function AdminApplications() {
-  const [applications, setApplications] = useState(sampleApplications)
+  const { data: applications } = useApplications()
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -32,9 +33,13 @@ export default function AdminApplications() {
     return matchSearch && matchStatus
   })
 
-  const updateStatus = (id, status) => {
-    setApplications(applications.map(a => a.id === id ? { ...a, status } : a))
-    setToast(`Application status updated to ${statusLabels[status]}`)
+  const updateStatus = async (id, status) => {
+    try {
+      await updateApplicationStatus(id, status)
+      setToast(`Application status updated to ${statusLabels[status]}`)
+    } catch (err) {
+      setToast('Error: ' + err.message)
+    }
   }
 
   return (
