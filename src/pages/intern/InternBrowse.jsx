@@ -24,7 +24,7 @@ export default function InternBrowse() {
       <div className="page-header">
         <h1>Browse Internships</h1>
         <span style={{ color: 'var(--nriva-text-light)', fontSize: 14 }}>
-          {filtered.length} positions found
+          {filtered.length} {filtered.length === 1 ? 'position' : 'positions'} found
         </span>
       </div>
 
@@ -95,7 +95,7 @@ export default function InternBrowse() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                 <span style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>
-                  {job.applicants} applicants · {job.positions} position{job.positions > 1 ? 's' : ''}
+                  {job.applicants || 0} {(job.applicants || 0) === 1 ? 'applicant' : 'applicants'} · {job.positions || 0} {(job.positions || 0) === 1 ? 'position' : 'positions'}
                 </span>
                 <span style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>
                   Deadline: {formatDate(job.deadline)}

@@ -132,6 +132,7 @@ export default function Layout({ role }) {
       <main style={{
         flex: 1, marginLeft: isMobile ? 0 : (sidebarOpen ? 250 : 60),
         transition: 'margin-left 0.3s ease',
+        minHeight: '100vh', overflow: 'auto',
       }}>
         <header style={{
           background: 'white', padding: '12px 24px',
