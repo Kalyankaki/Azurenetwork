@@ -6,6 +6,19 @@ import {
 
 const SUPER_ADMIN_EMAIL = 'kalyank.123@gmail.com'
 
+// Grade levels for validation
+export const GRADE_LEVELS = [
+  '10th Grade',
+  '11th Grade',
+  '12th Grade',
+  'College Freshman',
+  'College Sophomore',
+  'College Junior',
+  'College Senior',
+]
+
+// ============ USERS ============
+
 export async function createUser(uid, data) {
   const userRef = doc(db, 'users', uid)
   const existing = await getDoc(userRef)
@@ -16,6 +29,7 @@ export async function createUser(uid, data) {
     displayName: data.displayName || '',
     photoURL: data.photoURL || '',
     roles: [],
+    coordinator: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }
@@ -32,6 +46,10 @@ export async function updateUserRoles(uid, roles) {
   await updateDoc(doc(db, 'users', uid), { roles, updatedAt: serverTimestamp() })
 }
 
+export async function updateUserCoordinator(uid, coordinator) {
+  await updateDoc(doc(db, 'users', uid), { coordinator, updatedAt: serverTimestamp() })
+}
+
 export async function getAllUsers() {
   const snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')))
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
@@ -45,6 +63,8 @@ export function getUserRoles(email, firestoreRoles = []) {
 export function isSuperAdmin(email) {
   return email === SUPER_ADMIN_EMAIL
 }
+
+// ============ INTERNSHIPS ============
 
 export async function createInternship(data) {
   const ref = await addDoc(collection(db, 'internships'), {
@@ -73,6 +93,8 @@ export function subscribeInternships(callback, filters = {}) {
   })
 }
 
+// ============ APPLICATIONS ============
+
 export async function createApplication(data) {
   const ref = await addDoc(collection(db, 'applications'), {
     ...data, status: 'pending', appliedDate: serverTimestamp(),
@@ -94,6 +116,38 @@ export function subscribeApplications(callback, filters = {}) {
     callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
   })
 }
+
+// ============ MESSAGES (Support/Issues) ============
+
+export async function createMessage(data) {
+  const ref = await addDoc(collection(db, 'messages'), {
+    ...data,
+    status: 'open',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateMessageStatus(id, status, adminNote = '') {
+  const updates = { status, updatedAt: serverTimestamp() }
+  if (adminNote) updates.adminNote = adminNote
+  if (status === 'resolved') updates.resolvedAt = serverTimestamp()
+  await updateDoc(doc(db, 'messages', id), updates)
+}
+
+export function subscribeMessages(callback, filters = {}) {
+  let q = collection(db, 'messages')
+  const constraints = []
+  if (filters.senderUid) constraints.push(where('senderUid', '==', filters.senderUid))
+  if (filters.status) constraints.push(where('status', '==', filters.status))
+  if (constraints.length > 0) q = query(q, ...constraints)
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  })
+}
+
+// ============ ADMIN USERS ============
 
 export function subscribeUsers(callback) {
   return onSnapshot(collection(db, 'users'), (snap) => {
