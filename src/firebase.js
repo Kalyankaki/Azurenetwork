@@ -1,11 +1,11 @@
 // Firebase configuration
-// Replace these values with your Firebase project config
 // To set up:
 // 1. Go to https://console.firebase.google.com
 // 2. Create a new project (e.g., "nriva-internship")
 // 3. Enable Authentication > Sign-in providers > Google
-// 4. Add your Vercel domain to Authorized domains
-// 5. Copy the config below from Project Settings > General > Your apps > Web app
+// 4. Enable Cloud Firestore (start in test mode, then apply security rules)
+// 5. Add your Vercel domain to Authorized domains
+// 6. Copy config from Project Settings > General > Your apps > Web app
 
 import { initializeApp } from 'firebase/app'
 import {
@@ -15,6 +15,7 @@ import {
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "REPLACE_WITH_YOUR_API_KEY",
@@ -27,6 +28,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
+const db = getFirestore(app)
 
 const googleProvider = new GoogleAuthProvider()
 googleProvider.addScope('email')
@@ -54,4 +56,4 @@ export function onAuthChange(callback) {
   return onAuthStateChanged(auth, callback)
 }
 
-export { auth }
+export { auth, db }
