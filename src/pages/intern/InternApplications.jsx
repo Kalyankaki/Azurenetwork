@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useApplications } from '../../hooks/useFirestore'
+import { formatDate } from '../../utils/date'
 
 const statusLabels = {
   pending: { label: 'Pending', class: 'pending' },
@@ -43,7 +44,7 @@ export default function InternApplications() {
                   <tr key={app.id}>
                     <td style={{ fontWeight: 500 }}>{app.internshipTitle}</td>
                     <td>{app.company}</td>
-                    <td>{new Date(app.appliedDate).toLocaleDateString()}</td>
+                    <td>{formatDate(app.appliedDate)}</td>
                     <td>
                       <span className={`badge badge-${status.class}`}>{status.label}</span>
                     </td>
@@ -80,7 +81,7 @@ export default function InternApplications() {
               }}>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Applied Date</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{new Date(selected.appliedDate).toLocaleDateString()}</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{formatDate(selected.appliedDate)}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Status</div>
@@ -101,24 +102,24 @@ export default function InternApplications() {
               <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Application Timeline</h4>
               <div className="timeline">
                 <div className="timeline-item">
-                  <div className="timeline-date">{new Date(selected.appliedDate).toLocaleDateString()}</div>
+                  <div className="timeline-date">{formatDate(selected.appliedDate)}</div>
                   <div className="timeline-content">Application submitted</div>
                 </div>
                 {selected.status !== 'pending' && (
                   <div className="timeline-item">
-                    <div className="timeline-date">{new Date(new Date(selected.appliedDate).getTime() + 86400000 * 2).toLocaleDateString()}</div>
+                    <div className="timeline-date">{formatDate(new Date((selected.appliedDate?.toDate ? selected.appliedDate.toDate() : new Date(selected.appliedDate)).getTime() + 86400000 * 2))}</div>
                     <div className="timeline-content">Application received and under review</div>
                   </div>
                 )}
                 {(selected.status === 'shortlisted' || selected.status === 'accepted') && (
                   <div className="timeline-item">
-                    <div className="timeline-date">{new Date(new Date(selected.appliedDate).getTime() + 86400000 * 5).toLocaleDateString()}</div>
+                    <div className="timeline-date">{formatDate(new Date((selected.appliedDate?.toDate ? selected.appliedDate.toDate() : new Date(selected.appliedDate)).getTime() + 86400000 * 5))}</div>
                     <div className="timeline-content">Shortlisted for interview</div>
                   </div>
                 )}
                 {selected.status === 'accepted' && (
                   <div className="timeline-item">
-                    <div className="timeline-date">{new Date(new Date(selected.appliedDate).getTime() + 86400000 * 10).toLocaleDateString()}</div>
+                    <div className="timeline-date">{formatDate(new Date((selected.appliedDate?.toDate ? selected.appliedDate.toDate() : new Date(selected.appliedDate)).getTime() + 86400000 * 10))}</div>
                     <div className="timeline-content">Offer extended - Accepted!</div>
                   </div>
                 )}

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships, useApplications } from '../../hooks/useFirestore'
+import { formatDate } from '../../utils/date'
 
 export default function InternDashboard() {
   const { user } = useAuth()
@@ -64,7 +65,7 @@ export default function InternDashboard() {
                 <tr key={app.id}>
                   <td style={{ fontWeight: 500 }}>{app.internshipTitle}</td>
                   <td>{app.company}</td>
-                  <td>{new Date(app.appliedDate).toLocaleDateString()}</td>
+                  <td>{formatDate(app.appliedDate)}</td>
                   <td>
                     <span className={`badge badge-${app.status === 'shortlisted' ? 'open' : app.status === 'under_review' ? 'pending' : app.status === 'accepted' ? 'filled' : 'closed'}`}>
                       {app.status.replace('_', ' ')}
