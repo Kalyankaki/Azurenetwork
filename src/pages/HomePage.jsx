@@ -1,10 +1,10 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 const roles = [
   {
     title: 'Intern Portal',
     description: 'Browse available internships, apply to positions, and track your application status.',
-    path: '/intern',
+    path: '/login',
     icon: '🎓',
     color: '#1a237e',
     features: ['Browse internship listings', 'Submit applications online', 'Track application status', 'View position details'],
@@ -12,7 +12,7 @@ const roles = [
   {
     title: 'Employer Portal',
     description: 'Post internship opportunities, review applicants, and manage your job listings.',
-    path: '/employer',
+    path: '/login',
     icon: '🏢',
     color: '#1b5e20',
     features: ['Post new internship positions', 'Review applications', 'Manage job requirements', 'Track applicant pipeline'],
@@ -20,7 +20,7 @@ const roles = [
   {
     title: 'Admin Portal',
     description: 'Oversee the entire internship program, manage positions, and monitor progress.',
-    path: '/admin',
+    path: '/login',
     icon: '⚙️',
     color: '#b71c1c',
     features: ['Monitor all internships', 'Manage applications', 'View analytics & reports', 'Facilitate matching'],
@@ -37,29 +37,29 @@ export default function HomePage() {
         alignItems: 'center',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 48,
-            height: 48,
-            borderRadius: 12,
-            background: 'rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 800,
-            fontSize: 16,
-          }}>
-            NV
-          </div>
+          <img
+            src="/nriva-logo.svg"
+            alt="NRIVA"
+            style={{ width: 48, height: 48, borderRadius: 12, objectFit: 'contain', background: 'rgba(255,255,255,0.9)', padding: 3 }}
+            onError={(e) => { e.target.outerHTML = '<div style="width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:16px">NV</div>' }}
+          />
           <div>
             <div style={{ color: 'white', fontSize: 20, fontWeight: 700 }}>NRIVA</div>
             <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>NRI Vasavi Association</div>
           </div>
         </div>
-        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
-          Internship Management Portal
-        </div>
+        <Link to="/login" style={{
+          padding: '8px 20px',
+          borderRadius: 8,
+          background: 'rgba(255,255,255,0.15)',
+          color: 'white',
+          fontSize: 14,
+          fontWeight: 500,
+          border: '1px solid rgba(255,255,255,0.3)',
+          transition: 'all 0.2s',
+        }}>
+          Sign In
+        </Link>
       </header>
 
       <section style={{
@@ -147,7 +147,7 @@ export default function HomePage() {
         gap: 24,
       }}>
         {roles.map((role) => (
-          <Link key={role.path} to={role.path} style={{ textDecoration: 'none' }}>
+          <Link key={role.title} to={role.path} style={{ textDecoration: 'none' }}>
             <div style={{
               background: 'white',
               borderRadius: 16,
@@ -222,7 +222,7 @@ export default function HomePage() {
                 fontWeight: 600,
                 fontSize: 14,
               }}>
-                Enter Portal →
+                Get Started →
               </div>
             </div>
           </Link>
@@ -237,7 +237,7 @@ export default function HomePage() {
         fontSize: 13,
       }}>
         <p>NRI Vasavi Association (NRIVA) - Internship Program</p>
-        <p style={{ marginTop: 4 }}>This is a demo prototype for presentation purposes.</p>
+        <p style={{ marginTop: 4 }}>501(c)(3) Non-Profit Organization · Tax-ID: 26-1923816</p>
       </footer>
     </div>
   )
