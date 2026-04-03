@@ -34,6 +34,7 @@ export default function EmployerNewPosting() {
     preferredQualifications: '',
     skills: '',
     benefits: '',
+    expectedHoursPerDay: '',
     applicationDeadline: '',
     startDate: '',
     additionalNotes: '',
@@ -105,6 +106,7 @@ export default function EmployerNewPosting() {
         positions: parseInt(form.positions) || 1,
         gradeLevelMin: form.gradeLevelMin,
         gradeLevelMax: form.gradeLevelMax || null,
+        expectedHoursPerDay: form.expectedHoursPerDay,
         contactEmail: form.contactEmail,
         contactPhone: form.contactPhone,
       })
@@ -240,6 +242,17 @@ export default function EmployerNewPosting() {
                 <option value="12 months">12 months</option>
               </select>
             </div>
+          </div>
+          <div className="form-group">
+            <label>Expected Hours Per Day <span className="required">*</span></label>
+            <select className="form-control" name="expectedHoursPerDay" value={form.expectedHoursPerDay} onChange={handleChange} required>
+              <option value="">Select...</option>
+              <option value="1-2 hours">1-2 hours</option>
+              <option value="2-4 hours">2-4 hours</option>
+              <option value="4-6 hours">4-6 hours</option>
+              <option value="6-8 hours">6-8 hours</option>
+              <option value="Flexible">Flexible</option>
+            </select>
           </div>
           <div className="form-row">
             <div className="form-group">

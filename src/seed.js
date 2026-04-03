@@ -23,6 +23,7 @@ const testInternships = [
     deadline: '2026-06-30',
     status: 'open',
     positions: 3,
+    expectedHoursPerDay: '6-8 hours',
     contactEmail: 'rajesh@techvasavi.com',
   },
   {
@@ -42,6 +43,7 @@ const testInternships = [
     deadline: '2026-05-31',
     status: 'open',
     positions: 2,
+    expectedHoursPerDay: '4-6 hours',
     contactEmail: 'priya@databridge.com',
   },
   {
@@ -61,6 +63,7 @@ const testInternships = [
     deadline: '2026-07-15',
     status: 'open',
     positions: 2,
+    expectedHoursPerDay: '2-4 hours',
     contactEmail: 'lakshmi@nriva.org',
   },
   {
@@ -80,6 +83,7 @@ const testInternships = [
     deadline: '2026-05-15',
     status: 'open',
     positions: 2,
+    expectedHoursPerDay: '6-8 hours',
     contactEmail: 'venkat@cloudnine.io',
   },
   {
@@ -99,6 +103,7 @@ const testInternships = [
     deadline: '2026-06-01',
     status: 'open',
     positions: 1,
+    expectedHoursPerDay: '2-4 hours',
     contactEmail: 'anita@creativevasavi.com',
   },
   {
@@ -118,6 +123,7 @@ const testInternships = [
     deadline: '2026-05-30',
     status: 'open',
     positions: 1,
+    expectedHoursPerDay: '6-8 hours',
     contactEmail: 'suresh@nriva.org',
   },
   {
@@ -137,6 +143,7 @@ const testInternships = [
     deadline: '2026-06-15',
     status: 'open',
     positions: 2,
+    expectedHoursPerDay: '6-8 hours',
     contactEmail: 'kiran@appvasavi.com',
   },
   {
@@ -156,6 +163,7 @@ const testInternships = [
     deadline: '2026-07-01',
     status: 'open',
     positions: 3,
+    expectedHoursPerDay: '4-6 hours',
     contactEmail: 'deepa@greenfuture.org',
   },
   {
@@ -175,6 +183,7 @@ const testInternships = [
     deadline: '2026-06-01',
     status: 'open',
     positions: 2,
+    expectedHoursPerDay: '6-8 hours',
     contactEmail: 'ramesh@vasavihealth.com',
   },
   {
@@ -194,6 +203,7 @@ const testInternships = [
     deadline: '2026-07-31',
     status: 'open',
     positions: 3,
+    expectedHoursPerDay: '2-4 hours',
     contactEmail: 'meena@nrivamedia.org',
   },
 ]

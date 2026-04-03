@@ -102,6 +102,7 @@ export default function InternDashboard() {
               <div style={{ display: 'flex', gap: 12, margin: '12px 0', fontSize: 12, color: 'var(--nriva-text-light)' }}>
                 <span>📍 {job.location}</span>
                 <span>⏱ {job.duration}</span>
+                {job.expectedHoursPerDay && <span>🕐 {job.expectedHoursPerDay}/day</span>}
                 <span>💰 {job.stipend}</span>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>

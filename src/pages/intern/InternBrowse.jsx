@@ -77,6 +77,7 @@ export default function InternBrowse() {
               <div style={{ display: 'flex', gap: 16, margin: '12px 0', fontSize: 13, color: 'var(--nriva-text-light)' }}>
                 <span>📍 {job.location}</span>
                 <span>⏱ {job.duration}</span>
+                {job.expectedHoursPerDay && <span>🕐 {job.expectedHoursPerDay}/day</span>}
                 <span>🕐 {job.type}</span>
                 <span>💰 {job.stipend}</span>
               </div>
