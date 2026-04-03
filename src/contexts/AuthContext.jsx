@@ -9,23 +9,9 @@ export function AuthProvider({ children }) {
   const [availableRoles, setAvailableRoles] = useState([])
   const [activeRole, setActiveRole] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [demoMode, setDemoMode] = useState(false)
+  const [userCoordinator, setUserCoordinator] = useState(null)
 
   useEffect(() => {
-    // Check for demo mode in localStorage
-    const savedDemo = localStorage.getItem('nriva_demo_mode')
-    const savedRole = localStorage.getItem('nriva_role')
-    const savedUser = localStorage.getItem('nriva_demo_user')
-
-    if (savedDemo === 'true' && savedRole && savedUser) {
-      setDemoMode(true)
-      setActiveRole(savedRole)
-      setAvailableRoles(['intern', 'employer', 'admin'])
-      setUser(JSON.parse(savedUser))
-      setLoading(false)
-      return
-    }
-
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       if (firebaseUser) {
         const userData = {
@@ -37,7 +23,6 @@ export function AuthProvider({ children }) {
         }
         setUser(userData)
 
-        // Fetch or create user in Firestore
         try {
           let firestoreUser = await getUser(firebaseUser.uid)
           if (!firestoreUser) {
@@ -46,8 +31,8 @@ export function AuthProvider({ children }) {
           }
           const roles = getUserRoles(firebaseUser.email, firestoreUser.roles || [])
           setAvailableRoles(roles)
+          setUserCoordinator(firestoreUser.coordinator || null)
 
-          // Restore last active role
           const savedRole = localStorage.getItem(`nriva_role_${firebaseUser.uid}`)
           if (savedRole && roles.includes(savedRole)) {
             setActiveRole(savedRole)
@@ -55,7 +40,6 @@ export function AuthProvider({ children }) {
             setActiveRole(roles[0])
           }
         } catch (err) {
-          // If Firestore not configured, check for super admin at least
           if (isSuperAdmin(firebaseUser.email)) {
             setAvailableRoles(['intern', 'employer', 'admin'])
           } else {
@@ -67,6 +51,7 @@ export function AuthProvider({ children }) {
         setUser(null)
         setAvailableRoles([])
         setActiveRole(null)
+        setUserCoordinator(null)
       }
       setLoading(false)
     })
@@ -81,60 +66,35 @@ export function AuthProvider({ children }) {
     return result
   }
 
-  const loginAsDemo = (demoRole) => {
-    const demoUser = {
-      uid: 'demo-user',
-      email: 'demo@nriva.org',
-      displayName: 'Demo User',
-      photoURL: null,
-      provider: 'demo',
-    }
-    setUser(demoUser)
-    setAvailableRoles(['intern', 'employer', 'admin'])
-    setActiveRole(demoRole)
-    setDemoMode(true)
-    localStorage.setItem('nriva_demo_mode', 'true')
-    localStorage.setItem('nriva_role', demoRole)
-    localStorage.setItem('nriva_demo_user', JSON.stringify(demoUser))
-  }
-
   const selectRole = useCallback((newRole) => {
-    if (availableRoles.includes(newRole) || demoMode) {
+    if (availableRoles.includes(newRole)) {
       setActiveRole(newRole)
-      if (user?.uid && !demoMode) {
+      if (user?.uid) {
         localStorage.setItem(`nriva_role_${user.uid}`, newRole)
       }
-      if (demoMode) {
-        localStorage.setItem('nriva_role', newRole)
-      }
     }
-  }, [availableRoles, demoMode, user])
+  }, [availableRoles, user])
 
   const refreshRoles = useCallback(async () => {
-    if (!user?.uid || demoMode) return
+    if (!user?.uid) return
     try {
       const firestoreUser = await getUser(user.uid)
       if (firestoreUser) {
         const roles = getUserRoles(user.email, firestoreUser.roles || [])
         setAvailableRoles(roles)
+        setUserCoordinator(firestoreUser.coordinator || null)
       }
     } catch (err) {
       console.warn('Failed to refresh roles:', err.message)
     }
-  }, [user, demoMode])
+  }, [user])
 
   const logout = async () => {
-    if (demoMode) {
-      localStorage.removeItem('nriva_demo_mode')
-      localStorage.removeItem('nriva_role')
-      localStorage.removeItem('nriva_demo_user')
-      setDemoMode(false)
-    } else {
-      await logOut()
-    }
+    await logOut()
     setUser(null)
     setAvailableRoles([])
     setActiveRole(null)
+    setUserCoordinator(null)
   }
 
   return (
@@ -143,14 +103,12 @@ export function AuthProvider({ children }) {
       availableRoles,
       activeRole,
       loading,
-      demoMode,
+      userCoordinator,
       loginWithGoogle,
-      loginAsDemo,
       selectRole,
       refreshRoles,
       logout,
       isAuthenticated: !!user,
-      // Backward compat: expose 'role' as alias for activeRole
       role: activeRole,
     }}>
       {children}

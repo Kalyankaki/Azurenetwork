@@ -17,6 +17,7 @@ import AdminInternships from './pages/admin/AdminInternships'
 import AdminApplications from './pages/admin/AdminApplications'
 import AdminReports from './pages/admin/AdminReports'
 import AdminUsers from './pages/admin/AdminUsers'
+import AdminMessages from './pages/admin/AdminMessages'
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="internships" element={<AdminInternships />} />
         <Route path="applications" element={<AdminApplications />} />
+        <Route path="messages" element={<AdminMessages />} />
         <Route path="reports" element={<AdminReports />} />
         <Route path="users" element={<AdminUsers />} />
       </Route>
