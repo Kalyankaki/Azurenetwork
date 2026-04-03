@@ -548,3 +548,10 @@ tr:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* Homepage mobile responsiveness */
+@media (max-width: 600px) {
+  .homepage-info-cards {
+    grid-template-columns: 1fr !important;
+  }
+}
