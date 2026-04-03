@@ -49,6 +49,12 @@ export default function InternBrowse() {
 
       <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1fr' : '1fr', gap: 24 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filtered.length === 0 && (
+            <div className="empty-state">
+              <h3>No internships found</h3>
+              <p>Try adjusting your search or filters.</p>
+            </div>
+          )}
           {filtered.map(job => (
             <div
               key={job.id}

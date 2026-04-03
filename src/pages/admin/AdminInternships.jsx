@@ -21,9 +21,12 @@ export default function AdminInternships() {
     setToast(`Internship status updated to ${status}`)
   }
 
+  const [confirmDelete, setConfirmDelete] = useState(null)
+
   const deletePosting = (id) => {
     setInternships(internships.filter(i => i.id !== id))
     setSelected(null)
+    setConfirmDelete(null)
     setToast('Internship posting removed')
   }
 
@@ -168,10 +171,29 @@ export default function AdminInternships() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-danger btn-sm" onClick={() => deletePosting(selected.id)}>
+              <button className="btn btn-danger btn-sm" onClick={() => setConfirmDelete(selected.id)}>
                 Remove Posting
               </button>
               <button className="btn btn-outline" onClick={() => setSelected(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2>Confirm Removal</h2>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to remove this internship posting? This action cannot be undone.</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setConfirmDelete(null)}>Cancel</button>
+              <button className="btn btn-danger" onClick={() => deletePosting(confirmDelete)}>
+                Yes, Remove
+              </button>
             </div>
           </div>
         </div>
