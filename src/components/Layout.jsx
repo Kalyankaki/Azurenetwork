@@ -1,5 +1,6 @@
-import { Outlet, NavLink, Link, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
 const navItems = {
   intern: [
@@ -35,7 +36,10 @@ const roleColors = {
 
 export default function Layout({ role }) {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout, demoMode } = useAuth()
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
 
   useEffect(() => {
@@ -93,20 +97,12 @@ export default function Layout({ role }) {
           gap: 12,
         }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              background: 'rgba(255,255,255,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: 14,
-              flexShrink: 0,
-            }}>
-              NV
-            </div>
+            <img
+              src="/nriva-logo.svg"
+              alt="NRIVA"
+              style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain', flexShrink: 0, background: 'rgba(255,255,255,0.9)', padding: 2 }}
+              onError={(e) => { e.target.outerHTML = '<div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;color:white">NV</div>' }}
+            />
             {sidebarOpen && (
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2 }}>NRIVA</div>
@@ -202,23 +198,80 @@ export default function Layout({ role }) {
               NRIVA Internship Program 2026
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ fontSize: 13, color: 'var(--nriva-text-light)' }}>
-              Demo Mode
-            </span>
-            <div style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: roleColors[role],
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 13,
-              fontWeight: 600,
-            }}>
-              {role === 'intern' ? 'IN' : role === 'employer' ? 'EM' : 'AD'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+            {demoMode && (
+              <span style={{ fontSize: 11, color: 'var(--nriva-accent)', background: '#fff3e0', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                DEMO
+              </span>
+            )}
+            <button
+              onClick={() => navigate('/select-role')}
+              className="btn btn-sm btn-outline"
+              style={{ fontSize: 12, padding: '4px 10px' }}
+            >
+              Switch Role
+            </button>
+            <div
+              style={{ position: 'relative', cursor: 'pointer' }}
+              onClick={() => setShowUserMenu(!showUserMenu)}
+            >
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="" style={{ width: 32, height: 32, borderRadius: '50%' }} />
+              ) : (
+                <div style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: roleColors[role],
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}>
+                  {(user?.displayName || 'U')[0].toUpperCase()}
+                </div>
+              )}
+              {showUserMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: 40,
+                  right: 0,
+                  background: 'white',
+                  borderRadius: 8,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  padding: '8px 0',
+                  minWidth: 180,
+                  zIndex: 200,
+                }}>
+                  <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--nriva-border)' }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{user?.displayName || 'User'}</div>
+                    <div style={{ fontSize: 11, color: 'var(--nriva-text-light)' }}>{user?.email}</div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await logout()
+                      navigate('/login')
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '8px 16px',
+                      border: 'none',
+                      background: 'none',
+                      textAlign: 'left',
+                      fontSize: 13,
+                      color: 'var(--nriva-danger)',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#fef2f2'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
