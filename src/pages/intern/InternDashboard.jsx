@@ -47,7 +47,7 @@ export default function InternDashboard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>My Recent Applications</h2>
           <Link to="/intern/applications" style={{ color: 'var(--nriva-primary)', fontSize: 14, fontWeight: 500 }}>
-            View All \u2192
+            View All →
           </Link>
         </div>
         <div className="table-wrapper">
@@ -82,7 +82,7 @@ export default function InternDashboard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>Recommended for You</h2>
           <Link to="/intern/browse" style={{ color: 'var(--nriva-primary)', fontSize: 14, fontWeight: 500 }}>
-            Browse All \u2192
+            Browse All →
           </Link>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
@@ -100,10 +100,10 @@ export default function InternDashboard() {
                 <span className="badge badge-open">Open</span>
               </div>
               <div style={{ display: 'flex', gap: 12, margin: '12px 0', fontSize: 12, color: 'var(--nriva-text-light)' }}>
-                <span>\ud83d\udccd {job.location}</span>
-                <span>\u23f1 {job.duration}</span>
-                {job.expectedHoursPerDay && <span>\ud83d\udd50 {job.expectedHoursPerDay}/day</span>}
-                <span>\ud83d\udcb0 {job.stipend}</span>
+                <span>📍 {job.location}</span>
+                <span>⏱ {job.duration}</span>
+                {job.expectedHoursPerDay && <span>🕐 {job.expectedHoursPerDay}/day</span>}
+                <span>💰 {job.stipend}</span>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                 {job.skills.slice(0, 3).map(s => (
