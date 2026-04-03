@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom'
-import { sampleInternships, sampleApplications } from '../../data'
+import { useAuth } from '../../contexts/AuthContext'
+import { useInternships, useApplications } from '../../hooks/useFirestore'
 
 export default function EmployerDashboard() {
-  const myPostings = sampleInternships.filter(i => i.employer === 'Rajesh Kumar' || i.employer === 'Priya Reddy')
-  const recentApps = sampleApplications.slice(0, 4)
+  const { user } = useAuth()
+  const { data: myPostings } = useInternships({ employerUid: user?.uid })
+  const { data: allApps } = useApplications()
+  const recentApps = allApps.slice(0, 4)
 
   return (
     <div>
@@ -30,7 +33,7 @@ export default function EmployerDashboard() {
         </div>
         <div className="stat-card">
           <div className="stat-label">Shortlisted</div>
-          <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>{sampleApplications.filter(a => a.status === 'shortlisted').length}</div>
+          <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>{allApps.filter(a => a.status === 'shortlisted').length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Positions Filled</div>

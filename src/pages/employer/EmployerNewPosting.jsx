@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
+import { createInternship } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 export default function EmployerNewPosting() {
   const navigate = useNavigate()
+  const { user, demoMode } = useAuth()
   const [toast, setToast] = useState(null)
   const [submitted, setSubmitted] = useState(false)
 
@@ -36,11 +39,28 @@ export default function EmployerNewPosting() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setSubmitted(true)
-    setToast('Internship posting submitted for review!')
-    setTimeout(() => navigate('/employer/postings'), 2500)
+    try {
+      if (!demoMode) {
+        await createInternship({
+          title: form.title, company: form.company,
+          employerUid: user.uid, employerName: user.displayName || form.contactName,
+          location: form.locationType === 'remote' ? 'Remote' : form.location,
+          type: form.type, duration: form.duration,
+          stipend: form.stipendType === 'paid' ? form.stipendAmount : 'Unpaid (Volunteer)',
+          skills: form.skills.split(',').map(s => s.trim()).filter(Boolean),
+          description: form.description, requirements: form.requirements,
+          deadline: form.applicationDeadline, status: 'open',
+          positions: parseInt(form.positions) || 1,
+        })
+      }
+      setSubmitted(true)
+      setToast('Internship posting submitted!')
+      setTimeout(() => navigate('/employer/postings'), 2500)
+    } catch (err) {
+      setToast('Error: ' + err.message)
+    }
   }
 
   if (submitted) {

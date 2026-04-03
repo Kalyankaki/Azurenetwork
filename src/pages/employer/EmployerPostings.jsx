@@ -1,22 +1,26 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { sampleInternships } from '../../data'
+import { useAuth } from '../../contexts/AuthContext'
+import { useInternships } from '../../hooks/useFirestore'
+import { updateInternship } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 export default function EmployerPostings() {
-  const [postings, setPostings] = useState(sampleInternships)
+  const { user, demoMode } = useAuth()
+  const { data: postings } = useInternships({ employerUid: user?.uid })
   const [toast, setToast] = useState(null)
   const [editingId, setEditingId] = useState(null)
 
-  const toggleStatus = (id) => {
-    setPostings(postings.map(p => {
-      if (p.id === id) {
-        const newStatus = p.status === 'open' ? 'closed' : 'open'
-        return { ...p, status: newStatus }
-      }
-      return p
-    }))
-    setToast('Posting status updated!')
+  const toggleStatus = async (id) => {
+    const posting = postings.find(p => p.id === id)
+    if (!posting) return
+    const newStatus = posting.status === 'open' ? 'closed' : 'open'
+    try {
+      if (!demoMode) await updateInternship(id, { status: newStatus })
+      setToast('Posting status updated!')
+    } catch (err) {
+      setToast('Error: ' + err.message)
+    }
   }
 
   return (

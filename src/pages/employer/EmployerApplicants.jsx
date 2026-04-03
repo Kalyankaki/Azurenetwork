@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { sampleApplications } from '../../data'
+import { useAuth } from '../../contexts/AuthContext'
+import { useApplications } from '../../hooks/useFirestore'
+import { updateApplicationStatus } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 const statusOptions = ['pending', 'under_review', 'shortlisted', 'accepted', 'rejected']
@@ -21,7 +23,8 @@ const statusBadgeClass = {
 }
 
 export default function EmployerApplicants() {
-  const [applicants, setApplicants] = useState(sampleApplications)
+  const { demoMode } = useAuth()
+  const { data: applicants } = useApplications()
   const [selected, setSelected] = useState(null)
   const [toast, setToast] = useState(null)
   const [filterStatus, setFilterStatus] = useState('all')
@@ -34,11 +37,15 @@ export default function EmployerApplicants() {
     return matchStatus && matchSearch
   })
 
-  const updateStatus = (id, newStatus) => {
-    setApplicants(applicants.map(a => a.id === id ? { ...a, status: newStatus } : a))
-    setToast(`Applicant status updated to ${statusLabels[newStatus]}`)
+  const updateStatus = async (id, newStatus) => {
+    try {
+      if (!demoMode) await updateApplicationStatus(id, newStatus)
+      setToast(`Applicant status updated to ${statusLabels[newStatus]}`)
     if (selected?.id === id) {
       setSelected({ ...selected, status: newStatus })
+    }
+    } catch (err) {
+      setToast('Error: ' + err.message)
     }
   }
 
