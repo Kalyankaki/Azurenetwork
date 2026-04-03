@@ -19,6 +19,7 @@ const navItems = {
     { path: '/admin/internships', label: 'Internships', icon: '💼' },
     { path: '/admin/applications', label: 'Applications', icon: '📄' },
     { path: '/admin/reports', label: 'Reports', icon: '📈' },
+    { path: '/admin/users', label: 'Manage Users', icon: '👤' },
   ],
 }
 

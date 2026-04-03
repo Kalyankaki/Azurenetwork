@@ -1,11 +1,13 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { onAuthChange, signInWithGoogle, logOut } from '../firebase'
+import { createUser, getUser, getUserRoles, isSuperAdmin } from '../services/firestore'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [role, setRole] = useState(null)
+  const [availableRoles, setAvailableRoles] = useState([])
+  const [activeRole, setActiveRole] = useState(null)
   const [loading, setLoading] = useState(true)
   const [demoMode, setDemoMode] = useState(false)
 
@@ -17,27 +19,54 @@ export function AuthProvider({ children }) {
 
     if (savedDemo === 'true' && savedRole && savedUser) {
       setDemoMode(true)
-      setRole(savedRole)
+      setActiveRole(savedRole)
+      setAvailableRoles(['intern', 'employer', 'admin'])
       setUser(JSON.parse(savedUser))
       setLoading(false)
       return
     }
 
-    const unsubscribe = onAuthChange((firebaseUser) => {
+    const unsubscribe = onAuthChange(async (firebaseUser) => {
       if (firebaseUser) {
-        setUser({
+        const userData = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
           provider: firebaseUser.providerData[0]?.providerId || 'unknown',
-        })
-        // Load saved role
-        const savedRole = localStorage.getItem(`nriva_role_${firebaseUser.uid}`)
-        if (savedRole) setRole(savedRole)
+        }
+        setUser(userData)
+
+        // Fetch or create user in Firestore
+        try {
+          let firestoreUser = await getUser(firebaseUser.uid)
+          if (!firestoreUser) {
+            await createUser(firebaseUser.uid, userData)
+            firestoreUser = { roles: [] }
+          }
+          const roles = getUserRoles(firebaseUser.email, firestoreUser.roles || [])
+          setAvailableRoles(roles)
+
+          // Restore last active role
+          const savedRole = localStorage.getItem(`nriva_role_${firebaseUser.uid}`)
+          if (savedRole && roles.includes(savedRole)) {
+            setActiveRole(savedRole)
+          } else if (roles.length === 1) {
+            setActiveRole(roles[0])
+          }
+        } catch (err) {
+          // If Firestore not configured, check for super admin at least
+          if (isSuperAdmin(firebaseUser.email)) {
+            setAvailableRoles(['intern', 'employer', 'admin'])
+          } else {
+            setAvailableRoles([])
+          }
+          console.warn('Firestore not configured:', err.message)
+        }
       } else {
         setUser(null)
-        setRole(null)
+        setAvailableRoles([])
+        setActiveRole(null)
       }
       setLoading(false)
     })
@@ -48,7 +77,7 @@ export function AuthProvider({ children }) {
   const loginWithGoogle = async () => {
     setLoading(true)
     const result = await signInWithGoogle()
-    setLoading(false)
+    if (result.error) setLoading(false)
     return result
   }
 
@@ -61,22 +90,38 @@ export function AuthProvider({ children }) {
       provider: 'demo',
     }
     setUser(demoUser)
-    setRole(demoRole)
+    setAvailableRoles(['intern', 'employer', 'admin'])
+    setActiveRole(demoRole)
     setDemoMode(true)
     localStorage.setItem('nriva_demo_mode', 'true')
     localStorage.setItem('nriva_role', demoRole)
     localStorage.setItem('nriva_demo_user', JSON.stringify(demoUser))
   }
 
-  const selectRole = (newRole) => {
-    setRole(newRole)
-    if (user?.uid && !demoMode) {
-      localStorage.setItem(`nriva_role_${user.uid}`, newRole)
+  const selectRole = useCallback((newRole) => {
+    if (availableRoles.includes(newRole) || demoMode) {
+      setActiveRole(newRole)
+      if (user?.uid && !demoMode) {
+        localStorage.setItem(`nriva_role_${user.uid}`, newRole)
+      }
+      if (demoMode) {
+        localStorage.setItem('nriva_role', newRole)
+      }
     }
-    if (demoMode) {
-      localStorage.setItem('nriva_role', newRole)
+  }, [availableRoles, demoMode, user])
+
+  const refreshRoles = useCallback(async () => {
+    if (!user?.uid || demoMode) return
+    try {
+      const firestoreUser = await getUser(user.uid)
+      if (firestoreUser) {
+        const roles = getUserRoles(user.email, firestoreUser.roles || [])
+        setAvailableRoles(roles)
+      }
+    } catch (err) {
+      console.warn('Failed to refresh roles:', err.message)
     }
-  }
+  }, [user, demoMode])
 
   const logout = async () => {
     if (demoMode) {
@@ -88,20 +133,25 @@ export function AuthProvider({ children }) {
       await logOut()
     }
     setUser(null)
-    setRole(null)
+    setAvailableRoles([])
+    setActiveRole(null)
   }
 
   return (
     <AuthContext.Provider value={{
       user,
-      role,
+      availableRoles,
+      activeRole,
       loading,
       demoMode,
       loginWithGoogle,
       loginAsDemo,
       selectRole,
+      refreshRoles,
       logout,
       isAuthenticated: !!user,
+      // Backward compat: expose 'role' as alias for activeRole
+      role: activeRole,
     }}>
       {children}
     </AuthContext.Provider>

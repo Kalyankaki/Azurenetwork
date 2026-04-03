@@ -1,9 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import RoleSelectPage from './pages/RoleSelectPage'
-import HomePage from './pages/HomePage'
 import InternDashboard from './pages/intern/InternDashboard'
 import InternBrowse from './pages/intern/InternBrowse'
 import InternApplications from './pages/intern/InternApplications'
@@ -16,20 +16,14 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminInternships from './pages/admin/AdminInternships'
 import AdminApplications from './pages/admin/AdminApplications'
 import AdminReports from './pages/admin/AdminReports'
-import { useAuth } from './contexts/AuthContext'
+import AdminUsers from './pages/admin/AdminUsers'
 
 export default function App() {
-  const { isAuthenticated, role } = useAuth()
-
   return (
     <Routes>
-      <Route path="/" element={
-        isAuthenticated && role ? <Navigate to={`/${role}`} replace /> : <HomePage />
-      } />
+      <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/select-role" element={
-        isAuthenticated ? <RoleSelectPage /> : <Navigate to="/login" replace />
-      } />
+      <Route path="/select-role" element={<RoleSelectPage />} />
 
       <Route path="/intern" element={
         <ProtectedRoute allowedRole="intern"><Layout role="intern" /></ProtectedRoute>
@@ -56,6 +50,7 @@ export default function App() {
         <Route path="internships" element={<AdminInternships />} />
         <Route path="applications" element={<AdminApplications />} />
         <Route path="reports" element={<AdminReports />} />
+        <Route path="users" element={<AdminUsers />} />
       </Route>
     </Routes>
   )
