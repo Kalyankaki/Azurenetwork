@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { createInternship } from '../../services/firestore'
+import { createInternship, GRADE_LEVELS } from '../../services/firestore'
+import { generateJobDescription } from '../../services/ai'
 import Toast from '../../components/Toast'
 
 export default function EmployerNewPosting() {
   const navigate = useNavigate()
-  const { user, demoMode } = useAuth()
+  const { user } = useAuth()
   const [toast, setToast] = useState(null)
   const [submitted, setSubmitted] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
 
   const [form, setForm] = useState({
     title: '',
@@ -24,6 +26,8 @@ export default function EmployerNewPosting() {
     stipendAmount: '',
     positions: '1',
     department: '',
+    gradeLevelMin: '',
+    gradeLevelMax: '',
     description: '',
     responsibilities: '',
     requirements: '',
@@ -39,22 +43,71 @@ export default function EmployerNewPosting() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
+  const handleWriteWithAI = async () => {
+    if (!form.title) {
+      setToast('Please enter an internship title first')
+      return
+    }
+    setAiLoading(true)
+    try {
+      const result = await generateJobDescription({
+        title: form.title,
+        company: form.company,
+        duration: form.duration,
+        type: form.type,
+        skills: form.skills,
+        gradeLevel: form.gradeLevelMin
+          ? `${form.gradeLevelMin}${form.gradeLevelMax ? ' to ' + form.gradeLevelMax : ' and above'}`
+          : null,
+      })
+      setForm(prev => ({
+        ...prev,
+        description: result.description || prev.description,
+        responsibilities: result.responsibilities || prev.responsibilities,
+        requirements: result.requirements || prev.requirements,
+        preferredQualifications: result.preferredQualifications || prev.preferredQualifications,
+        benefits: result.benefits || prev.benefits,
+      }))
+      setToast('AI-generated content applied! Review and edit as needed.')
+    } catch (err) {
+      setToast('AI Error: ' + err.message)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    // Validate grade level
+    if (!form.gradeLevelMin) {
+      setToast('Please select a minimum grade level')
+      return
+    }
     try {
-      if (!demoMode) {
-        await createInternship({
-          title: form.title, company: form.company,
-          employerUid: user.uid, employerName: user.displayName || form.contactName,
-          location: form.locationType === 'remote' ? 'Remote' : form.location,
-          type: form.type, duration: form.duration,
-          stipend: form.stipendType === 'paid' ? form.stipendAmount : 'Unpaid (Volunteer)',
-          skills: form.skills.split(',').map(s => s.trim()).filter(Boolean),
-          description: form.description, requirements: form.requirements,
-          deadline: form.applicationDeadline, status: 'open',
-          positions: parseInt(form.positions) || 1,
-        })
-      }
+      await createInternship({
+        title: form.title,
+        company: form.company,
+        employerUid: user.uid,
+        employerName: user.displayName || form.contactName,
+        location: form.locationType === 'remote' ? 'Remote' : form.location,
+        type: form.type,
+        duration: form.duration,
+        stipend: form.stipendType === 'paid' ? form.stipendAmount : 'Unpaid (Volunteer)',
+        skills: form.skills.split(',').map(s => s.trim()).filter(Boolean),
+        description: form.description,
+        responsibilities: form.responsibilities,
+        requirements: form.requirements,
+        preferredQualifications: form.preferredQualifications,
+        benefits: form.benefits,
+        deadline: form.applicationDeadline,
+        startDate: form.startDate,
+        status: 'open',
+        positions: parseInt(form.positions) || 1,
+        gradeLevelMin: form.gradeLevelMin,
+        gradeLevelMax: form.gradeLevelMax || null,
+        contactEmail: form.contactEmail,
+        contactPhone: form.contactPhone,
+      })
       setSubmitted(true)
       setToast('Internship posting submitted!')
       setTimeout(() => navigate('/employer/postings'), 2500)
@@ -88,6 +141,7 @@ export default function EmployerNewPosting() {
       </div>
 
       <form onSubmit={handleSubmit}>
+        {/* Company Info */}
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
             Company / Organization Information
@@ -113,6 +167,7 @@ export default function EmployerNewPosting() {
           </div>
         </div>
 
+        {/* Position Details */}
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
             Position Details
@@ -127,6 +182,28 @@ export default function EmployerNewPosting() {
             <input className="form-control" name="department" value={form.department} onChange={handleChange}
               placeholder="e.g., Engineering, Marketing, Finance" />
           </div>
+
+          {/* Grade Level */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Minimum Grade Level <span className="required">*</span></label>
+              <select className="form-control" name="gradeLevelMin" value={form.gradeLevelMin} onChange={handleChange} required>
+                <option value="">Select...</option>
+                {GRADE_LEVELS.map(gl => <option key={gl} value={gl}>{gl}</option>)}
+              </select>
+              <span style={{ fontSize: 11, color: 'var(--nriva-text-light)', marginTop: 4, display: 'block' }}>
+                Open to students from 10th grade through college
+              </span>
+            </div>
+            <div className="form-group">
+              <label>Maximum Grade Level</label>
+              <select className="form-control" name="gradeLevelMax" value={form.gradeLevelMax} onChange={handleChange}>
+                <option value="">Any (no max)</option>
+                {GRADE_LEVELS.map(gl => <option key={gl} value={gl}>{gl}</option>)}
+              </select>
+            </div>
+          </div>
+
           <div className="form-row">
             <div className="form-group">
               <label>Location Type <span className="required">*</span></label>
@@ -192,10 +269,45 @@ export default function EmployerNewPosting() {
           </div>
         </div>
 
+        {/* Job Description with AI */}
         <div className="card" style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
-            Job Description & Requirements
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600 }}>Job Description & Requirements</h2>
+            <button
+              type="button"
+              onClick={handleWriteWithAI}
+              disabled={aiLoading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 16px', borderRadius: 8,
+                border: '2px solid #7c3aed',
+                background: aiLoading ? '#f3f4f6' : 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+                color: aiLoading ? '#6b7280' : 'white',
+                fontSize: 13, fontWeight: 600, cursor: aiLoading ? 'wait' : 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {aiLoading ? (
+                <>
+                  <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: 14 }}>⟳</span>
+                  Generating...
+                </>
+              ) : (
+                <>✨ Write with AI</>
+              )}
+            </button>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+
+          {aiLoading && (
+            <div style={{
+              background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 8,
+              padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#5b21b6',
+            }}>
+              AI is writing your job description based on the position details above. This takes a few seconds...
+            </div>
+          )}
+
           <div className="form-group">
             <label>Description <span className="required">*</span></label>
             <textarea className="form-control" name="description" value={form.description} onChange={handleChange} required
@@ -232,6 +344,7 @@ export default function EmployerNewPosting() {
           </div>
         </div>
 
+        {/* Application Settings */}
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
             Application Settings
@@ -250,9 +363,6 @@ export default function EmployerNewPosting() {
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <button type="button" className="btn btn-outline" onClick={() => navigate('/employer/postings')}>
             Cancel
-          </button>
-          <button type="button" className="btn btn-outline" onClick={() => setToast('Draft saved!')}>
-            Save as Draft
           </button>
           <button type="submit" className="btn btn-primary btn-lg">
             Submit for Review

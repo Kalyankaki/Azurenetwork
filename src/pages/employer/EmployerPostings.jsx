@@ -6,7 +6,7 @@ import { updateInternship } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 export default function EmployerPostings() {
-  const { user, demoMode } = useAuth()
+  const { user } = useAuth()
   const { data: postings } = useInternships({ employerUid: user?.uid })
   const [toast, setToast] = useState(null)
   const [editingId, setEditingId] = useState(null)
@@ -16,7 +16,7 @@ export default function EmployerPostings() {
     if (!posting) return
     const newStatus = posting.status === 'open' ? 'closed' : 'open'
     try {
-      if (!demoMode) await updateInternship(id, { status: newStatus })
+      await updateInternship(id, { status: newStatus })
       setToast('Posting status updated!')
     } catch (err) {
       setToast('Error: ' + err.message)
