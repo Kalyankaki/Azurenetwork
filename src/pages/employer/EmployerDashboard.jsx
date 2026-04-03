@@ -22,19 +22,19 @@ export default function EmployerDashboard() {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Active Postings</div>
-          <div className="stat-value">3</div>
+          <div className="stat-value">{myPostings.filter(p => p.status === 'open').length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Total Applicants</div>
-          <div className="stat-value">32</div>
+          <div className="stat-value">{myPostings.reduce((sum, p) => sum + p.applicants, 0)}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Shortlisted</div>
-          <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>8</div>
+          <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>{sampleApplications.filter(a => a.status === 'shortlisted').length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Positions Filled</div>
-          <div className="stat-value" style={{ color: 'var(--nriva-accent)' }}>2</div>
+          <div className="stat-value" style={{ color: 'var(--nriva-accent)' }}>{myPostings.filter(p => p.status === 'filled').length}</div>
         </div>
       </div>
 

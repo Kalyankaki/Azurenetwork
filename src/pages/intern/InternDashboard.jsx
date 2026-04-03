@@ -22,15 +22,15 @@ export default function InternDashboard() {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Applications Submitted</div>
-          <div className="stat-value">3</div>
+          <div className="stat-value">{sampleApplications.length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Under Review</div>
-          <div className="stat-value" style={{ color: 'var(--nriva-warning)' }}>1</div>
+          <div className="stat-value" style={{ color: 'var(--nriva-warning)' }}>{sampleApplications.filter(a => a.status === 'under_review').length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Shortlisted</div>
-          <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>1</div>
+          <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>{sampleApplications.filter(a => a.status === 'shortlisted').length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Available Positions</div>
