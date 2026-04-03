@@ -3,7 +3,7 @@
 // To set up:
 // 1. Go to https://console.firebase.google.com
 // 2. Create a new project (e.g., "nriva-internship")
-// 3. Enable Authentication > Sign-in providers > Google and Microsoft (for LinkedIn)
+// 3. Enable Authentication > Sign-in providers > Google
 // 4. Add your Vercel domain to Authorized domains
 // 5. Copy the config below from Project Settings > General > Your apps > Web app
 
@@ -11,7 +11,6 @@ import { initializeApp } from 'firebase/app'
 import {
   getAuth,
   GoogleAuthProvider,
-  OAuthProvider,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
@@ -33,23 +32,9 @@ const googleProvider = new GoogleAuthProvider()
 googleProvider.addScope('email')
 googleProvider.addScope('profile')
 
-// LinkedIn uses Microsoft/OIDC provider in Firebase
-// You'll need to set up a LinkedIn app at https://www.linkedin.com/developers/
-// and configure it as an OIDC provider in Firebase Console
-const linkedInProvider = new OAuthProvider('oidc.linkedin')
-
 export async function signInWithGoogle() {
   try {
     const result = await signInWithPopup(auth, googleProvider)
-    return { user: result.user, error: null }
-  } catch (error) {
-    return { user: null, error: error.message }
-  }
-}
-
-export async function signInWithLinkedIn() {
-  try {
-    const result = await signInWithPopup(auth, linkedInProvider)
     return { user: result.user, error: null }
   } catch (error) {
     return { user: null, error: error.message }

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { onAuthChange, signInWithGoogle, signInWithLinkedIn, logOut } from '../firebase'
+import { onAuthChange, signInWithGoogle, logOut } from '../firebase'
 
 const AuthContext = createContext(null)
 
@@ -52,13 +52,6 @@ export function AuthProvider({ children }) {
     return result
   }
 
-  const loginWithLinkedIn = async () => {
-    setLoading(true)
-    const result = await signInWithLinkedIn()
-    setLoading(false)
-    return result
-  }
-
   const loginAsDemo = (demoRole) => {
     const demoUser = {
       uid: 'demo-user',
@@ -105,7 +98,6 @@ export function AuthProvider({ children }) {
       loading,
       demoMode,
       loginWithGoogle,
-      loginWithLinkedIn,
       loginAsDemo,
       selectRole,
       logout,
