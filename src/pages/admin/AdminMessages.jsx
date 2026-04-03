@@ -109,7 +109,7 @@ export default function AdminMessages() {
                     </p>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', whiteSpace: 'nowrap' }}>
-                    {msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleDateString() : '—'}
+                    {msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleDateString() : '\u2014'}
                   </div>
                 </div>
               </div>
@@ -142,7 +142,7 @@ export default function AdminMessages() {
               <div style={{ fontSize: 13, color: 'var(--nriva-text-light)', marginBottom: 16 }}>
                 <strong>From:</strong> {selected.senderName} ({selected.senderEmail})<br />
                 <strong>Role:</strong> {selected.senderRole}<br />
-                <strong>Date:</strong> {selected.createdAt?.toDate ? selected.createdAt.toDate().toLocaleString() : '—'}
+                <strong>Date:</strong> {selected.createdAt?.toDate ? selected.createdAt.toDate().toLocaleString() : '\u2014'}
               </div>
 
               <div style={{ background: '#f8fafc', borderRadius: 8, padding: 16, marginBottom: 16, fontSize: 14, lineHeight: 1.6 }}>

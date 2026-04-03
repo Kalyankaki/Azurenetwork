@@ -3,12 +3,11 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function HomePage() {
-  const { isAuthenticated, activeRole, availableRoles, loginWithGoogle, loginAsDemo, loading } = useAuth()
+  const { isAuthenticated, activeRole, availableRoles, loginWithGoogle, loading } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState(null)
   const [loggingIn, setLoggingIn] = useState(false)
 
-  // If authenticated with a role, redirect to dashboard
   if (isAuthenticated && activeRole) {
     return <Navigate to={`/${activeRole}`} replace />
   }
@@ -26,11 +25,6 @@ export default function HomePage() {
     }
   }
 
-  const handleDemo = (role) => {
-    loginAsDemo(role)
-    navigate(`/${role}`)
-  }
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -38,7 +32,6 @@ export default function HomePage() {
       display: 'flex',
       flexDirection: 'column',
     }}>
-      {/* Hero Section - Centered */}
       <div style={{
         flex: 1,
         display: 'flex',
@@ -48,7 +41,6 @@ export default function HomePage() {
         padding: '40px 20px',
         textAlign: 'center',
       }}>
-        {/* Logo */}
         <img
           src="/nriva-logo.svg"
           alt="NRIVA - NRI Vasavi Association"
@@ -56,7 +48,6 @@ export default function HomePage() {
           onError={(e) => { e.target.style.display = 'none' }}
         />
 
-        {/* Hero Text */}
         <div style={{
           display: 'inline-block',
           background: 'rgba(255,111,0,0.2)',
@@ -93,7 +84,6 @@ export default function HomePage() {
           and manage the program — all in one place.
         </p>
 
-        {/* Auth Card - Centered */}
         <div style={{
           background: 'rgba(255,255,255,0.95)',
           backdropFilter: 'blur(20px)',
@@ -104,7 +94,6 @@ export default function HomePage() {
           boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
           marginBottom: 24,
         }}>
-          {/* Google Sign In */}
           <button
             onClick={handleGoogle}
             disabled={loggingIn || loading}
@@ -124,7 +113,6 @@ export default function HomePage() {
               transition: 'all 0.2s',
               opacity: loggingIn ? 0.6 : 1,
               width: '100%',
-              marginBottom: 16,
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24">
@@ -144,58 +132,15 @@ export default function HomePage() {
               borderRadius: 8,
               color: '#dc2626',
               fontSize: 12,
-              marginBottom: 12,
+              marginTop: 12,
             }}>
               {error.includes('REPLACE_WITH')
-                ? 'Firebase not configured. Use Demo Mode below.'
+                ? 'Firebase not configured yet. Please set up Firebase credentials.'
                 : error}
             </div>
           )}
-
-          {/* Demo Divider */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            marginBottom: 14,
-          }}>
-            <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>OR TRY THE DEMO</span>
-            <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-          </div>
-
-          {/* Demo Buttons */}
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[
-              { role: 'intern', color: '#1a237e', label: 'Intern' },
-              { role: 'employer', color: '#1b5e20', label: 'Employer' },
-              { role: 'admin', color: '#b71c1c', label: 'Admin' },
-            ].map(({ role, color, label }) => (
-              <button
-                key={role}
-                onClick={() => handleDemo(role)}
-                style={{
-                  flex: 1,
-                  padding: '9px 6px',
-                  borderRadius: 8,
-                  border: `2px solid ${color}`,
-                  background: 'transparent',
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = color; e.currentTarget.style.color = 'white' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = color }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
 
-        {/* Stats */}
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
           {[
             { value: '50+', label: 'Active Positions' },
@@ -216,7 +161,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Info Cards */}
       <div style={{
         maxWidth: 1000,
         margin: '0 auto',
@@ -227,10 +171,10 @@ export default function HomePage() {
         width: '100%',
       }}>
         {[
-          { icon: '🎓', title: 'For Interns', desc: 'Browse internships, apply online, and track your application status in real-time.', color: '#1a237e' },
-          { icon: '🏢', title: 'For Employers', desc: 'Post opportunities, review applicants, and manage your hiring pipeline.', color: '#1b5e20' },
-          { icon: '⚙️', title: 'For Admins', desc: 'Oversee the program, manage users, and view comprehensive analytics.', color: '#b71c1c' },
-        ].map(({ icon, title, desc, color }) => (
+          { icon: '🎓', title: 'For Students (10th Grade - College)', desc: 'Browse internships, apply online, and track your application status. Open to students from 10th grade through college.', color: '#1a237e' },
+          { icon: '🏢', title: 'For Employers', desc: 'Post opportunities, review applicants, and manage your hiring pipeline with AI-powered tools.', color: '#1b5e20' },
+          { icon: '⚙️', title: 'For Admins', desc: 'Oversee the program, manage users, assign coordinators, and view comprehensive analytics.', color: '#b71c1c' },
+        ].map(({ icon, title, desc }) => (
           <div key={title} style={{
             background: 'rgba(255,255,255,0.06)',
             borderRadius: 12,
@@ -244,7 +188,6 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* Footer */}
       <footer style={{
         textAlign: 'center',
         padding: '20px',
