@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const navItems = {
   intern: [
@@ -34,27 +34,57 @@ const roleColors = {
 }
 
 export default function Layout({ role }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768)
   const location = useLocation()
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        setSidebarOpen(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  useEffect(() => {
+    if (window.innerWidth <= 768) {
+      setSidebarOpen(false)
+    }
+  }, [location.pathname])
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Sidebar */}
+      {sidebarOpen && isMobile && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 99,
+          }}
+        />
+      )}
+
       <aside style={{
         width: sidebarOpen ? 250 : 60,
         background: `linear-gradient(180deg, ${roleColors[role]} 0%, ${roleColors[role]}dd 100%)`,
         color: 'white',
-        transition: 'width 0.3s ease',
+        transition: 'all 0.3s ease',
         position: 'fixed',
         top: 0,
-        left: 0,
+        left: sidebarOpen || !isMobile ? 0 : -60,
         bottom: 0,
         zIndex: 100,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
       }}>
-        {/* Logo area */}
         <div style={{
           padding: '20px 16px',
           borderBottom: '1px solid rgba(255,255,255,0.15)',
@@ -86,7 +116,6 @@ export default function Layout({ role }) {
           </Link>
         </div>
 
-        {/* Nav items */}
         <nav style={{ padding: '12px 8px', flex: 1 }}>
           {navItems[role].map((item) => {
             const isActive = location.pathname === item.path
@@ -95,6 +124,7 @@ export default function Layout({ role }) {
                 key={item.path}
                 to={item.path}
                 end={item.path === `/${role}`}
+                aria-label={item.label}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -110,16 +140,17 @@ export default function Layout({ role }) {
                   whiteSpace: 'nowrap',
                 }}
               >
-                <span style={{ fontSize: 18 }}>{item.icon}</span>
+                <span style={{ fontSize: 18 }} role="img" aria-hidden="true">{item.icon}</span>
                 {sidebarOpen && <span>{item.label}</span>}
               </NavLink>
             )
           })}
         </nav>
 
-        {/* Toggle button */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          aria-expanded={sidebarOpen}
           style={{
             margin: 12,
             padding: 8,
@@ -135,13 +166,11 @@ export default function Layout({ role }) {
         </button>
       </aside>
 
-      {/* Main content */}
       <main style={{
         flex: 1,
-        marginLeft: sidebarOpen ? 250 : 60,
+        marginLeft: isMobile ? 0 : (sidebarOpen ? 250 : 60),
         transition: 'margin-left 0.3s ease',
       }}>
-        {/* Top bar */}
         <header style={{
           background: 'white',
           padding: '12px 24px',
@@ -153,8 +182,25 @@ export default function Layout({ role }) {
           top: 0,
           zIndex: 50,
         }}>
-          <div style={{ fontSize: 13, color: 'var(--nriva-text-light)' }}>
-            NRIVA Internship Program 2026
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {isMobile && (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open menu"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 20,
+                  cursor: 'pointer',
+                  padding: 4,
+                }}
+              >
+                ☰
+              </button>
+            )}
+            <span style={{ fontSize: 13, color: 'var(--nriva-text-light)' }}>
+              NRIVA Internship Program 2026
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <span style={{ fontSize: 13, color: 'var(--nriva-text-light)' }}>
@@ -177,7 +223,7 @@ export default function Layout({ role }) {
           </div>
         </header>
 
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: isMobile ? 16 : 24 }}>
           <Outlet />
         </div>
       </main>
