@@ -1,17 +1,22 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function HomePage() {
   const { isAuthenticated, activeRole, availableRoles, loginWithGoogle, loading } = useAuth()
-  const navigate = useNavigate()
   const [error, setError] = useState(null)
   const [loggingIn, setLoggingIn] = useState(false)
 
+  // If authenticated with a role, redirect to dashboard
   if (isAuthenticated && activeRole) {
     return <Navigate to={`/${activeRole}`} replace />
   }
+  // If authenticated with multiple roles, go to role select
   if (isAuthenticated && availableRoles.length > 0) {
+    return <Navigate to="/select-role" replace />
+  }
+  // If authenticated but no roles assigned yet, go to role select (shows pending approval)
+  if (isAuthenticated && !loading) {
     return <Navigate to="/select-role" replace />
   }
 
@@ -23,6 +28,8 @@ export default function HomePage() {
       setError(result.error)
       setLoggingIn(false)
     }
+    // On success, onAuthStateChanged handles the rest and isAuthenticated becomes true,
+    // triggering a redirect above on re-render
   }
 
   return (
@@ -106,12 +113,12 @@ export default function HomePage() {
               borderRadius: 10,
               border: '1px solid #e2e8f0',
               background: 'white',
-              cursor: loggingIn ? 'wait' : 'pointer',
+              cursor: (loggingIn || loading) ? 'wait' : 'pointer',
               fontSize: 15,
               fontWeight: 500,
               color: '#1a1a2e',
               transition: 'all 0.2s',
-              opacity: loggingIn ? 0.6 : 1,
+              opacity: (loggingIn || loading) ? 0.6 : 1,
               width: '100%',
             }}
           >
@@ -121,7 +128,7 @@ export default function HomePage() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            {loggingIn ? 'Signing in...' : 'Sign in with Google'}
+            {loading ? 'Loading...' : loggingIn ? 'Signing in...' : 'Sign in with Google'}
           </button>
 
           {error && (
@@ -171,9 +178,9 @@ export default function HomePage() {
         width: '100%',
       }}>
         {[
-          { icon: '🎓', title: 'For Students (10th Grade - College)', desc: 'Browse internships, apply online, and track your application status. Open to students from 10th grade through college.', color: '#1a237e' },
-          { icon: '🏢', title: 'For Employers', desc: 'Post opportunities, review applicants, and manage your hiring pipeline with AI-powered tools.', color: '#1b5e20' },
-          { icon: '⚙️', title: 'For Admins', desc: 'Oversee the program, manage users, assign coordinators, and view comprehensive analytics.', color: '#b71c1c' },
+          { icon: '🎓', title: 'For Students (10th Grade - College)', desc: 'Browse internships, apply online, and track your application status. Open to students from 10th grade through college.' },
+          { icon: '🏢', title: 'For Employers', desc: 'Post opportunities, review applicants, and manage your hiring pipeline with AI-powered tools.' },
+          { icon: '⚙️', title: 'For Admins', desc: 'Oversee the program, manage users, assign coordinators, and view comprehensive analytics.' },
         ].map(({ icon, title, desc }) => (
           <div key={title} style={{
             background: 'rgba(255,255,255,0.06)',

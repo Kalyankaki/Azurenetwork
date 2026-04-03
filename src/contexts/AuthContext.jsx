@@ -40,12 +40,15 @@ export function AuthProvider({ children }) {
             setActiveRole(roles[0])
           }
         } catch (err) {
+          console.warn('Firestore error:', err.message)
+          // Even if Firestore fails, check for super admin
           if (isSuperAdmin(firebaseUser.email)) {
             setAvailableRoles(['intern', 'employer', 'admin'])
           } else {
+            // User is authenticated but we can't fetch roles
+            // Set empty roles - they'll see "pending approval"
             setAvailableRoles([])
           }
-          console.warn('Firestore not configured:', err.message)
         }
       } else {
         setUser(null)
@@ -53,6 +56,7 @@ export function AuthProvider({ children }) {
         setActiveRole(null)
         setUserCoordinator(null)
       }
+      // Always set loading to false after auth state resolves
       setLoading(false)
     })
 
@@ -62,7 +66,11 @@ export function AuthProvider({ children }) {
   const loginWithGoogle = async () => {
     setLoading(true)
     const result = await signInWithGoogle()
-    if (result.error) setLoading(false)
+    if (result.error) {
+      // Reset loading on error so the button becomes clickable again
+      setLoading(false)
+    }
+    // On success, onAuthStateChanged callback handles setting loading=false
     return result
   }
 
