@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 
-const roles = [
+const roleConfig = [
   {
     id: 'intern',
     title: 'Intern',
@@ -26,12 +27,57 @@ const roles = [
 ]
 
 export default function RoleSelectPage() {
-  const { user, selectRole } = useAuth()
+  const { user, availableRoles, selectRole } = useAuth()
   const navigate = useNavigate()
+
+  const visibleRoles = roleConfig.filter(r => availableRoles.includes(r.id))
+
+  // Auto-redirect if only one role
+  useEffect(() => {
+    if (visibleRoles.length === 1) {
+      selectRole(visibleRoles[0].id)
+      navigate(`/${visibleRoles[0].id}`, { replace: true })
+    }
+  }, [visibleRoles.length])
 
   const handleSelect = (roleId) => {
     selectRole(roleId)
     navigate(`/${roleId}`)
+  }
+
+  if (availableRoles.length === 0) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+      }}>
+        <div style={{
+          background: 'white',
+          borderRadius: 20,
+          padding: '48px 36px',
+          maxWidth: 440,
+          width: '100%',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1a237e', marginBottom: 12 }}>
+            Account Pending Approval
+          </h2>
+          <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+            Your account has been created successfully. An NRIVA administrator
+            will review your account and assign roles shortly.
+          </p>
+          <Link to="/" style={{ color: '#1a237e', fontSize: 14, fontWeight: 500 }}>
+            Return to Home
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -60,7 +106,7 @@ export default function RoleSelectPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 800 }}>
-        {roles.map((role) => (
+        {visibleRoles.map((role) => (
           <button
             key={role.id}
             onClick={() => handleSelect(role.id)}
@@ -96,9 +142,12 @@ export default function RoleSelectPage() {
         ))}
       </div>
 
-      <Link to="/login" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 24 }}>
-        Sign out and use a different account
-      </Link>
+      <button
+        onClick={() => window.history.back()}
+        style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 24, background: 'none', border: 'none', cursor: 'pointer' }}
+      >
+        Go back
+      </button>
     </div>
   )
 }
