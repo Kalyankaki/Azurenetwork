@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom'
-import { sampleInternships, sampleApplications } from '../../data'
+import { useAuth } from '../../contexts/AuthContext'
+import { useInternships, useApplications } from '../../hooks/useFirestore'
 
 export default function InternDashboard() {
-  const myApplications = sampleApplications.slice(0, 3)
-  const recommended = sampleInternships.filter(i => i.status === 'open').slice(0, 3)
+  const { user } = useAuth()
+  const { data: allApplications } = useApplications({ applicantUid: user?.uid })
+  const { data: allInternships } = useInternships()
+  const myApplications = allApplications.slice(0, 3)
+  const recommended = allInternships.filter(i => i.status === 'open').slice(0, 3)
 
   return (
     <div>
@@ -22,19 +26,19 @@ export default function InternDashboard() {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Applications Submitted</div>
-          <div className="stat-value">{sampleApplications.length}</div>
+          <div className="stat-value">{allApplications.length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Under Review</div>
-          <div className="stat-value" style={{ color: 'var(--nriva-warning)' }}>{sampleApplications.filter(a => a.status === 'under_review').length}</div>
+          <div className="stat-value" style={{ color: 'var(--nriva-warning)' }}>{allApplications.filter(a => a.status === 'under_review').length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Shortlisted</div>
-          <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>{sampleApplications.filter(a => a.status === 'shortlisted').length}</div>
+          <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>{allApplications.filter(a => a.status === 'shortlisted').length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Available Positions</div>
-          <div className="stat-value">{sampleInternships.filter(i => i.status === 'open').length}</div>
+          <div className="stat-value">{allInternships.filter(i => i.status === 'open').length}</div>
         </div>
       </div>
 

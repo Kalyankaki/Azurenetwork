@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { sampleInternships } from '../../data'
+import { useInternships } from '../../hooks/useFirestore'
 
 export default function InternBrowse() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
   const [selected, setSelected] = useState(null)
+  const { data: internships } = useInternships()
 
-  const filtered = sampleInternships.filter(job => {
+  const filtered = internships.filter(job => {
     const matchSearch = job.title.toLowerCase().includes(search.toLowerCase()) ||
       job.company.toLowerCase().includes(search.toLowerCase()) ||
       job.skills.some(s => s.toLowerCase().includes(search.toLowerCase()))

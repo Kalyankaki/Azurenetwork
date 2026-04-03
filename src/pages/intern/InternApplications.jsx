@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { sampleApplications } from '../../data'
+import { useAuth } from '../../contexts/AuthContext'
+import { useApplications } from '../../hooks/useFirestore'
 
 const statusLabels = {
   pending: { label: 'Pending', class: 'pending' },
@@ -10,6 +11,8 @@ const statusLabels = {
 }
 
 export default function InternApplications() {
+  const { user } = useAuth()
+  const { data: sampleApplications } = useApplications({ applicantUid: user?.uid })
   const [selected, setSelected] = useState(null)
 
   return (

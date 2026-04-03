@@ -1,12 +1,17 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { sampleInternships, chapters } from '../../data'
+import { chapters } from '../../data'
+import { useAuth } from '../../contexts/AuthContext'
+import { useInternships } from '../../hooks/useFirestore'
+import { createApplication } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 export default function InternApply() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const internship = sampleInternships.find(i => i.id === Number(id))
+  const { user, demoMode } = useAuth()
+  const { data: internships } = useInternships()
+  const internship = internships.find(i => String(i.id) === String(id))
   const [toast, setToast] = useState(null)
   const [submitted, setSubmitted] = useState(false)
 
@@ -35,11 +40,30 @@ export default function InternApply() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setSubmitted(true)
-    setToast('Application submitted successfully! You will receive a confirmation email.')
-    setTimeout(() => navigate('/intern/applications'), 2500)
+    try {
+      if (!demoMode) {
+        await createApplication({
+          internshipId: id,
+          internshipTitle: internship.title,
+          company: internship.company,
+          applicantUid: user.uid,
+          applicantName: form.firstName + ' ' + form.lastName,
+          email: form.email, phone: form.phone,
+          university: form.university, major: form.major,
+          graduationYear: form.graduationYear, gpa: form.gpa,
+          skills: form.skills, experience: form.experience,
+          whyInterested: form.whyInterested, availability: form.availability,
+          referral: form.referral, chapter: form.chapter,
+        })
+      }
+      setSubmitted(true)
+      setToast('Application submitted successfully!')
+      setTimeout(() => navigate('/intern/applications'), 2500)
+    } catch (err) {
+      setToast('Error: ' + err.message)
+    }
   }
 
   if (!internship) {
