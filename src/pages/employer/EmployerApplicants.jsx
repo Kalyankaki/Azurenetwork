@@ -23,7 +23,7 @@ const statusBadgeClass = {
 }
 
 export default function EmployerApplicants() {
-  const { demoMode } = useAuth()
+  // useAuth available for authenticated context
   const { data: applicants } = useApplications()
   const [selected, setSelected] = useState(null)
   const [toast, setToast] = useState(null)
@@ -39,7 +39,7 @@ export default function EmployerApplicants() {
 
   const updateStatus = async (id, newStatus) => {
     try {
-      if (!demoMode) await updateApplicationStatus(id, newStatus)
+      await updateApplicationStatus(id, newStatus)
       setToast(`Applicant status updated to ${statusLabels[newStatus]}`)
     if (selected?.id === id) {
       setSelected({ ...selected, status: newStatus })

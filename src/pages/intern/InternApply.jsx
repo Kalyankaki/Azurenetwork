@@ -1,15 +1,24 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { chapters } from '../../data'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships } from '../../hooks/useFirestore'
-import { createApplication } from '../../services/firestore'
+import { createApplication, GRADE_LEVELS } from '../../services/firestore'
 import Toast from '../../components/Toast'
+
+const chapters = [
+  'Alaska', 'Albany', 'Arizona', 'Atlanta', 'Austin', 'Baltimore',
+  'Boston', 'Charlotte', 'Chicago', 'Cincinnati', 'Cleveland',
+  'Colorado', 'Columbus', 'Connecticut', 'Dallas', 'Detroit',
+  'Houston', 'Indianapolis', 'Kansas City', 'Los Angeles',
+  'Michigan', 'Minnesota', 'New Jersey', 'New York', 'North Carolina',
+  'Ohio', 'Oklahoma', 'Oregon', 'Philadelphia', 'Pittsburgh',
+  'San Francisco', 'Seattle', 'St. Louis', 'Tampa', 'Virginia', 'Washington DC'
+]
 
 export default function InternApply() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user, demoMode } = useAuth()
+  const { user } = useAuth()
   const { data: internships } = useInternships()
   const internship = internships.find(i => String(i.id) === String(id))
   const [toast, setToast] = useState(null)
@@ -22,10 +31,10 @@ export default function InternApply() {
     phone: '',
     dateOfBirth: '',
     gender: '',
+    gradeLevel: '',
     chapter: '',
-    university: '',
+    school: '',
     major: '',
-    graduationYear: '',
     gpa: '',
     linkedIn: '',
     portfolio: '',
@@ -42,22 +51,40 @@ export default function InternApply() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    try {
-      if (!demoMode) {
-        await createApplication({
-          internshipId: id,
-          internshipTitle: internship.title,
-          company: internship.company,
-          applicantUid: user.uid,
-          applicantName: form.firstName + ' ' + form.lastName,
-          email: form.email, phone: form.phone,
-          university: form.university, major: form.major,
-          graduationYear: form.graduationYear, gpa: form.gpa,
-          skills: form.skills, experience: form.experience,
-          whyInterested: form.whyInterested, availability: form.availability,
-          referral: form.referral, chapter: form.chapter,
-        })
+    if (!form.gradeLevel) {
+      setToast('Please select your current grade level')
+      return
+    }
+    // Validate grade level against internship requirements
+    if (internship?.gradeLevelMin) {
+      const minIdx = GRADE_LEVELS.indexOf(internship.gradeLevelMin)
+      const maxIdx = internship.gradeLevelMax ? GRADE_LEVELS.indexOf(internship.gradeLevelMax) : GRADE_LEVELS.length - 1
+      const applicantIdx = GRADE_LEVELS.indexOf(form.gradeLevel)
+      if (applicantIdx < minIdx || applicantIdx > maxIdx) {
+        setToast(`This position requires ${internship.gradeLevelMin}${internship.gradeLevelMax ? ' to ' + internship.gradeLevelMax : ' and above'}`)
+        return
       }
+    }
+    try {
+      await createApplication({
+        internshipId: id,
+        internshipTitle: internship.title,
+        company: internship.company,
+        applicantUid: user.uid,
+        applicantName: `${form.firstName} ${form.lastName}`,
+        email: form.email,
+        phone: form.phone,
+        gradeLevel: form.gradeLevel,
+        school: form.school,
+        major: form.major,
+        gpa: form.gpa,
+        skills: form.skills,
+        experience: form.experience,
+        whyInterested: form.whyInterested,
+        availability: form.availability,
+        referral: form.referral,
+        chapter: form.chapter,
+      })
       setSubmitted(true)
       setToast('Application submitted successfully!')
       setTimeout(() => navigate('/intern/applications'), 2500)
@@ -80,9 +107,6 @@ export default function InternApply() {
         <p style={{ color: 'var(--nriva-text-light)', fontSize: 16, marginBottom: 24 }}>
           Your application for <strong>{internship.title}</strong> at <strong>{internship.company}</strong> has been submitted.
         </p>
-        <p style={{ color: 'var(--nriva-text-light)', fontSize: 14 }}>
-          Redirecting to your applications...
-        </p>
         {toast && <Toast message={toast} type="success" onClose={() => setToast(null)} />}
       </div>
     )
@@ -95,11 +119,15 @@ export default function InternApply() {
           <h1>Apply: {internship.title}</h1>
           <p style={{ color: 'var(--nriva-text-light)', fontSize: 14, marginTop: 4 }}>
             {internship.company} · {internship.location} · {internship.duration}
+            {internship.gradeLevelMin && (
+              <> · {internship.gradeLevelMin}{internship.gradeLevelMax ? ` - ${internship.gradeLevelMax}` : '+'}</>
+            )}
           </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
+        {/* Personal Information */}
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
             Personal Information
@@ -149,39 +177,42 @@ export default function InternApply() {
           </div>
         </div>
 
+        {/* Education - Updated for grade levels */}
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
             Education
           </h2>
-          <div className="form-group">
-            <label>University / College <span className="required">*</span></label>
-            <input className="form-control" name="university" value={form.university} onChange={handleChange} required />
+          <div className="form-row">
+            <div className="form-group">
+              <label>Current Grade Level <span className="required">*</span></label>
+              <select className="form-control" name="gradeLevel" value={form.gradeLevel} onChange={handleChange} required>
+                <option value="">Select...</option>
+                {GRADE_LEVELS.map(gl => <option key={gl} value={gl}>{gl}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>School / University <span className="required">*</span></label>
+              <input className="form-control" name="school" value={form.school} onChange={handleChange} required
+                placeholder="e.g., Lincoln High School or UT Austin" />
+            </div>
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Major / Field of Study <span className="required">*</span></label>
-              <input className="form-control" name="major" value={form.major} onChange={handleChange} required />
+              <label>Major / Area of Interest</label>
+              <input className="form-control" name="major" value={form.major} onChange={handleChange}
+                placeholder="e.g., Computer Science, Business" />
             </div>
             <div className="form-group">
-              <label>Expected Graduation Year <span className="required">*</span></label>
-              <select className="form-control" name="graduationYear" value={form.graduationYear} onChange={handleChange} required>
-                <option value="">Select...</option>
-                <option value="2026">2026</option>
-                <option value="2027">2027</option>
-                <option value="2028">2028</option>
-                <option value="2029">2029</option>
-              </select>
+              <label>GPA (if applicable)</label>
+              <input className="form-control" name="gpa" value={form.gpa} onChange={handleChange} placeholder="e.g., 3.5" />
             </div>
-          </div>
-          <div className="form-group">
-            <label>GPA (if applicable)</label>
-            <input className="form-control" name="gpa" value={form.gpa} onChange={handleChange} placeholder="e.g., 3.5" />
           </div>
         </div>
 
+        {/* Professional Details */}
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
-            Professional Details
+            Skills & Experience
           </h2>
           <div className="form-row">
             <div className="form-group">
@@ -198,16 +229,13 @@ export default function InternApply() {
             <input className="form-control" name="skills" value={form.skills} onChange={handleChange} required placeholder="e.g., Python, React, Data Analysis" />
           </div>
           <div className="form-group">
-            <label>Resume / CV <span className="required">*</span></label>
-            <input className="form-control" type="file" accept=".pdf,.doc,.docx" style={{ padding: 8 }} />
-          </div>
-          <div className="form-group">
             <label>Prior Experience</label>
             <textarea className="form-control" name="experience" value={form.experience} onChange={handleChange}
-              placeholder="Describe any relevant work experience, projects, or extracurricular activities..." />
+              placeholder="Describe any relevant experience, school projects, clubs, or extracurricular activities..." />
           </div>
         </div>
 
+        {/* Additional Info */}
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
             Additional Information
@@ -224,6 +252,7 @@ export default function InternApply() {
               <option value="immediate">Immediately</option>
               <option value="2_weeks">Within 2 weeks</option>
               <option value="1_month">Within 1 month</option>
+              <option value="summer_only">Summer only</option>
               <option value="specific">Specific date</option>
             </select>
           </div>
@@ -234,19 +263,15 @@ export default function InternApply() {
               <option value="nriva_website">NRIVA Website</option>
               <option value="social_media">Social Media</option>
               <option value="member_referral">NRIVA Member Referral</option>
-              <option value="university">University Career Center</option>
+              <option value="school">School / Teacher</option>
               <option value="other">Other</option>
             </select>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-          <button type="button" className="btn btn-outline" onClick={() => navigate('/intern/browse')}>
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-primary btn-lg">
-            Submit Application
-          </button>
+          <button type="button" className="btn btn-outline" onClick={() => navigate('/intern/browse')}>Cancel</button>
+          <button type="submit" className="btn btn-primary btn-lg">Submit Application</button>
         </div>
       </form>
 
