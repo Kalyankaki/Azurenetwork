@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useApplications } from '../../hooks/useFirestore'
 import { updateApplicationStatus } from '../../services/firestore'
 import Toast from '../../components/Toast'
+import { formatDate } from '../../utils/date'
 
 const statusLabels = {
   pending: 'Pending',
@@ -28,7 +29,7 @@ export default function AdminApplications() {
   const filtered = applications.filter(app => {
     const matchSearch = app.applicantName.toLowerCase().includes(search.toLowerCase()) ||
       app.internshipTitle.toLowerCase().includes(search.toLowerCase()) ||
-      app.university.toLowerCase().includes(search.toLowerCase())
+      (app.university || app.school || '').toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === 'all' || app.status === statusFilter
     return matchSearch && matchStatus
   })
@@ -54,7 +55,7 @@ export default function AdminApplications() {
       <div className="filter-bar">
         <input
           className="search-input"
-          placeholder="Search by name, position, or university..."
+          placeholder="Search by name, position, or school..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -102,9 +103,9 @@ export default function AdminApplications() {
                   </td>
                   <td style={{ fontSize: 13 }}>{app.internshipTitle}</td>
                   <td style={{ fontSize: 13 }}>{app.company}</td>
-                  <td style={{ fontSize: 13 }}>{app.university}</td>
+                  <td style={{ fontSize: 13 }}>{app.university || app.school}</td>
                   <td style={{ fontSize: 13, fontWeight: 500 }}>{app.gpa}</td>
-                  <td style={{ fontSize: 13 }}>{new Date(app.appliedDate).toLocaleDateString()}</td>
+                  <td style={{ fontSize: 13 }}>{formatDate(app.appliedDate)}</td>
                   <td>
                     <span className={`badge badge-${statusBadgeClass[app.status]}`}>
                       {statusLabels[app.status]}
