@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useApplications } from '../../hooks/useFirestore'
 import { updateApplicationStatus } from '../../services/firestore'
 import Toast from '../../components/Toast'
+import { formatDate } from '../../utils/date'
 
 const statusOptions = ['pending', 'under_review', 'shortlisted', 'accepted', 'rejected']
 
@@ -106,9 +107,9 @@ export default function EmployerApplicants() {
                     </div>
                   </td>
                   <td style={{ fontSize: 13 }}>{app.internshipTitle}</td>
-                  <td style={{ fontSize: 13 }}>{app.university}</td>
+                  <td style={{ fontSize: 13 }}>{app.university || app.school}</td>
                   <td style={{ fontSize: 13, fontWeight: 500 }}>{app.gpa}</td>
-                  <td style={{ fontSize: 13 }}>{new Date(app.appliedDate).toLocaleDateString()}</td>
+                  <td style={{ fontSize: 13 }}>{formatDate(app.appliedDate)}</td>
                   <td>
                     <span className={`badge badge-${statusBadgeClass[app.status]}`}>
                       {statusLabels[app.status]}
@@ -170,7 +171,7 @@ export default function EmployerApplicants() {
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>University</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.university}</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.university || selected.school}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Major</div>
@@ -196,7 +197,7 @@ export default function EmployerApplicants() {
                 padding: '12px 16px', border: '1px solid var(--nriva-border)', borderRadius: 8,
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
-                <span style={{ fontSize: 14 }}>📎 {selected.resume}</span>
+                <span style={{ fontSize: 14 }}>{selected.resume}</span>
                 <button className="btn btn-sm btn-outline">Download</button>
               </div>
 

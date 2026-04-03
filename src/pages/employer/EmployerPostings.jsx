@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useInternships } from '../../hooks/useFirestore'
 import { updateInternship } from '../../services/firestore'
 import Toast from '../../components/Toast'
+import { formatDate } from '../../utils/date'
 
 export default function EmployerPostings() {
   const { user } = useAuth()
@@ -60,7 +61,7 @@ export default function EmployerPostings() {
                     <span style={{ color: 'var(--nriva-text-light)' }}> / {job.positions} positions</span>
                   </td>
                   <td><span className={`badge badge-${job.status}`}>{job.status}</span></td>
-                  <td style={{ fontSize: 13 }}>{new Date(job.deadline).toLocaleDateString()}</td>
+                  <td style={{ fontSize: 13 }}>{formatDate(job.deadline)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button
