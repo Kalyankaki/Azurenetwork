@@ -351,27 +351,47 @@ const testApplications = [
   },
 ]
 
+function withTimeout(promise, ms = 8000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+  ])
+}
+
 export async function seedDatabase() {
+  let created = 0
   console.log('Seeding internships...')
   for (const internship of testInternships) {
-    const ref = await addDoc(collection(db, 'internships'), {
-      ...internship,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-    console.log(`  Created internship: ${internship.title} (${ref.id})`)
+    try {
+      const ref = await withTimeout(addDoc(collection(db, 'internships'), {
+        ...internship,
+        applicants: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }))
+      created++
+      console.log(`  [${created}] Created: ${internship.title} (${ref.id})`)
+    } catch (err) {
+      console.warn(`  SKIP: ${internship.title} - ${err.message}`)
+    }
   }
 
   console.log('Seeding applications...')
   for (const app of testApplications) {
-    const ref = await addDoc(collection(db, 'applications'), {
-      ...app,
-      appliedDate: serverTimestamp(),
-    })
-    console.log(`  Created application: ${app.applicantName} (${ref.id})`)
+    try {
+      const ref = await withTimeout(addDoc(collection(db, 'applications'), {
+        ...app,
+        appliedDate: serverTimestamp(),
+      }))
+      created++
+      console.log(`  [${created}] Created: ${app.applicantName} (${ref.id})`)
+    } catch (err) {
+      console.warn(`  SKIP: ${app.applicantName} - ${err.message}`)
+    }
   }
 
-  console.log('Seed complete! 10 internships + 10 applications created.')
+  console.log(`Seed complete! ${created} records created.`)
+  return created
 }
 
 // Make available globally for browser console

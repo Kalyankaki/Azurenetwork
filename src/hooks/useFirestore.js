@@ -6,86 +6,76 @@ import {
   subscribeMessages,
 } from '../services/firestore'
 
-export function useInternships(filters = {}) {
+const TIMEOUT_MS = 10000
+
+function useFirestoreSubscription(subscribeFn, filters, deps) {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
+    setLoading(true)
+    setError(null)
+    let unsubscribe = null
+    let timedOut = false
+
+    const timer = setTimeout(() => {
+      timedOut = true
+      setLoading(false)
+      setError('Connection timed out. Please check your internet connection.')
+    }, TIMEOUT_MS)
+
     try {
-      const unsubscribe = subscribeInternships((internships) => {
-        setData(internships)
-        setLoading(false)
+      unsubscribe = subscribeFn((items) => {
+        if (!timedOut) {
+          clearTimeout(timer)
+          setData(items)
+          setLoading(false)
+          setError(null)
+        }
       }, filters)
-      return () => unsubscribe()
     } catch (err) {
+      clearTimeout(timer)
       setError(err.message)
       setLoading(false)
     }
-  }, [filters.employerUid, filters.status])
 
-  return { data, loading, error }
+    return () => {
+      clearTimeout(timer)
+      if (unsubscribe) unsubscribe()
+    }
+  }, [...deps, retryCount])
+
+  const retry = () => setRetryCount(c => c + 1)
+
+  return { data, loading, error, retry }
+}
+
+export function useInternships(filters = {}) {
+  return useFirestoreSubscription(
+    subscribeInternships,
+    filters,
+    [filters.employerUid, filters.status]
+  )
 }
 
 export function useApplications(filters = {}) {
-  const [data, setData] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    try {
-      const unsubscribe = subscribeApplications((applications) => {
-        setData(applications)
-        setLoading(false)
-      }, filters)
-      return () => unsubscribe()
-    } catch (err) {
-      setError(err.message)
-      setLoading(false)
-    }
-  }, [filters.applicantUid, filters.internshipId])
-
-  return { data, loading, error }
+  return useFirestoreSubscription(
+    subscribeApplications,
+    filters,
+    [filters.applicantUid, filters.internshipId]
+  )
 }
 
 export function useUsers() {
-  const [data, setData] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    try {
-      const unsubscribe = subscribeUsers((users) => {
-        setData(users)
-        setLoading(false)
-      })
-      return () => unsubscribe()
-    } catch (err) {
-      setError(err.message)
-      setLoading(false)
-    }
-  }, [])
-
-  return { data, loading, error }
+  return useFirestoreSubscription(subscribeUsers, {}, [])
 }
 
 export function useMessages(filters = {}) {
-  const [data, setData] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    try {
-      const unsubscribe = subscribeMessages((messages) => {
-        setData(messages)
-        setLoading(false)
-      }, filters)
-      return () => unsubscribe()
-    } catch (err) {
-      setError(err.message)
-      setLoading(false)
-    }
-  }, [filters.senderUid, filters.status])
-
-  return { data, loading, error }
+  return useFirestoreSubscription(
+    subscribeMessages,
+    filters,
+    [filters.senderUid, filters.status]
+  )
 }
