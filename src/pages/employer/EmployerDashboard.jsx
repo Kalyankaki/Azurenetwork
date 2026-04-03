@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships, useApplications } from '../../hooks/useFirestore'
+import { formatDate } from '../../utils/date'
 
 export default function EmployerDashboard() {
   const { user } = useAuth()
@@ -69,7 +70,7 @@ export default function EmployerDashboard() {
                   <td><span className={`badge badge-${job.status}`}>{job.status}</span></td>
                   <td>{job.applicants}</td>
                   <td>{job.positions}</td>
-                  <td>{new Date(job.deadline).toLocaleDateString()}</td>
+                  <td>{formatDate(job.deadline)}</td>
                 </tr>
               ))}
             </tbody>
@@ -108,7 +109,7 @@ export default function EmployerDashboard() {
                   {app.status.replace('_', ' ')}
                 </span>
                 <span style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>
-                  {new Date(app.appliedDate).toLocaleDateString()}
+                  {formatDate(app.appliedDate)}
                 </span>
               </div>
             </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useInternships } from '../../hooks/useFirestore'
 import { updateInternship as updateInternshipDB, deleteInternship as deleteInternshipDB } from '../../services/firestore'
 import Toast from '../../components/Toast'
+import { formatDate } from '../../utils/date'
 
 export default function AdminInternships() {
   const { data: internships } = useInternships()
@@ -93,7 +94,7 @@ export default function AdminInternships() {
                     <span style={{ color: 'var(--nriva-text-light)' }}> / {job.positions}</span>
                   </td>
                   <td><span className={`badge badge-${job.status}`}>{job.status}</span></td>
-                  <td style={{ fontSize: 13 }}>{new Date(job.deadline).toLocaleDateString()}</td>
+                  <td style={{ fontSize: 13 }}>{formatDate(job.deadline)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button className="btn btn-sm btn-outline" onClick={() => setSelected(job)}>
