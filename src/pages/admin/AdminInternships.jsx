@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useInternships } from '../../hooks/useFirestore'
 import { updateInternship as updateInternshipDB, deleteInternship as deleteInternshipDB } from '../../services/firestore'
+import { formatDate } from '../../utils/date'
 import Toast from '../../components/Toast'
 
 export default function AdminInternships() {
@@ -85,15 +86,15 @@ export default function AdminInternships() {
                     <div style={{ fontWeight: 500 }}>{job.title}</div>
                     <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{job.company}</div>
                   </td>
-                  <td style={{ fontSize: 13 }}>{job.employer}</td>
+                  <td style={{ fontSize: 13 }}>{job.employerName || job.employer || '—'}</td>
                   <td style={{ fontSize: 13 }}>{job.location}</td>
                   <td style={{ fontSize: 13 }}>{job.type}</td>
                   <td>
-                    <span style={{ fontWeight: 600 }}>{job.applicants}</span>
-                    <span style={{ color: 'var(--nriva-text-light)' }}> / {job.positions}</span>
+                    <span style={{ fontWeight: 600 }}>{job.applicants || 0}</span>
+                    <span style={{ color: 'var(--nriva-text-light)' }}> / {job.positions || 0}</span>
                   </td>
                   <td><span className={`badge badge-${job.status}`}>{job.status}</span></td>
-                  <td style={{ fontSize: 13 }}>{new Date(job.deadline).toLocaleDateString()}</td>
+                  <td style={{ fontSize: 13 }}>{formatDate(job.deadline)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button className="btn btn-sm btn-outline" onClick={() => setSelected(job)}>
@@ -118,7 +119,7 @@ export default function AdminInternships() {
             <div className="modal-body">
               <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{selected.title}</h3>
               <p style={{ color: 'var(--nriva-text-light)', marginBottom: 20 }}>
-                {selected.company} · Posted by {selected.employer}
+                {selected.company} · Posted by {selected.employerName || selected.employer || 'Unknown'}
               </p>
 
               <div style={{
@@ -148,18 +149,18 @@ export default function AdminInternships() {
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Applicants</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.applicants}</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.applicants || 0}</div>
                 </div>
               </div>
 
               <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Description</h4>
               <p style={{ fontSize: 14, color: 'var(--nriva-text-light)', lineHeight: 1.6, marginBottom: 16 }}>
-                {selected.description}
+                {selected.description || 'No description provided.'}
               </p>
 
               <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Requirements</h4>
               <p style={{ fontSize: 14, color: 'var(--nriva-text-light)', lineHeight: 1.6, marginBottom: 20 }}>
-                {selected.requirements}
+                {selected.requirements || 'No requirements specified.'}
               </p>
 
               <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Update Status</h4>
