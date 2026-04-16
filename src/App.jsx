@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, Link } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import HomePage from './pages/HomePage'
@@ -54,6 +54,31 @@ export default function App() {
         <Route path="reports" element={<AdminReports />} />
         <Route path="users" element={<AdminUsers />} />
       </Route>
+
+      <Route path="*" element={<NotFound />} />
     </Routes>
+  )
+}
+
+function NotFound() {
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
+      color: 'white', padding: 20, textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 96, fontWeight: 800, marginBottom: 8 }}>404</div>
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Page Not Found</h1>
+      <p style={{ opacity: 0.7, marginBottom: 24 }}>
+        The page you&apos;re looking for doesn&apos;t exist or has been moved.
+      </p>
+      <Link to="/" style={{
+        background: '#ffa040', color: '#1a237e', padding: '12px 24px',
+        borderRadius: 8, fontWeight: 600, textDecoration: 'none',
+      }}>
+        Return Home
+      </Link>
+    </div>
   )
 }

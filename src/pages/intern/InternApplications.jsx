@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useApplications } from '../../hooks/useFirestore'
-import { formatDate } from '../../utils/date'
+import { formatDate, addDays } from '../../utils/date'
 
 const statusLabels = {
   pending: { label: 'Pending', class: 'pending' },
@@ -90,12 +90,12 @@ export default function InternApplications() {
                   </span>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>University</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.university}</div>
+                  <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>School</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.school || selected.university || '—'}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Major</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.major}</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.major || '—'}</div>
                 </div>
               </div>
 
@@ -107,19 +107,19 @@ export default function InternApplications() {
                 </div>
                 {selected.status !== 'pending' && (
                   <div className="timeline-item">
-                    <div className="timeline-date">{formatDate(new Date((selected.appliedDate?.toDate ? selected.appliedDate.toDate() : new Date(selected.appliedDate)).getTime() + 86400000 * 2))}</div>
+                    <div className="timeline-date">{formatDate(addDays(selected.appliedDate, 2))}</div>
                     <div className="timeline-content">Application received and under review</div>
                   </div>
                 )}
                 {(selected.status === 'shortlisted' || selected.status === 'accepted') && (
                   <div className="timeline-item">
-                    <div className="timeline-date">{formatDate(new Date((selected.appliedDate?.toDate ? selected.appliedDate.toDate() : new Date(selected.appliedDate)).getTime() + 86400000 * 5))}</div>
+                    <div className="timeline-date">{formatDate(addDays(selected.appliedDate, 5))}</div>
                     <div className="timeline-content">Shortlisted for interview</div>
                   </div>
                 )}
                 {selected.status === 'accepted' && (
                   <div className="timeline-item">
-                    <div className="timeline-date">{formatDate(new Date((selected.appliedDate?.toDate ? selected.appliedDate.toDate() : new Date(selected.appliedDate)).getTime() + 86400000 * 10))}</div>
+                    <div className="timeline-date">{formatDate(addDays(selected.appliedDate, 10))}</div>
                     <div className="timeline-content">Offer extended - Accepted!</div>
                   </div>
                 )}

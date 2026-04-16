@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useInternships } from '../../hooks/useFirestore'
 import { formatDate } from '../../utils/date'
@@ -9,6 +9,12 @@ export default function InternBrowse() {
   const [locationFilter, setLocationFilter] = useState('all')
   const [selected, setSelected] = useState(null)
   const { data: internships } = useInternships()
+
+  useEffect(() => {
+    const onEsc = (e) => { if (e.key === 'Escape') setSelected(null) }
+    window.addEventListener('keydown', onEsc)
+    return () => window.removeEventListener('keydown', onEsc)
+  }, [])
 
   const filtered = internships.filter(job => {
     const matchSearch = job.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -61,11 +67,15 @@ export default function InternBrowse() {
             <div
               key={job.id}
               className="card"
+              role="button"
+              tabIndex={0}
+              aria-label={`View ${job.title} at ${job.company}`}
               style={{
                 cursor: 'pointer',
                 border: selected?.id === job.id ? '2px solid var(--nriva-primary)' : '2px solid transparent',
               }}
               onClick={() => setSelected(job)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(job) } }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                 <div>

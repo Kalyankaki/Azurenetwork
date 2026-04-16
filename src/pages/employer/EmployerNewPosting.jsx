@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { createInternship, GRADE_LEVELS } from '../../services/firestore'
 import { generateJobDescription } from '../../services/ai'
+import { isPastDate } from '../../utils/date'
 import Toast from '../../components/Toast'
 
 export default function EmployerNewPosting() {
@@ -11,6 +12,7 @@ export default function EmployerNewPosting() {
   const [toast, setToast] = useState(null)
   const [submitted, setSubmitted] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
+  const today = new Date().toISOString().split('T')[0]
 
   const [form, setForm] = useState({
     title: '',
@@ -82,6 +84,21 @@ export default function EmployerNewPosting() {
     // Validate grade level
     if (!form.gradeLevelMin) {
       setToast('Please select a minimum grade level')
+      return
+    }
+    // Validate grade level range
+    if (form.gradeLevelMax && GRADE_LEVELS.indexOf(form.gradeLevelMax) < GRADE_LEVELS.indexOf(form.gradeLevelMin)) {
+      setToast('Maximum grade level cannot be lower than minimum grade level')
+      return
+    }
+    // Validate deadline is not in the past
+    if (form.applicationDeadline && isPastDate(form.applicationDeadline)) {
+      setToast('Application deadline cannot be in the past')
+      return
+    }
+    // Validate start date is not before deadline
+    if (form.startDate && form.applicationDeadline && new Date(form.startDate) < new Date(form.applicationDeadline)) {
+      setToast('Start date should be on or after the application deadline')
       return
     }
     try {
@@ -277,7 +294,7 @@ export default function EmployerNewPosting() {
             </div>
             <div className="form-group">
               <label>Expected Start Date</label>
-              <input className="form-control" type="date" name="startDate" value={form.startDate} onChange={handleChange} />
+              <input className="form-control" type="date" name="startDate" min={today} value={form.startDate} onChange={handleChange} />
             </div>
           </div>
         </div>
@@ -364,7 +381,7 @@ export default function EmployerNewPosting() {
           </h2>
           <div className="form-group">
             <label>Application Deadline <span className="required">*</span></label>
-            <input className="form-control" type="date" name="applicationDeadline" value={form.applicationDeadline} onChange={handleChange} required />
+            <input className="form-control" type="date" name="applicationDeadline" min={today} value={form.applicationDeadline} onChange={handleChange} required />
           </div>
           <div className="form-group">
             <label>Additional Notes for Applicants</label>
