@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships, useApplications } from '../../hooks/useFirestore'
+import { formatDate } from '../../utils/date'
 
 export default function EmployerDashboard() {
   const { user } = useAuth()
@@ -29,7 +30,7 @@ export default function EmployerDashboard() {
         </div>
         <div className="stat-card">
           <div className="stat-label">Total Applicants</div>
-          <div className="stat-value">{myPostings.reduce((sum, p) => sum + p.applicants, 0)}</div>
+          <div className="stat-value">{myPostings.reduce((sum, p) => sum + (p.applicants || 0), 0)}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Shortlisted</div>
@@ -67,9 +68,9 @@ export default function EmployerDashboard() {
                     <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{job.company}</div>
                   </td>
                   <td><span className={`badge badge-${job.status}`}>{job.status}</span></td>
-                  <td>{job.applicants}</td>
-                  <td>{job.positions}</td>
-                  <td>{new Date(job.deadline).toLocaleDateString()}</td>
+                  <td>{job.applicants || 0}</td>
+                  <td>{job.positions || 0}</td>
+                  <td>{formatDate(job.deadline)}</td>
                 </tr>
               ))}
             </tbody>
@@ -85,7 +86,11 @@ export default function EmployerDashboard() {
           </Link>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {recentApps.map(app => (
+          {recentApps.length === 0 ? (
+            <p style={{ color: 'var(--nriva-text-light)', fontSize: 14, padding: '12px 0' }}>
+              No applications yet.
+            </p>
+          ) : recentApps.map(app => (
             <div key={app.id} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '12px 16px', border: '1px solid var(--nriva-border)', borderRadius: 8,
@@ -96,19 +101,19 @@ export default function EmployerDashboard() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontWeight: 600, color: 'var(--nriva-primary)', fontSize: 14,
                 }}>
-                  {app.applicantName.split(' ').map(n => n[0]).join('')}
+                  {(app.applicantName || '?').split(' ').map(n => n[0]).join('').slice(0, 2)}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{app.applicantName}</div>
-                  <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{app.internshipTitle}</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{app.applicantName || '—'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{app.internshipTitle || '—'}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span className={`badge badge-${app.status === 'shortlisted' ? 'open' : app.status === 'under_review' ? 'pending' : app.status === 'accepted' ? 'filled' : 'closed'}`}>
-                  {app.status.replace('_', ' ')}
+                  {(app.status || 'pending').replace('_', ' ')}
                 </span>
                 <span style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>
-                  {new Date(app.appliedDate).toLocaleDateString()}
+                  {formatDate(app.appliedDate)}
                 </span>
               </div>
             </div>
