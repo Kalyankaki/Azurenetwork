@@ -47,8 +47,18 @@ Return ONLY a JSON object with these keys (no markdown, no code fences):
   })
 
   if (!response.ok) {
-    const err = await response.text()
-    throw new Error(`AI generation failed: ${response.status} - ${err}`)
+    const errText = await response.text()
+    // Parse specific errors for better user messaging
+    if (response.status === 400 && errText.includes('credit balance')) {
+      throw new Error('Anthropic API credits depleted. Please add credits at https://console.anthropic.com/settings/billing')
+    }
+    if (response.status === 401) {
+      throw new Error('Invalid Anthropic API key. Check the VITE_ANTHROPIC_API_KEY environment variable in Vercel.')
+    }
+    if (response.status === 429) {
+      throw new Error('Rate limit reached. Please try again in a few seconds.')
+    }
+    throw new Error(`AI generation failed (${response.status}). ${errText.slice(0, 200)}`)
   }
 
   const data = await response.json()
