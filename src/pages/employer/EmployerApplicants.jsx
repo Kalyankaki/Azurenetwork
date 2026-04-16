@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
 import { useApplications } from '../../hooks/useFirestore'
 import { updateApplicationStatus } from '../../services/firestore'
+import { formatDate } from '../../utils/date'
 import Toast from '../../components/Toast'
 
 const statusOptions = ['pending', 'under_review', 'shortlisted', 'accepted', 'rejected']
@@ -23,7 +23,6 @@ const statusBadgeClass = {
 }
 
 export default function EmployerApplicants() {
-  // useAuth available for authenticated context
   const { data: applicants } = useApplications()
   const [selected, setSelected] = useState(null)
   const [toast, setToast] = useState(null)
@@ -32,8 +31,9 @@ export default function EmployerApplicants() {
 
   const filtered = applicants.filter(app => {
     const matchStatus = filterStatus === 'all' || app.status === filterStatus
-    const matchSearch = app.applicantName.toLowerCase().includes(search.toLowerCase()) ||
-      app.internshipTitle.toLowerCase().includes(search.toLowerCase())
+    const name = (app.applicantName || '').toLowerCase()
+    const title = (app.internshipTitle || '').toLowerCase()
+    const matchSearch = name.includes(search.toLowerCase()) || title.includes(search.toLowerCase())
     return matchStatus && matchSearch
   })
 
@@ -41,9 +41,9 @@ export default function EmployerApplicants() {
     try {
       await updateApplicationStatus(id, newStatus)
       setToast(`Applicant status updated to ${statusLabels[newStatus]}`)
-    if (selected?.id === id) {
-      setSelected({ ...selected, status: newStatus })
-    }
+      if (selected?.id === id) {
+        setSelected({ ...selected, status: newStatus })
+      }
     } catch (err) {
       setToast('Error: ' + err.message)
     }
@@ -54,7 +54,7 @@ export default function EmployerApplicants() {
       <div className="page-header">
         <h1>Applicants</h1>
         <span style={{ color: 'var(--nriva-text-light)', fontSize: 14 }}>
-          {filtered.length} applicants
+          {filtered.length} {filtered.length === 1 ? 'applicant' : 'applicants'}
         </span>
       </div>
 
@@ -80,14 +80,21 @@ export default function EmployerApplicants() {
               <tr>
                 <th>Applicant</th>
                 <th>Position</th>
-                <th>University</th>
-                <th>GPA</th>
+                <th>School</th>
+                <th>Grade Level</th>
                 <th>Applied</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: 40, color: 'var(--nriva-text-light)' }}>
+                    No applicants found.
+                  </td>
+                </tr>
+              )}
               {filtered.map(app => (
                 <tr key={app.id}>
                   <td>
@@ -97,21 +104,21 @@ export default function EmployerApplicants() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontWeight: 600, color: 'var(--nriva-primary)', fontSize: 13,
                       }}>
-                        {app.applicantName.split(' ').map(n => n[0]).join('')}
+                        {(app.applicantName || '?').split(' ').map(n => n[0]).join('').slice(0, 2)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 500, fontSize: 14 }}>{app.applicantName}</div>
-                        <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{app.email}</div>
+                        <div style={{ fontWeight: 500, fontSize: 14 }}>{app.applicantName || '—'}</div>
+                        <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{app.email || '—'}</div>
                       </div>
                     </div>
                   </td>
-                  <td style={{ fontSize: 13 }}>{app.internshipTitle}</td>
-                  <td style={{ fontSize: 13 }}>{app.university}</td>
-                  <td style={{ fontSize: 13, fontWeight: 500 }}>{app.gpa}</td>
-                  <td style={{ fontSize: 13 }}>{new Date(app.appliedDate).toLocaleDateString()}</td>
+                  <td style={{ fontSize: 13 }}>{app.internshipTitle || '—'}</td>
+                  <td style={{ fontSize: 13 }}>{app.school || app.university || '—'}</td>
+                  <td style={{ fontSize: 13 }}>{app.gradeLevel || '—'}</td>
+                  <td style={{ fontSize: 13 }}>{formatDate(app.appliedDate)}</td>
                   <td>
-                    <span className={`badge badge-${statusBadgeClass[app.status]}`}>
-                      {statusLabels[app.status]}
+                    <span className={`badge badge-${statusBadgeClass[app.status] || 'pending'}`}>
+                      {statusLabels[app.status] || 'Pending'}
                     </span>
                   </td>
                   <td>
@@ -136,7 +143,7 @@ export default function EmployerApplicants() {
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650 }}>
             <div className="modal-header">
               <h2>Applicant Profile</h2>
-              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setSelected(null)} aria-label="Close" style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>✕</button>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
@@ -145,12 +152,12 @@ export default function EmployerApplicants() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontWeight: 700, color: 'var(--nriva-primary)', fontSize: 20,
                 }}>
-                  {selected.applicantName.split(' ').map(n => n[0]).join('')}
+                  {(selected.applicantName || '?').split(' ').map(n => n[0]).join('').slice(0, 2)}
                 </div>
                 <div>
-                  <h3 style={{ fontSize: 20, fontWeight: 600 }}>{selected.applicantName}</h3>
+                  <h3 style={{ fontSize: 20, fontWeight: 600 }}>{selected.applicantName || '—'}</h3>
                   <p style={{ color: 'var(--nriva-text-light)', fontSize: 14 }}>
-                    Applied for: {selected.internshipTitle}
+                    Applied for: {selected.internshipTitle || '—'}
                   </p>
                 </div>
               </div>
@@ -162,43 +169,68 @@ export default function EmployerApplicants() {
               }}>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Email</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.email}</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.email || '—'}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Phone</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.phone}</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.phone || '—'}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>University</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.university}</div>
+                  <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>School</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.school || selected.university || '—'}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Major</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.major}</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.major || '—'}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Graduation</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.graduationYear}</div>
+                  <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Grade Level</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.gradeLevel || '—'}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>GPA</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.gpa}</div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.gpa || '—'}</div>
                 </div>
+                {selected.chapter && (
+                  <div>
+                    <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>NRIVA Chapter</div>
+                    <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.chapter}</div>
+                  </div>
+                )}
+                {selected.availability && (
+                  <div>
+                    <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Availability</div>
+                    <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.availability.replace('_', ' ')}</div>
+                  </div>
+                )}
               </div>
 
-              <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Cover Letter</h4>
-              <p style={{ fontSize: 14, color: 'var(--nriva-text-light)', lineHeight: 1.6, marginBottom: 20 }}>
-                {selected.coverLetter}
-              </p>
+              {selected.skills && (
+                <>
+                  <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Skills</h4>
+                  <p style={{ fontSize: 14, color: 'var(--nriva-text-light)', lineHeight: 1.6, marginBottom: 16 }}>
+                    {selected.skills}
+                  </p>
+                </>
+              )}
 
-              <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Resume</h4>
-              <div style={{
-                padding: '12px 16px', border: '1px solid var(--nriva-border)', borderRadius: 8,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
-                <span style={{ fontSize: 14 }}>📎 {selected.resume}</span>
-                <button className="btn btn-sm btn-outline">Download</button>
-              </div>
+              {selected.experience && (
+                <>
+                  <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Prior Experience</h4>
+                  <p style={{ fontSize: 14, color: 'var(--nriva-text-light)', lineHeight: 1.6, marginBottom: 16 }}>
+                    {selected.experience}
+                  </p>
+                </>
+              )}
+
+              {selected.whyInterested && (
+                <>
+                  <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Why Interested</h4>
+                  <p style={{ fontSize: 14, color: 'var(--nriva-text-light)', lineHeight: 1.6, marginBottom: 20 }}>
+                    {selected.whyInterested}
+                  </p>
+                </>
+              )}
 
               <div style={{ marginTop: 24 }}>
                 <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Update Status</h4>
