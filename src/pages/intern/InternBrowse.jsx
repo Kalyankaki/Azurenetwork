@@ -20,9 +20,11 @@ export default function InternBrowse() {
     const matchSearch = job.title.toLowerCase().includes(search.toLowerCase()) ||
       job.company.toLowerCase().includes(search.toLowerCase()) ||
       job.skills.some(s => s.toLowerCase().includes(search.toLowerCase()))
+    // Only show approved internships (open/closed/filled), not pending or rejected
+    const isVisible = job.status === 'open' || job.status === 'closed' || job.status === 'filled'
     const matchType = typeFilter === 'all' || job.type === typeFilter
     const matchLocation = locationFilter === 'all' || job.location === locationFilter
-    return matchSearch && matchType && matchLocation
+    return isVisible && matchSearch && matchType && matchLocation
   })
 
   return (
