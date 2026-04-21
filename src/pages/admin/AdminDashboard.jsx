@@ -1,17 +1,21 @@
 import { Link } from 'react-router-dom'
-import { useInternships, useApplications, useMessages } from '../../hooks/useFirestore'
+import { useInternships, useApplications, useMessages, useUsers } from '../../hooks/useFirestore'
+import { INTERNSHIP_STATUSES } from '../../services/firestore'
 
 export default function AdminDashboard() {
   const { data: internships } = useInternships()
   const { data: applications } = useApplications()
   const { data: messages } = useMessages()
+  const { data: users } = useUsers()
 
   const openPositions = internships.filter(i => i.status === 'open').length
+  const pendingApprovals = internships.filter(i => i.status === INTERNSHIP_STATUSES.PENDING_APPROVAL).length
   const totalApplicants = applications.length
   const shortlisted = applications.filter(a => a.status === 'shortlisted').length
   const accepted = applications.filter(a => a.status === 'accepted').length
   const openMessages = messages.filter(m => m.status === 'open').length
   const resolvedMessages = messages.filter(m => m.status === 'resolved').length
+  const pendingUsers = users.filter(u => !u.roles || u.roles.length === 0).length
 
   return (
     <div>
@@ -54,6 +58,66 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Pending approval banner */}
+      {pendingApprovals > 0 && (
+        <Link to="/admin/internships" style={{ textDecoration: 'none' }}>
+          <div className="card" style={{
+            marginBottom: 16, padding: '16px 20px',
+            border: '2px solid #fbbf24', background: '#fffbeb',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 24 }}>⏳</span>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: '#92400e' }}>
+                    Internships Awaiting Approval
+                  </div>
+                  <div style={{ fontSize: 13, color: '#b45309' }}>
+                    {pendingApprovals} posting{pendingApprovals === 1 ? '' : 's'} need review before students can see them
+                  </div>
+                </div>
+              </div>
+              <span style={{
+                background: '#f59e0b', color: 'white', padding: '4px 12px',
+                borderRadius: 20, fontSize: 13, fontWeight: 700,
+              }}>
+                {pendingApprovals} pending
+              </span>
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* Pending users banner */}
+      {pendingUsers > 0 && (
+        <Link to="/admin/users" style={{ textDecoration: 'none' }}>
+          <div className="card" style={{
+            marginBottom: 16, padding: '16px 20px',
+            border: '2px solid #a78bfa', background: '#f5f3ff',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 24 }}>👤</span>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: '#5b21b6' }}>
+                    Users Awaiting Role Assignment
+                  </div>
+                  <div style={{ fontSize: 13, color: '#6d28d9' }}>
+                    {pendingUsers} user{pendingUsers === 1 ? '' : 's'} signed up but have no roles assigned yet
+                  </div>
+                </div>
+              </div>
+              <span style={{
+                background: '#7c3aed', color: 'white', padding: '4px 12px',
+                borderRadius: 20, fontSize: 13, fontWeight: 700,
+              }}>
+                {pendingUsers} pending
+              </span>
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Messages/Issues Summary */}
       {(openMessages > 0 || resolvedMessages > 0) && (

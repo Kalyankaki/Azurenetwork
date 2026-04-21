@@ -7,14 +7,25 @@ import Toast from '../../components/Toast'
 const ALL_ROLES = ['intern', 'employer', 'admin']
 
 export default function AdminUsers() {
-  const { data: users, loading } = useUsers()
+  const { user: currentUser } = useAuth()
+  const { data: users, loading, error, retry } = useUsers()
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
   const [confirmAction, setConfirmAction] = useState(null)
   const [coordinatorModal, setCoordinatorModal] = useState(null)
   const [coordForm, setCoordForm] = useState({ name: '', email: '', phone: '' })
 
-  const filtered = users.filter(u =>
+  // Sort: pending users (no roles) first, then by createdAt desc
+  const sorted = [...users].sort((a, b) => {
+    const aHasRoles = (a.roles || []).length > 0 || isSuperAdmin(a.email)
+    const bHasRoles = (b.roles || []).length > 0 || isSuperAdmin(b.email)
+    if (aHasRoles !== bHasRoles) return aHasRoles ? 1 : -1
+    const aTime = a.createdAt?.seconds || 0
+    const bTime = b.createdAt?.seconds || 0
+    return bTime - aTime
+  })
+
+  const filtered = sorted.filter(u =>
     u.email?.toLowerCase().includes(search.toLowerCase()) ||
     u.displayName?.toLowerCase().includes(search.toLowerCase())
   )
@@ -26,7 +37,7 @@ export default function AdminUsers() {
       ? currentRoles.filter(r => r !== role)
       : [...currentRoles, role]
     try {
-      await updateUserRoles(user.id, newRoles)
+      await updateUserRoles(user.id, newRoles, currentUser?.email || '')
       setToast(`Updated roles for ${user.displayName || user.email}`)
     } catch (err) {
       setToast(`Error: ${err.message}`)
@@ -86,6 +97,21 @@ export default function AdminUsers() {
         <input className="search-input" placeholder="Search by name or email..."
           value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
+
+      {error && (
+        <div style={{
+          background: '#fef2f2', border: '1px solid #fecaca',
+          borderRadius: 12, padding: '16px 20px', marginBottom: 16,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+        }}>
+          <div style={{ fontSize: 13, color: '#b91c1c' }}>
+            <strong>Failed to load users:</strong> {error}
+          </div>
+          <button className="btn btn-sm btn-outline" onClick={retry} style={{ whiteSpace: 'nowrap' }}>
+            Retry
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="empty-state"><p>Loading users...</p></div>
