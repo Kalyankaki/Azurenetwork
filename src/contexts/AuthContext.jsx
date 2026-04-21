@@ -1,10 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { onAuthChange, signInWithGoogle, logOut } from '../firebase'
+import { onAuthChange, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, logOut } from '../firebase'
 import { createUser, getUser, getUserRoles, isSuperAdmin } from '../services/firestore'
 
 const AuthContext = createContext(null)
 
-// Timeout for Firestore operations during auth - don't block sign-in indefinitely
 const AUTH_FIRESTORE_TIMEOUT = 6000
 
 function withTimeout(promise, ms, fallback = null) {
@@ -31,10 +30,8 @@ export function AuthProvider({ children }) {
           photoURL: firebaseUser.photoURL,
           provider: firebaseUser.providerData[0]?.providerId || 'unknown',
         }
-        // Set user immediately - don't wait for Firestore
         setUser(userData)
 
-        // Apply super admin roles immediately (synchronous check)
         const isSuper = isSuperAdmin(firebaseUser.email)
         if (isSuper) {
           setAvailableRoles(['intern', 'employer', 'admin'])
@@ -44,28 +41,22 @@ export function AuthProvider({ children }) {
           }
         }
 
-        // Stop showing "loading" immediately - user is authenticated
         setLoading(false)
 
-        // Fetch Firestore user data in background (non-blocking)
         try {
           let firestoreUser = await withTimeout(getUser(firebaseUser.uid), AUTH_FIRESTORE_TIMEOUT)
-
           if (!firestoreUser) {
-            // Try to create user doc (best-effort, also with timeout)
             try {
               await withTimeout(createUser(firebaseUser.uid, userData), AUTH_FIRESTORE_TIMEOUT)
             } catch (e) {
-              console.warn('createUser failed (non-blocking):', e?.message)
+              console.warn('createUser failed:', e?.message)
             }
             firestoreUser = { roles: [] }
           }
-
           const roles = getUserRoles(firebaseUser.email, firestoreUser.roles || [])
           setAvailableRoles(roles)
           setUserCoordinator(firestoreUser.coordinator || null)
 
-          // Restore last active role if available
           const savedRole = localStorage.getItem(`nriva_role_${firebaseUser.uid}`)
           if (savedRole && roles.includes(savedRole)) {
             setActiveRole(savedRole)
@@ -73,8 +64,7 @@ export function AuthProvider({ children }) {
             setActiveRole(roles[0])
           }
         } catch (err) {
-          console.warn('Firestore profile load failed (non-blocking):', err?.message)
-          // Super admin already set above; otherwise leave empty roles
+          console.warn('Firestore profile load failed:', err?.message)
         }
       } else {
         setUser(null)
@@ -88,11 +78,10 @@ export function AuthProvider({ children }) {
     return () => unsubscribe()
   }, [])
 
-  const loginWithGoogle = async () => {
-    const result = await signInWithGoogle()
-    // onAuthStateChanged handles the rest
-    return result
-  }
+  const loginWithGoogle = async () => signInWithGoogle()
+  const loginWithEmail = async (email, password) => signInWithEmail(email, password)
+  const signUp = async (email, password, displayName) => signUpWithEmail(email, password, displayName)
+  const requestPasswordReset = async (email) => resetPassword(email)
 
   const selectRole = useCallback((newRole) => {
     if (availableRoles.includes(newRole)) {
@@ -133,6 +122,9 @@ export function AuthProvider({ children }) {
       loading,
       userCoordinator,
       loginWithGoogle,
+      loginWithEmail,
+      signUp,
+      requestPasswordReset,
       selectRole,
       refreshRoles,
       logout,

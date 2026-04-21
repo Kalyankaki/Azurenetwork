@@ -1,12 +1,11 @@
 import { db } from '../firebase'
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  addDoc, query, where, orderBy, onSnapshot, serverTimestamp,
+  addDoc, query, where, orderBy, onSnapshot, serverTimestamp, increment, limit,
 } from 'firebase/firestore'
 
 const SUPER_ADMIN_EMAIL = 'kalyank.123@gmail.com'
 
-// Grade levels for validation
 export const GRADE_LEVELS = [
   '10th Grade',
   '11th Grade',
@@ -16,6 +15,45 @@ export const GRADE_LEVELS = [
   'College Junior',
   'College Senior',
 ]
+
+// Internship statuses
+export const INTERNSHIP_STATUSES = {
+  PENDING_APPROVAL: 'pending_approval',
+  OPEN: 'open',
+  CLOSED: 'closed',
+  FILLED: 'filled',
+  REJECTED: 'rejected',
+}
+
+// ============ ACTIVITY LOG ============
+
+export async function logActivity(action, data = {}) {
+  try {
+    await addDoc(collection(db, 'activity'), {
+      action,
+      ...data,
+      createdAt: serverTimestamp(),
+    })
+  } catch (err) {
+    console.warn('Failed to log activity:', err?.message)
+  }
+}
+
+export function subscribeActivity(onData, opts = {}, onError) {
+  const q = query(
+    collection(db, 'activity'),
+    orderBy('createdAt', 'desc'),
+    limit(opts.limit || 50)
+  )
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    (err) => {
+      console.error('subscribeActivity error:', err)
+      if (onError) onError(err)
+    }
+  )
+}
 
 // ============ USERS ============
 
@@ -34,6 +72,7 @@ export async function createUser(uid, data) {
     updatedAt: serverTimestamp(),
   }
   await setDoc(userRef, userData)
+  logActivity('user_signup', { userUid: uid, email: data.email, displayName: data.displayName })
   return userData
 }
 
@@ -42,12 +81,14 @@ export async function getUser(uid) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null
 }
 
-export async function updateUserRoles(uid, roles) {
+export async function updateUserRoles(uid, roles, actorEmail = '') {
   await updateDoc(doc(db, 'users', uid), { roles, updatedAt: serverTimestamp() })
+  logActivity('roles_changed', { userUid: uid, newRoles: roles, actorEmail })
 }
 
 export async function updateUserCoordinator(uid, coordinator) {
   await updateDoc(doc(db, 'users', uid), { coordinator, updatedAt: serverTimestamp() })
+  logActivity('coordinator_assigned', { userUid: uid, coordinator })
 }
 
 export async function getAllUsers() {
@@ -67,30 +108,69 @@ export function isSuperAdmin(email) {
 // ============ INTERNSHIPS ============
 
 export async function createInternship(data) {
+  // New internships go to pending_approval unless super admin is posting
   const ref = await addDoc(collection(db, 'internships'), {
-    ...data, status: data.status || 'open',
-    createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    ...data,
+    status: data.status || INTERNSHIP_STATUSES.PENDING_APPROVAL,
+    applicants: 0,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  logActivity('internship_created', {
+    internshipId: ref.id,
+    title: data.title,
+    company: data.company,
+    employerUid: data.employerUid,
   })
   return ref.id
 }
 
 export async function updateInternship(id, data) {
   await updateDoc(doc(db, 'internships', id), { ...data, updatedAt: serverTimestamp() })
+  if (data.status) {
+    logActivity('internship_status_changed', { internshipId: id, newStatus: data.status })
+  }
+}
+
+export async function approveInternship(id, approverEmail = '') {
+  await updateDoc(doc(db, 'internships', id), {
+    status: INTERNSHIP_STATUSES.OPEN,
+    approvedAt: serverTimestamp(),
+    approvedBy: approverEmail,
+    updatedAt: serverTimestamp(),
+  })
+  logActivity('internship_approved', { internshipId: id, approverEmail })
+}
+
+export async function rejectInternship(id, reason = '', rejecterEmail = '') {
+  await updateDoc(doc(db, 'internships', id), {
+    status: INTERNSHIP_STATUSES.REJECTED,
+    rejectionReason: reason,
+    rejectedBy: rejecterEmail,
+    updatedAt: serverTimestamp(),
+  })
+  logActivity('internship_rejected', { internshipId: id, rejecterEmail, reason })
 }
 
 export async function deleteInternship(id) {
   await deleteDoc(doc(db, 'internships', id))
+  logActivity('internship_deleted', { internshipId: id })
 }
 
-export function subscribeInternships(callback, filters = {}) {
+export function subscribeInternships(onData, filters = {}, onError) {
   let q = collection(db, 'internships')
   const constraints = []
   if (filters.employerUid) constraints.push(where('employerUid', '==', filters.employerUid))
   if (filters.status) constraints.push(where('status', '==', filters.status))
   if (constraints.length > 0) q = query(q, ...constraints)
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-  })
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    (err) => {
+      console.error('subscribeInternships error:', err)
+      if (onError) onError(err)
+    }
+  )
 }
 
 // ============ APPLICATIONS ============
@@ -99,22 +179,46 @@ export async function createApplication(data) {
   const ref = await addDoc(collection(db, 'applications'), {
     ...data, status: 'pending', appliedDate: serverTimestamp(),
   })
+  // Auto-increment applicant count on the internship
+  if (data.internshipId) {
+    try {
+      await updateDoc(doc(db, 'internships', data.internshipId), {
+        applicants: increment(1),
+        updatedAt: serverTimestamp(),
+      })
+    } catch (err) {
+      console.warn('Failed to increment applicant count:', err?.message)
+    }
+  }
+  logActivity('application_submitted', {
+    applicationId: ref.id,
+    internshipId: data.internshipId,
+    internshipTitle: data.internshipTitle,
+    applicantUid: data.applicantUid,
+    applicantName: data.applicantName,
+  })
   return ref.id
 }
 
-export async function updateApplicationStatus(id, status) {
+export async function updateApplicationStatus(id, status, actorEmail = '') {
   await updateDoc(doc(db, 'applications', id), { status, updatedAt: serverTimestamp() })
+  logActivity('application_status_changed', { applicationId: id, newStatus: status, actorEmail })
 }
 
-export function subscribeApplications(callback, filters = {}) {
+export function subscribeApplications(onData, filters = {}, onError) {
   let q = collection(db, 'applications')
   const constraints = []
   if (filters.applicantUid) constraints.push(where('applicantUid', '==', filters.applicantUid))
   if (filters.internshipId) constraints.push(where('internshipId', '==', filters.internshipId))
   if (constraints.length > 0) q = query(q, ...constraints)
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-  })
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    (err) => {
+      console.error('subscribeApplications error:', err)
+      if (onError) onError(err)
+    }
+  )
 }
 
 // ============ MESSAGES (Support/Issues) ============
@@ -126,6 +230,12 @@ export async function createMessage(data) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
+  logActivity('message_submitted', {
+    messageId: ref.id,
+    subject: data.subject,
+    category: data.category,
+    senderUid: data.senderUid,
+  })
   return ref.id
 }
 
@@ -134,25 +244,36 @@ export async function updateMessageStatus(id, status, adminNote = '') {
   if (adminNote) updates.adminNote = adminNote
   if (status === 'resolved') updates.resolvedAt = serverTimestamp()
   await updateDoc(doc(db, 'messages', id), updates)
+  logActivity('message_status_changed', { messageId: id, newStatus: status })
 }
 
-export function subscribeMessages(callback, filters = {}) {
+export function subscribeMessages(onData, filters = {}, onError) {
   let q = collection(db, 'messages')
   const constraints = []
   if (filters.senderUid) constraints.push(where('senderUid', '==', filters.senderUid))
   if (filters.status) constraints.push(where('status', '==', filters.status))
   if (constraints.length > 0) q = query(q, ...constraints)
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-  })
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    (err) => {
+      console.error('subscribeMessages error:', err)
+      if (onError) onError(err)
+    }
+  )
 }
 
 // ============ ADMIN USERS ============
 
-export function subscribeUsers(callback) {
-  return onSnapshot(collection(db, 'users'), (snap) => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-  })
+export function subscribeUsers(onData, _filters, onError) {
+  return onSnapshot(
+    collection(db, 'users'),
+    (snap) => onData(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    (err) => {
+      console.error('subscribeUsers error:', err)
+      if (onError) onError(err)
+    }
+  )
 }
 
 export { SUPER_ADMIN_EMAIL }
