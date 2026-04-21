@@ -22,6 +22,7 @@ const navItems = {
     { path: '/admin/messages', label: 'Messages', icon: '✉️' },
     { path: '/admin/reports', label: 'Reports', icon: '📈' },
     { path: '/admin/users', label: 'Manage Users', icon: '👤' },
+    { path: '/admin/activity', label: 'Activity Log', icon: '📜' },
   ],
 }
 

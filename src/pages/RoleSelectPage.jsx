@@ -27,7 +27,7 @@ const roleConfig = [
 ]
 
 export default function RoleSelectPage() {
-  const { user, availableRoles, selectRole } = useAuth()
+  const { user, availableRoles, selectRole, logout } = useAuth()
   const navigate = useNavigate()
 
   const visibleRoles = roleConfig.filter(r => availableRoles.includes(r.id))
@@ -68,13 +68,23 @@ export default function RoleSelectPage() {
           <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1a237e', marginBottom: 12 }}>
             Account Pending Approval
           </h2>
-          <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+          <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 8 }}>
             Your account has been created successfully. An NRIVA administrator
             will review your account and assign roles shortly.
           </p>
-          <Link to="/" style={{ color: '#1a237e', fontSize: 14, fontWeight: 500 }}>
-            Return to Home
-          </Link>
+          <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 24 }}>
+            Contact: admin@nriva.org
+          </p>
+          <button
+            onClick={async () => { await logout(); navigate('/') }}
+            style={{
+              background: '#1a237e', color: 'white', border: 'none',
+              padding: '10px 24px', borderRadius: 8, fontSize: 14,
+              fontWeight: 500, cursor: 'pointer',
+            }}
+          >
+            Sign Out
+          </button>
         </div>
       </div>
     )

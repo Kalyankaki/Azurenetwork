@@ -232,6 +232,20 @@ export default function EmployerApplicants() {
                 </>
               )}
 
+              {selected.resumeUrl && (
+                <>
+                  <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Resume</h4>
+                  <a href={selected.resumeUrl} target="_blank" rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      padding: '8px 14px', background: '#e8eaf6', color: 'var(--nriva-primary)',
+                      borderRadius: 8, fontSize: 13, fontWeight: 500, marginBottom: 16,
+                    }}>
+                    📎 {selected.resumeName || 'Download Resume'}
+                  </a>
+                </>
+              )}
+
               <div style={{ marginTop: 24 }}>
                 <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Update Status</h4>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships } from '../../hooks/useFirestore'
 import { createApplication, GRADE_LEVELS } from '../../services/firestore'
+import { uploadResume } from '../../firebase'
 import Toast from '../../components/Toast'
 
 const chapters = [
@@ -23,6 +24,8 @@ export default function InternApply() {
   const internship = internships.find(i => String(i.id) === String(id))
   const [toast, setToast] = useState(null)
   const [submitted, setSubmitted] = useState(false)
+  const [resumeFile, setResumeFile] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
 
   const [form, setForm] = useState({
     firstName: '',
@@ -65,7 +68,18 @@ export default function InternApply() {
         return
       }
     }
+    setSubmitting(true)
     try {
+      let resumeData = null
+      if (resumeFile) {
+        try {
+          resumeData = await uploadResume(resumeFile, user.uid)
+        } catch (err) {
+          setToast('Resume upload failed: ' + err.message)
+          setSubmitting(false)
+          return
+        }
+      }
       await createApplication({
         internshipId: id,
         internshipTitle: internship.title,
@@ -84,11 +98,14 @@ export default function InternApply() {
         availability: form.availability,
         referral: form.referral,
         chapter: form.chapter,
+        resumeUrl: resumeData?.url || null,
+        resumeName: resumeData?.name || null,
       })
       setSubmitted(true)
       setToast('Application submitted successfully!')
       setTimeout(() => navigate('/intern/applications'), 2500)
     } catch (err) {
+      setSubmitting(false)
       setToast('Error: ' + err.message)
     }
   }
@@ -233,6 +250,17 @@ export default function InternApply() {
             <textarea className="form-control" name="experience" value={form.experience} onChange={handleChange}
               placeholder="Describe any relevant experience, school projects, clubs, or extracurricular activities..." />
           </div>
+          <div className="form-group">
+            <label>Resume / CV (PDF, DOC, DOCX - max 5MB)</label>
+            <input className="form-control" type="file" accept=".pdf,.doc,.docx"
+              onChange={(e) => setResumeFile(e.target.files[0] || null)}
+              style={{ padding: 8 }} />
+            {resumeFile && (
+              <div style={{ fontSize: 12, color: 'var(--nriva-success)', marginTop: 4 }}>
+                ✓ Selected: {resumeFile.name} ({(resumeFile.size / 1024).toFixed(1)} KB)
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Additional Info */}
@@ -271,7 +299,9 @@ export default function InternApply() {
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <button type="button" className="btn btn-outline" onClick={() => navigate('/intern/browse')}>Cancel</button>
-          <button type="submit" className="btn btn-primary btn-lg">Submit Application</button>
+          <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
+            {submitting ? 'Submitting...' : 'Submit Application'}
+          </button>
         </div>
       </form>
 
