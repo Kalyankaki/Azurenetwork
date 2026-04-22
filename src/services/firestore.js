@@ -25,6 +25,8 @@ export const INTERNSHIP_STATUSES = {
   REJECTED: 'rejected',
 }
 
+export const MAX_INTERN_APPLICATIONS = 4
+
 // ============ ACTIVITY LOG ============
 
 export async function logActivity(action, data = {}) {
@@ -68,12 +70,49 @@ export async function createUser(uid, data) {
     photoURL: data.photoURL || '',
     roles: [],
     coordinator: null,
+    onboarded: false,
+    nrivaMembership: '',
+    requestedRole: '',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }
   await setDoc(userRef, userData)
   logActivity('user_signup', { userUid: uid, email: data.email, displayName: data.displayName })
   return userData
+}
+
+export async function onboardUser(uid, { requestedRole, nrivaMembership, displayName }) {
+  const updates = {
+    onboarded: true,
+    requestedRole,
+    nrivaMembership: nrivaMembership || '',
+    updatedAt: serverTimestamp(),
+  }
+  if (displayName) updates.displayName = displayName
+  // Intern role is auto-approved
+  if (requestedRole === 'intern') {
+    updates.roles = ['intern']
+  }
+  await updateDoc(doc(db, 'users', uid), updates)
+  logActivity('user_onboarded', { userUid: uid, requestedRole, nrivaMembership })
+  return requestedRole === 'intern' ? ['intern'] : []
+}
+
+export async function getApplicationCount(applicantUid) {
+  const q = query(collection(db, 'applications'), where('applicantUid', '==', applicantUid))
+  const snap = await getDocs(q)
+  return snap.size
+}
+
+export async function sendAdminNotification(data) {
+  // Store as a notification doc - can be picked up by a Cloud Function to send email
+  await addDoc(collection(db, 'notifications'), {
+    to: SUPER_ADMIN_EMAIL,
+    type: data.type || 'new_signup',
+    ...data,
+    sent: false,
+    createdAt: serverTimestamp(),
+  })
 }
 
 export async function getUser(uid) {
