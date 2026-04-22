@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships, useApplications } from '../../hooks/useFirestore'
+import { MAX_INTERN_APPLICATIONS } from '../../services/firestore'
 import { formatDate } from '../../utils/date'
 
 export default function InternDashboard() {
@@ -9,6 +10,7 @@ export default function InternDashboard() {
   const { data: allInternships } = useInternships()
   const myApplications = allApplications.slice(0, 3)
   const recommended = allInternships.filter(i => i.status === 'open').slice(0, 3)
+  const remainingApps = Math.max(0, MAX_INTERN_APPLICATIONS - allApplications.length)
 
   return (
     <div>
@@ -27,7 +29,10 @@ export default function InternDashboard() {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Applications Submitted</div>
-          <div className="stat-value">{allApplications.length}</div>
+          <div className="stat-value">{allApplications.length} <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--nriva-text-light)' }}>/ {MAX_INTERN_APPLICATIONS}</span></div>
+          <div style={{ fontSize: 12, color: remainingApps === 0 ? 'var(--nriva-danger)' : 'var(--nriva-text-light)', marginTop: 4 }}>
+            {remainingApps === 0 ? 'Maximum reached' : `${remainingApps} remaining`}
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Under Review</div>

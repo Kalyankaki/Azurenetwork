@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships } from '../../hooks/useFirestore'
-import { createApplication, GRADE_LEVELS } from '../../services/firestore'
+import { createApplication, getApplicationCount, GRADE_LEVELS, MAX_INTERN_APPLICATIONS } from '../../services/firestore'
 import { uploadResume } from '../../firebase'
 import Toast from '../../components/Toast'
 
@@ -57,6 +57,16 @@ export default function InternApply() {
     if (!form.gradeLevel) {
       setToast('Please select your current grade level')
       return
+    }
+    // Check application limit
+    try {
+      const count = await getApplicationCount(user.uid)
+      if (count >= MAX_INTERN_APPLICATIONS) {
+        setToast(`You have reached the maximum of ${MAX_INTERN_APPLICATIONS} applications. Please withdraw an existing application before applying to new positions.`)
+        return
+      }
+    } catch {
+      // Continue if check fails
     }
     // Validate grade level against internship requirements
     if (internship?.gradeLevelMin) {
