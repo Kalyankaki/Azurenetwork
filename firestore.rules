@@ -39,5 +39,11 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update, delete: if false;
     }
+    match /notifications/{docId} {
+      allow read: if isAdmin();
+      allow create: if request.auth != null;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
   }
 }
