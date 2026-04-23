@@ -75,7 +75,7 @@ export default function HomePage() {
         alignItems: 'center', justifyContent: 'center',
         padding: '40px 20px', textAlign: 'center',
       }}>
-        <img src="/nriva-logo.svg" alt="NRIVA"
+        <img src="/NRIVAYouthLogo.jpg" alt="NRIVA"
           style={{ width: 120, height: 120, objectFit: 'contain', marginBottom: 24 }}
           onError={(e) => { e.target.style.display = 'none' }} />
 

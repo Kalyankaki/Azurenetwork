@@ -74,7 +74,7 @@ export default function Layout({ role }) {
       }}>
         <div style={{ padding: '20px 16px', borderBottom: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src="/nriva-logo.svg" alt="NRIVA"
+            <img src="/NRIVAYouthLogo.jpg" alt="NRIVA"
               style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain', flexShrink: 0, background: 'rgba(255,255,255,0.9)', padding: 2 }}
               onError={(e) => { e.target.outerHTML = '<div style="width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;color:white">NV</div>' }}
             />

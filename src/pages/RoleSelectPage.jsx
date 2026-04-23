@@ -68,7 +68,7 @@ export default function RoleSelectPage() {
       alignItems: 'center', justifyContent: 'center', padding: 20,
     }}>
       <div style={{ textAlign: 'center', marginBottom: 32, color: 'white' }}>
-        <img src="/nriva-logo.svg" alt="NRIVA"
+        <img src="/NRIVAYouthLogo.jpg" alt="NRIVA"
           style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 16 }}
           onError={(e) => { e.target.style.display = 'none' }} />
         <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>
@@ -171,7 +171,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
         maxWidth: 520, width: '100%',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <img src="/nriva-logo.svg" alt="NRIVA"
+          <img src="/NRIVAYouthLogo.jpg" alt="NRIVA"
             style={{ width: 60, height: 60, objectFit: 'contain', marginBottom: 12 }}
             onError={(e) => { e.target.style.display = 'none' }} />
           <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1a237e', marginBottom: 4 }}>
