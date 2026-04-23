@@ -80,6 +80,31 @@ export default function HomePage() {
       background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
       display: 'flex', flexDirection: 'column',
     }}>
+      {/* Top brand bar */}
+      <div style={{
+        background: 'rgba(0,0,0,0.25)', borderBottom: '1px solid rgba(255,255,255,0.08)',
+        padding: '10px 20px', display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src="/NRIVAYouthLogo.jpg" alt="NRIVA"
+            style={{ width: 28, height: 28, objectFit: 'contain' }}
+            onError={(e) => { e.target.style.display = 'none' }} />
+          <span style={{ color: 'white', fontSize: 13, fontWeight: 600, letterSpacing: 0.3 }}>
+            NRI Vasavi Association &middot; Internship Program
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12 }}>
+          <a href="https://nriva.org" target="_blank" rel="noopener noreferrer"
+            style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none' }}>nriva.org</a>
+          <a href="https://nriva.org/donate/" target="_blank" rel="noopener noreferrer"
+            style={{
+              color: '#1a237e', background: '#ffa040', padding: '6px 12px',
+              borderRadius: 6, fontWeight: 600, textDecoration: 'none',
+            }}>Donate</a>
+        </div>
+      </div>
+
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
@@ -93,24 +118,46 @@ export default function HomePage() {
           display: 'inline-block', background: 'rgba(255,111,0,0.2)', color: '#ffa040',
           padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, marginBottom: 20,
         }}>
-          NRI Vasavi Association, USA
+          NRI Vasavi Association, USA &middot; 501(c)(3) Non-Profit
         </div>
 
         <h1 style={{
           color: 'white', fontSize: 'clamp(28px, 5vw, 44px)',
-          fontWeight: 800, lineHeight: 1.2, marginBottom: 12, maxWidth: 700,
+          fontWeight: 800, lineHeight: 1.2, marginBottom: 12, maxWidth: 760,
         }}>
-          Welcome to the New and Improved<br />
-          <span style={{ color: '#ffa040' }}>2026 NRIVA Internship Program</span>
+          Connecting to Serve.<br />
+          <span style={{ color: '#ffa040' }}>Transforming Lives through the 2026 NRIVA Internship Program.</span>
         </h1>
 
         <p style={{
-          color: 'rgba(255,255,255,0.7)', fontSize: 16, lineHeight: 1.6,
-          maxWidth: 500, margin: '0 auto 32px',
+          color: 'rgba(255,255,255,0.78)', fontSize: 16, lineHeight: 1.6,
+          maxWidth: 620, margin: '0 auto 20px',
         }}>
-          Connecting talent with opportunity. Browse internships, post positions,
-          and manage the program — all in one place.
+          Rooted in our mission to uplift the Vasavi community worldwide, this program
+          pairs talented students with purpose-driven employers &mdash; so the next generation
+          learns, leads, and gives back.
         </p>
+
+        {/* Values banner */}
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10,
+          marginBottom: 28, maxWidth: 640,
+        }}>
+          {[
+            { label: 'Dharmam', sub: 'Righteousness' },
+            { label: 'Seelam', sub: 'Integrity' },
+            { label: 'Ahimsa', sub: 'Non-violence' },
+          ].map(v => (
+            <div key={v.label} style={{
+              background: 'rgba(255,111,0,0.12)', border: '1px solid rgba(255,160,64,0.35)',
+              padding: '8px 16px', borderRadius: 999, color: '#ffa040',
+              fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'baseline', gap: 6,
+            }}>
+              <span>{v.label}</span>
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>&middot; {v.sub}</span>
+            </div>
+          ))}
+        </div>
 
         <div style={{
           background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)',
