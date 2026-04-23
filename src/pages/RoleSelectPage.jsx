@@ -106,6 +106,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   const [selectedRole, setSelectedRole] = useState('')
   const [membership, setMembership] = useState('')
   const [displayName, setDisplayName] = useState(user?.displayName || '')
+  const [signupComplete, setSignupComplete] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -146,9 +147,10 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
 
       if (selectedRole === 'intern') {
         selectRole('intern')
-        navigate('/intern', { replace: true })
+        setSignupComplete(true)
+        setSubmitting(false)
       } else {
-        // Employer/admin need approval - show pending message
+        setSignupComplete(true)
         setSubmitting(false)
       }
     } catch (err) {
@@ -158,6 +160,80 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   }
 
   const selectedConfig = roleConfig.find(r => r.id === selectedRole)
+
+  if (signupComplete) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', padding: 20,
+      }}>
+        <div style={{
+          background: 'white', borderRadius: 20, padding: '40px 32px',
+          maxWidth: 480, width: '100%', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>
+            {selectedRole === 'intern' ? '🎉' : '⏳'}
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1a237e', marginBottom: 8 }}>
+            {selectedRole === 'intern' ? 'Welcome Aboard!' : 'Request Submitted!'}
+          </h2>
+          <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+            {selectedRole === 'intern'
+              ? 'Your intern account is ready. You can now browse and apply for internships.'
+              : `Your ${selectedRole} role request has been submitted. An NRIVA administrator will review and approve your account shortly.`}
+          </p>
+
+          {selectedRole === 'intern' && (
+            <div style={{
+              background: '#dcfce7', border: '1px solid #86efac', borderRadius: 12,
+              padding: '16px 20px', marginBottom: 20, textAlign: 'left',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={{ fontSize: 24 }}>💬</span>
+                <div style={{ fontWeight: 600, fontSize: 15, color: '#15803d' }}>
+                  Join our WhatsApp Group
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, marginBottom: 12 }}>
+                Stay connected with fellow interns and get important updates about the internship program.
+              </p>
+              <a href="https://chat.whatsapp.com/DwpnyVgKQIyFmNvxo8mK3B" target="_blank" rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  background: '#25D366', color: 'white', padding: '10px 20px',
+                  borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none',
+                }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.37 0-4.567-.696-6.42-1.886l-.154-.1-3.208 1.076 1.076-3.208-.1-.154A9.935 9.935 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/>
+                </svg>
+                Join WhatsApp Group
+              </a>
+            </div>
+          )}
+
+          <button
+            onClick={() => {
+              if (selectedRole === 'intern') {
+                navigate('/intern', { replace: true })
+              } else {
+                logout()
+                navigate('/')
+              }
+            }}
+            style={{
+              width: '100%', padding: '12px 20px', borderRadius: 10,
+              border: 'none', background: '#1a237e', color: 'white',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}>
+            {selectedRole === 'intern' ? 'Go to Intern Dashboard' : 'Return to Home'}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{
