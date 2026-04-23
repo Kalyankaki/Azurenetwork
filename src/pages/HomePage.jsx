@@ -9,7 +9,7 @@ export default function HomePage() {
   const [error, setError] = useState(null)
   const [info, setInfo] = useState(null)
   const [loggingIn, setLoggingIn] = useState(false)
-  const [stats, setStats] = useState({ positions: 0, applications: 0, companies: 0 })
+  const [stats, setStats] = useState({ students: 0, internships: 0, companies: 0 })
   const [mode, setMode] = useState('signin') // 'signin' | 'signup' | 'reset'
   const [form, setForm] = useState({ email: '', password: '', displayName: '' })
 
@@ -18,16 +18,24 @@ export default function HomePage() {
     let cancelled = false
     async function fetchStats() {
       try {
-        const snap = await getDocs(collection(db, 'internships'))
+        const [internSnap, userSnap] = await Promise.all([
+          getDocs(collection(db, 'internships')),
+          getDocs(collection(db, 'users')),
+        ])
         if (cancelled) return
-        let open = 0
+        let openInternships = 0
         const companies = new Set()
-        snap.forEach(doc => {
+        let students = 0
+        internSnap.forEach(doc => {
           const d = doc.data()
-          if (d.status === 'open') open++
+          if (d.status === 'open') openInternships++
           if (d.company) companies.add(d.company)
         })
-        setStats({ positions: open, applications: snap.size, companies: companies.size })
+        userSnap.forEach(doc => {
+          const d = doc.data()
+          if ((d.roles || []).includes('intern') || d.requestedRole === 'intern') students++
+        })
+        setStats({ students, internships: openInternships, companies: companies.size })
       } catch { /* non-critical */ }
     }
     fetchStats()
@@ -205,9 +213,9 @@ export default function HomePage() {
 
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
           {[
-            { value: stats.positions, label: 'Open Positions' },
-            { value: stats.applications, label: 'Applications' },
-            { value: stats.companies, label: 'Partner Companies' },
+            { value: stats.students, label: 'Students Signed Up' },
+            { value: stats.internships, label: 'Internships Available' },
+            { value: stats.companies, label: 'Companies Partnered' },
           ].map(({ value, label }) => (
             <div key={label} style={{
               background: 'rgba(255,255,255,0.08)', padding: '12px 20px',
