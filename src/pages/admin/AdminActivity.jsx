@@ -92,7 +92,7 @@ export default function AdminActivity() {
                         {renderDetails(a)}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--nriva-text-light)', marginTop: 4 }}>
-                        {a.createdAt ? formatDate(a.createdAt) + ' ' + (a.createdAt?.toDate ? a.createdAt.toDate().toLocaleTimeString() : '') : '—'}
+                        {formatDate(a.createdAt)}
                       </div>
                     </div>
                   </div>

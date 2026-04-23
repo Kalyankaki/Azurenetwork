@@ -19,7 +19,7 @@ export default function InternBrowse() {
   const filtered = internships.filter(job => {
     const matchSearch = job.title.toLowerCase().includes(search.toLowerCase()) ||
       job.company.toLowerCase().includes(search.toLowerCase()) ||
-      job.skills.some(s => s.toLowerCase().includes(search.toLowerCase()))
+      (job.skills || []).some(s => s.toLowerCase().includes(search.toLowerCase()))
     // Only show approved internships (open/closed/filled), not pending or rejected
     const isVisible = job.status === 'open' || job.status === 'closed' || job.status === 'filled'
     const matchType = typeFilter === 'all' || job.type === typeFilter
@@ -94,7 +94,7 @@ export default function InternBrowse() {
                 <span>💰 {job.stipend}</span>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {job.skills.map(s => (
+                {(job.skills || []).map(s => (
                   <span key={s} style={{
                     background: '#e8eaf6',
                     color: 'var(--nriva-primary)',
@@ -179,7 +179,7 @@ export default function InternBrowse() {
 
             <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Skills</h3>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 24 }}>
-              {selected.skills.map(s => (
+              {(selected.skills || []).map(s => (
                 <span key={s} style={{
                   background: '#e8eaf6',
                   color: 'var(--nriva-primary)',
