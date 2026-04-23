@@ -19,6 +19,13 @@ export default function AdminReports() {
   const totalPositions = internships.reduce((sum, i) => sum + (i.positions || 0), 0)
   const totalApplicants = applications.length
 
+  // Build a map of internshipId -> application count from the applications collection
+  const appCountByInternship = {}
+  applications.forEach(a => {
+    const key = a.internshipId || 'unknown'
+    appCountByInternship[key] = (appCountByInternship[key] || 0) + 1
+  })
+
   return (
     <div>
       <div className="page-header">
@@ -67,13 +74,14 @@ export default function AdminReports() {
             <div className="card" style={{ marginBottom: 24 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Applications by Position</h3>
               {internships.map(job => {
-                const maxApplicants = Math.max(...internships.map(i => i.applicants || 0), 1)
-                const pct = safeDiv((job.applicants || 0), maxApplicants) * 100
+                const jobAppCount = appCountByInternship[job.id] || 0
+                const maxApplicants = Math.max(...internships.map(i => appCountByInternship[i.id] || 0), 1)
+                const pct = safeDiv(jobAppCount, maxApplicants) * 100
                 return (
                   <div key={job.id} style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
                       <span style={{ fontWeight: 500 }}>{job.title}</span>
-                      <span style={{ color: 'var(--nriva-text-light)' }}>{job.applicants || 0} applicants</span>
+                      <span style={{ color: 'var(--nriva-text-light)' }}>{jobAppCount} applicants</span>
                     </div>
                     <div style={{ height: 24, background: '#e2e8f0', borderRadius: 6, overflow: 'hidden' }}>
                       <div style={{
@@ -86,7 +94,7 @@ export default function AdminReports() {
                         alignItems: 'center',
                         paddingLeft: 8,
                       }}>
-                        {pct > 10 && <span style={{ color: 'white', fontSize: 11, fontWeight: 600 }}>{job.applicants || 0}</span>}
+                        {pct > 10 && <span style={{ color: 'white', fontSize: 11, fontWeight: 600 }}>{jobAppCount}</span>}
                       </div>
                     </div>
                   </div>

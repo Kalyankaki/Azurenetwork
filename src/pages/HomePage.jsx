@@ -18,24 +18,26 @@ export default function HomePage() {
     let cancelled = false
     async function fetchStats() {
       try {
-        const [internSnap, userSnap] = await Promise.all([
-          getDocs(collection(db, 'internships')),
-          getDocs(collection(db, 'users')),
-        ])
+        // Use server API for public stats (no auth required)
+        const res = await fetch('/api/public-stats')
+        if (res.ok) {
+          const data = await res.json()
+          if (!cancelled) setStats(data)
+          return
+        }
+      } catch { /* fallback below */ }
+      // Fallback: try direct Firestore (only works if signed in)
+      try {
+        const internSnap = await getDocs(collection(db, 'internships'))
         if (cancelled) return
         let openInternships = 0
         const companies = new Set()
-        let students = 0
         internSnap.forEach(doc => {
           const d = doc.data()
           if (d.status === 'open') openInternships++
           if (d.company) companies.add(d.company)
         })
-        userSnap.forEach(doc => {
-          const d = doc.data()
-          if ((d.roles || []).includes('intern') || d.requestedRole === 'intern') students++
-        })
-        setStats({ students, internships: openInternships, companies: companies.size })
+        setStats(s => ({ ...s, internships: openInternships, companies: companies.size }))
       } catch { /* non-critical */ }
     }
     fetchStats()
