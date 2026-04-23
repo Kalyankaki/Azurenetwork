@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useInternships } from '../../hooks/useFirestore'
+import { useInternships, useApplications } from '../../hooks/useFirestore'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   updateInternship as updateInternshipDB,
@@ -12,6 +12,9 @@ import Toast from '../../components/Toast'
 export default function AdminInternships() {
   const { user } = useAuth()
   const { data: internships } = useInternships()
+  const { data: allApplications } = useApplications()
+  const appCountMap = {}
+  allApplications.forEach(a => { appCountMap[a.internshipId] = (appCountMap[a.internshipId] || 0) + 1 })
   const [selected, setSelected] = useState(null)
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
@@ -141,7 +144,7 @@ export default function AdminInternships() {
                   <td style={{ fontSize: 13 }}>{job.location || '—'}</td>
                   <td style={{ fontSize: 13 }}>{job.type || '—'}</td>
                   <td>
-                    <span style={{ fontWeight: 600 }}>{job.applicants || 0}</span>
+                    <span style={{ fontWeight: 600 }}>{appCountMap[job.id] || 0}</span>
                     <span style={{ color: 'var(--nriva-text-light)' }}> / {job.positions || 0}</span>
                   </td>
                   <td>
@@ -207,7 +210,7 @@ export default function AdminInternships() {
                 <div><div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Positions</div>
                   <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.positions || 0}</div></div>
                 <div><div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Applicants</div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{selected.applicants || 0}</div></div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{appCountMap[selected.id] || 0}</div></div>
               </div>
 
               <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Description</h4>

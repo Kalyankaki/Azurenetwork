@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useInternships, useApplications, useMessages, useUsers } from '../../hooks/useFirestore'
-import { INTERNSHIP_STATUSES } from '../../services/firestore'
+import { INTERNSHIP_STATUSES, isSuperAdmin } from '../../services/firestore'
 
 export default function AdminDashboard() {
   const { data: internships } = useInternships()
@@ -15,7 +15,13 @@ export default function AdminDashboard() {
   const accepted = applications.filter(a => a.status === 'accepted').length
   const openMessages = messages.filter(m => m.status === 'open').length
   const resolvedMessages = messages.filter(m => m.status === 'resolved').length
-  const pendingUsers = users.filter(u => !u.roles || u.roles.length === 0).length
+  // Pending = onboarded with a non-intern requestedRole that hasn't been granted yet, OR not onboarded at all
+  const pendingUsers = users.filter(u => {
+    if (isSuperAdmin(u.email)) return false
+    const roles = u.roles || []
+    if (roles.length > 0) return false
+    return true
+  }).length
 
   return (
     <div>
