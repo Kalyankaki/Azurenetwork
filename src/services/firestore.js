@@ -29,16 +29,25 @@ export const MAX_INTERN_APPLICATIONS = 4
 
 // ============ ACTIVITY LOG ============
 
-export async function logActivity(action, data = {}) {
-  try {
-    await addDoc(collection(db, 'activity'), {
-      action,
-      ...data,
-      createdAt: serverTimestamp(),
-    })
-  } catch (err) {
-    console.warn('Failed to log activity:', err?.message)
+export function logActivity(action, data = {}) {
+  // Fire-and-forget with retry - don't block calling function
+  const doLog = async (attempt = 1) => {
+    try {
+      await addDoc(collection(db, 'activity'), {
+        action,
+        ...data,
+        createdAt: serverTimestamp(),
+      })
+    } catch (err) {
+      if (attempt < 3) {
+        setTimeout(() => doLog(attempt + 1), 1000 * attempt)
+      } else {
+        console.warn('Failed to log activity after 3 attempts:', action, err?.message)
+      }
+    }
   }
+  // Small delay to ensure auth token is ready
+  setTimeout(() => doLog(), 500)
 }
 
 export function subscribeActivity(onData, opts = {}, onError) {
