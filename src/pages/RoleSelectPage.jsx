@@ -106,6 +106,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   const [selectedRole, setSelectedRole] = useState('')
   const [membership, setMembership] = useState('')
   const [displayName, setDisplayName] = useState(user?.displayName || '')
+  const [signupComplete, setSignupComplete] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -146,9 +147,10 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
 
       if (selectedRole === 'intern') {
         selectRole('intern')
-        navigate('/intern', { replace: true })
+        setSignupComplete(true)
+        setSubmitting(false)
       } else {
-        // Employer/admin need approval - show pending message
+        setSignupComplete(true)
         setSubmitting(false)
       }
     } catch (err) {
@@ -158,6 +160,69 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   }
 
   const selectedConfig = roleConfig.find(r => r.id === selectedRole)
+
+  if (signupComplete) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', padding: 20,
+      }}>
+        <div style={{
+          background: 'white', borderRadius: 20, padding: '40px 32px',
+          maxWidth: 480, width: '100%', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>
+            {selectedRole === 'intern' ? '🎉' : '⏳'}
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1a237e', marginBottom: 8 }}>
+            {selectedRole === 'intern' ? 'Welcome Aboard!' : 'Request Submitted!'}
+          </h2>
+          <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+            {selectedRole === 'intern'
+              ? 'Your intern account is ready. You can now browse and apply for internships.'
+              : `Your ${selectedRole} role request has been submitted. An NRIVA administrator will review and approve your account shortly.`}
+          </p>
+
+          {selectedRole === 'intern' && (
+            <div style={{
+              background: '#dcfce7', border: '1px solid #86efac', borderRadius: 12,
+              padding: '16px 20px', marginBottom: 20, textAlign: 'left',
+            }}>
+              <div style={{ fontWeight: 600, fontSize: 15, color: '#15803d', marginBottom: 8 }}>
+                Join our WhatsApp Group
+              </div>
+              <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, marginBottom: 12 }}>
+                Stay connected with fellow interns and get important updates about the internship program.
+              </p>
+              <a href="https://chat.whatsapp.com/DwpnyVgKQIyFmNvxo8mK3B" target="_blank" rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  background: '#25D366', color: 'white', padding: '10px 20px',
+                  borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none',
+                }}>
+                Join WhatsApp Group
+              </a>
+            </div>
+          )}
+
+          <button
+            onClick={() => {
+              if (selectedRole === 'intern') navigate('/intern', { replace: true })
+              else { logout(); navigate('/') }
+            }}
+            style={{
+              width: '100%', padding: '12px 20px', borderRadius: 10,
+              border: 'none', background: '#1a237e', color: 'white',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}>
+            {selectedRole === 'intern' ? 'Go to Intern Dashboard' : 'Return to Home'}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{

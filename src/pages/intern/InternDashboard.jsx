@@ -111,7 +111,7 @@ export default function InternDashboard() {
                 <span>💰 {job.stipend}</span>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-                {job.skills.slice(0, 3).map(s => (
+                {(job.skills || []).slice(0, 3).map(s => (
                   <span key={s} style={{
                     background: '#e8eaf6',
                     color: 'var(--nriva-primary)',
