@@ -34,7 +34,7 @@ export default async function handler(req, res) {
               <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">NRIVA Membership</td><td style="padding:8px;border:1px solid #e2e8f0">${nrivaMembership || 'None'}</td></tr>
             </table>
             ${requestedRole !== 'intern' ? '<p style="margin-top:16px;color:#b45309"><strong>Action Required:</strong> This user requested the ' + requestedRole + ' role which requires your approval. Log in to the admin portal to review.</p>' : '<p style="margin-top:16px;color:#15803d">This user was auto-approved as an intern.</p>'}
-            <p style="margin-top:16px"><a href="https://azurenetwork.vercel.app">Open Admin Portal</a></p>
+            <p style="margin-top:16px"><a href="https://nrivainternships.org">Open Admin Portal</a></p>
           `,
         }),
       })
