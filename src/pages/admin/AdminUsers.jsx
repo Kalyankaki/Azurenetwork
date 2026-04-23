@@ -221,23 +221,48 @@ export default function AdminUsers() {
             </div>
             <div className="modal-body">
               <p style={{ fontSize: 13, color: 'var(--nriva-text-light)', marginBottom: 16 }}>
-                Assign a youth committee volunteer as coordinator for <strong>{coordinatorModal.displayName || coordinatorModal.email}</strong>
+                Select a coordinator for <strong>{coordinatorModal.displayName || coordinatorModal.email}</strong>
               </p>
               <div className="form-group">
-                <label>Coordinator Name</label>
-                <input className="form-control" value={coordForm.name} onChange={(e) => setCoordForm({ ...coordForm, name: e.target.value })}
-                  placeholder="e.g., Priya Sharma" />
+                <label>Select Coordinator</label>
+                <select className="form-control"
+                  value={coordForm.name ? `${coordForm.name}|||${coordForm.email}` : ''}
+                  onChange={(e) => {
+                    if (!e.target.value) {
+                      setCoordForm({ name: '', email: '', phone: '' })
+                      return
+                    }
+                    const [name, email] = e.target.value.split('|||')
+                    const adminUser = users.find(u => u.email === email)
+                    setCoordForm({ name, email, phone: adminUser?.phone || '' })
+                  }}>
+                  <option value="">Select a coordinator...</option>
+                  {users
+                    .filter(u => isSuperAdmin(u.email) || (u.roles || []).includes('admin'))
+                    .map(u => (
+                      <option key={u.id} value={`${u.displayName || u.email}|||${u.email}`}>
+                        {u.displayName || u.email}{isSuperAdmin(u.email) ? ' (Super Admin)' : ' (Admin)'}
+                      </option>
+                    ))}
+                </select>
               </div>
-              <div className="form-group">
-                <label>Coordinator Email</label>
-                <input className="form-control" type="email" value={coordForm.email} onChange={(e) => setCoordForm({ ...coordForm, email: e.target.value })}
-                  placeholder="coordinator@nriva.org" />
-              </div>
-              <div className="form-group">
-                <label>Coordinator Phone</label>
-                <input className="form-control" type="tel" value={coordForm.phone} onChange={(e) => setCoordForm({ ...coordForm, phone: e.target.value })}
-                  placeholder="(555) 123-4567" />
-              </div>
+              {coordForm.name && (
+                <>
+                  <div style={{
+                    background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8,
+                    padding: '12px 16px', marginBottom: 12,
+                  }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: '#0369a1' }}>{coordForm.name}</div>
+                    <div style={{ fontSize: 13, color: '#0284c7' }}>{coordForm.email}</div>
+                  </div>
+                  <div className="form-group">
+                    <label>Phone (optional)</label>
+                    <input className="form-control" type="tel" value={coordForm.phone}
+                      onChange={(e) => setCoordForm({ ...coordForm, phone: e.target.value })}
+                      placeholder="(555) 123-4567" />
+                  </div>
+                </>
+              )}
             </div>
             <div className="modal-footer">
               {coordinatorModal.coordinator && (
@@ -247,7 +272,7 @@ export default function AdminUsers() {
                 </button>
               )}
               <button className="btn btn-outline" onClick={() => setCoordinatorModal(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={saveCoordinator}>Save</button>
+              <button className="btn btn-primary" onClick={saveCoordinator} disabled={!coordForm.name}>Save</button>
             </div>
           </div>
         </div>
