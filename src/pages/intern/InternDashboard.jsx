@@ -73,7 +73,7 @@ export default function InternDashboard() {
                   <td>{formatDate(app.appliedDate)}</td>
                   <td>
                     <span className={`badge badge-${app.status === 'shortlisted' ? 'open' : app.status === 'under_review' ? 'pending' : app.status === 'accepted' ? 'filled' : 'closed'}`}>
-                      {app.status.replace('_', ' ')}
+                      {(app.status || 'pending').replace('_', ' ')}
                     </span>
                   </td>
                 </tr>

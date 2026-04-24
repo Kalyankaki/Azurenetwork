@@ -18,7 +18,7 @@ const statusColors = {
 }
 
 export default function AdminMessages() {
-  const { data: messages, loading } = useMessages()
+  const { data: messages, loading, error: loadError, retry } = useMessages()
   const [toast, setToast] = useState(null)
   const [selected, setSelected] = useState(null)
   const [filterStatus, setFilterStatus] = useState('all')
@@ -75,6 +75,17 @@ export default function AdminMessages() {
         </select>
       </div>
 
+      {loadError && (
+        <div style={{
+          background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12,
+          padding: '16px 20px', marginBottom: 16, display: 'flex',
+          justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <span style={{ fontSize: 13, color: '#b91c1c' }}>{loadError}</span>
+          <button className="btn btn-sm btn-outline" onClick={retry}>Retry</button>
+        </div>
+      )}
+
       {loading ? (
         <div className="empty-state"><p>Loading messages...</p></div>
       ) : filtered.length === 0 ? (
@@ -106,7 +117,7 @@ export default function AdminMessages() {
                     </div>
                     <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{msg.subject}</h3>
                     <p style={{ fontSize: 13, color: 'var(--nriva-text-light)', lineHeight: 1.4 }}>
-                      {msg.message.length > 150 ? msg.message.substring(0, 150) + '...' : msg.message}
+                      {(msg.message || '').length > 150 ? (msg.message || '').substring(0, 150) + '...' : msg.message}
                     </p>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', whiteSpace: 'nowrap' }}>

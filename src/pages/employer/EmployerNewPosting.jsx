@@ -111,7 +111,7 @@ export default function EmployerNewPosting() {
         type: form.type,
         duration: form.duration,
         stipend: form.stipendType === 'paid' ? form.stipendAmount : 'Unpaid (Volunteer)',
-        skills: form.skills.split(',').map(s => s.trim()).filter(Boolean),
+        skills: (form.skills || '').split(',').map(s => s.trim()).filter(Boolean),
         description: form.description,
         responsibilities: form.responsibilities,
         requirements: form.requirements,
