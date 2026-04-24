@@ -40,7 +40,7 @@ const roleConfig = [
 ]
 
 export default function RoleSelectPage() {
-  const { user, availableRoles, selectRole, logout, refreshRoles } = useAuth()
+  const { user, availableRoles, activeRole, selectRole, logout, refreshRoles } = useAuth()
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -48,12 +48,14 @@ export default function RoleSelectPage() {
   const visibleRoles = roleConfig.filter(r => availableRoles.includes(r.id))
   const isNewUser = availableRoles.length === 0
 
+  // Only auto-redirect if user has exactly 1 role AND no active role yet (first login)
+  // If they already have an active role, they clicked "Switch Role" — show the page
   useEffect(() => {
-    if (visibleRoles.length === 1) {
+    if (visibleRoles.length === 1 && !activeRole) {
       selectRole(visibleRoles[0].id)
       navigate(`/${visibleRoles[0].id}`, { replace: true })
     }
-  }, [visibleRoles.length])
+  }, [visibleRoles.length, activeRole])
 
   if (isNewUser) {
     return <OnboardingForm user={user} logout={logout} navigate={navigate}
@@ -79,6 +81,18 @@ export default function RoleSelectPage() {
             <h3 style={{ fontSize: 18, fontWeight: 700, color: role.color, marginBottom: 8 }}>{role.title}</h3>
           </button>
         ))}
+      </div>
+      <div style={{ display: 'flex', gap: 16, marginTop: 24 }}>
+        {activeRole && (
+          <button onClick={() => navigate(-1)}
+            style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}>
+            ← Go back
+          </button>
+        )}
+        <button onClick={async () => { await logout(); navigate('/') }}
+          style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}>
+          Sign Out
+        </button>
       </div>
     </div>
   )
