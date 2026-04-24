@@ -35,7 +35,7 @@ const EMPLOYER_INDUSTRIES = [
 
 const roleConfig = [
   { id: 'intern', title: 'Intern', icon: '🎓', color: '#1a237e', autoApproved: true },
-  { id: 'employer', title: 'Employer', icon: '🏢', color: '#1b5e20', autoApproved: false },
+  { id: 'employer', title: 'Employer', icon: '🏢', color: '#1b5e20', autoApproved: true },
   { id: 'admin', title: 'Administrator', icon: '⚙️', color: '#b71c1c', autoApproved: false },
 ]
 
@@ -162,7 +162,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
       } catch { /* best-effort */ }
 
       await refreshRoles()
-      if (selectedRole === 'intern') selectRole('intern')
+      if (selectedRole === 'intern' || selectedRole === 'employer') selectRole(selectedRole)
       setSignupComplete(true)
       setSubmitting(false)
     } catch (err) {
@@ -172,16 +172,19 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   }
 
   if (signupComplete) {
+    const autoApprovedRole = selectedRole === 'intern' || selectedRole === 'employer'
     return (
       <div style={pageStyle}>
         <div style={{ background: 'white', borderRadius: 20, padding: '40px 32px', maxWidth: 480, width: '100%', textAlign: 'center' }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>{selectedRole === 'intern' ? '🎉' : '⏳'}</div>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>{autoApprovedRole ? '🎉' : '⏳'}</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1a237e', marginBottom: 8 }}>
-            {selectedRole === 'intern' ? 'Welcome Aboard!' : 'Request Submitted!'}
+            {autoApprovedRole ? 'Welcome Aboard!' : 'Request Submitted!'}
           </h2>
           <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
             {selectedRole === 'intern'
               ? 'Your intern account is ready. We\'ll match you with internships based on your skills and interests.'
+              : selectedRole === 'employer'
+              ? 'Your employer account is ready. You can now post internships and manage applicants.'
               : `Your ${selectedRole} role request has been submitted. An admin will review and approve your account shortly.`}
           </p>
           {selectedRole === 'intern' && (
@@ -194,9 +197,9 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
               </a>
             </div>
           )}
-          <button onClick={() => { if (selectedRole === 'intern') navigate('/intern', { replace: true }); else { logout(); navigate('/') } }}
+          <button onClick={() => { if (autoApprovedRole) navigate(`/${selectedRole}`, { replace: true }); else { logout(); navigate('/') } }}
             style={{ width: '100%', padding: '12px 20px', borderRadius: 10, border: 'none', background: '#1a237e', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            {selectedRole === 'intern' ? 'Go to Dashboard' : 'Return to Home'}
+            {autoApprovedRole ? 'Go to Dashboard' : 'Return to Home'}
           </button>
         </div>
       </div>
@@ -426,7 +429,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
               <button type="button" onClick={() => setStep(2)} style={{ ...btnOutline, flex: 1 }}>Back</button>
               <button type="button" disabled={submitting} onClick={handleSubmit}
                 style={{ ...btnPrimary, flex: 2, background: '#1b5e20', opacity: submitting ? 0.6 : 1 }}>
-                {submitting ? 'Submitting...' : 'Request Employer Access'}
+                {submitting ? 'Setting up...' : 'Get Started'}
               </button>
             </div>
           </>
