@@ -103,6 +103,12 @@ export async function onboardUser(uid, { requestedRole, nrivaMembership, display
     updates.roles = ['intern']
   }
   await updateDoc(doc(db, 'users', uid), updates)
+  // Update public stats counter
+  if (requestedRole === 'intern') {
+    try {
+      await setDoc(doc(db, 'public_stats', 'counts'), { students: increment(1) }, { merge: true })
+    } catch { /* non-critical */ }
+  }
   logActivity('user_onboarded', { userUid: uid, requestedRole, nrivaMembership })
   return requestedRole === 'intern' ? ['intern'] : []
 }

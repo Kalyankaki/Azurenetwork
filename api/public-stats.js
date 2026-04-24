@@ -1,51 +1,57 @@
-// Vercel serverless function - returns public stats without auth
-// Reads from Firestore using admin SDK or service account
-
-import { initializeApp, cert, getApps } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
-
-function getDb() {
-  if (getApps().length === 0) {
-    const projectId = process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-      initializeApp({ credential: cert(sa) })
-    } else if (projectId) {
-      initializeApp({ projectId })
-    } else {
-      return null
-    }
-  }
-  return getFirestore()
-}
+// Public stats endpoint
+// Reads internships (public read rule) and returns aggregate counts
+// For user count, we read from a public stats doc that gets updated by the app
 
 export default async function handler(req, res) {
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
+  res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600')
+
+  const projectId = process.env.FIREBASE_PROJECT_ID
+  const apiKey = process.env.FIREBASE_API_KEY
+  if (!projectId || !apiKey) {
+    return res.status(200).json({ students: 0, internships: 0, companies: 0 })
+  }
+
+  const baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`
 
   try {
-    const db = getDb()
-    if (!db) {
-      return res.status(200).json({ students: 0, internships: 0, companies: 0 })
-    }
-
-    const [internSnap, userSnap] = await Promise.all([
-      db.collection('internships').get(),
-      db.collection('users').get(),
-    ])
+    // Query internships (public read allowed)
+    const internRes = await fetch(
+      `${baseUrl}:runQuery?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: 'internships' }],
+            select: { fields: [{ fieldPath: 'status' }, { fieldPath: 'company' }] },
+            limit: 500,
+          }
+        }),
+      }
+    )
 
     let openInternships = 0
     const companies = new Set()
-    internSnap.forEach(doc => {
-      const d = doc.data()
-      if (d.status === 'open') openInternships++
-      if (d.company) companies.add(d.company)
-    })
 
+    if (internRes.ok) {
+      const results = await internRes.json()
+      results.forEach(r => {
+        if (!r.document) return
+        const fields = r.document.fields || {}
+        if (fields.status?.stringValue === 'open') openInternships++
+        if (fields.company?.stringValue) companies.add(fields.company.stringValue)
+      })
+    }
+
+    // Read public stats doc (public read rule)
     let students = 0
-    userSnap.forEach(doc => {
-      const d = doc.data()
-      if ((d.roles || []).includes('intern') || d.requestedRole === 'intern') students++
-    })
+    try {
+      const statsRes = await fetch(`${baseUrl}/public_stats/counts?key=${apiKey}`)
+      if (statsRes.ok) {
+        const data = await statsRes.json()
+        students = parseInt(data.fields?.students?.integerValue || '0', 10)
+      }
+    } catch { /* fallback to 0 */ }
 
     return res.status(200).json({
       students,
@@ -53,7 +59,7 @@ export default async function handler(req, res) {
       companies: companies.size,
     })
   } catch (err) {
-    console.error('Stats error:', err)
+    console.error('Public stats error:', err)
     return res.status(200).json({ students: 0, internships: 0, companies: 0 })
   }
 }
