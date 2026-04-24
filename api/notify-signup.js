@@ -3,7 +3,10 @@
 // Set RESEND_API_KEY in Vercel env vars to enable email sending
 // If no email service configured, notifications are stored in Firestore 'notifications' collection
 
+import { rateLimit } from './_rateLimit.js'
+
 export default async function handler(req, res) {
+  if (rateLimit(req, res, { maxRequests: 5 })) return
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }

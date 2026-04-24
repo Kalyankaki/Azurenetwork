@@ -188,7 +188,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
             <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 12, padding: '16px 20px', marginBottom: 20, textAlign: 'left' }}>
               <div style={{ fontWeight: 600, fontSize: 15, color: '#15803d', marginBottom: 8 }}>Join our WhatsApp Group</div>
               <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, marginBottom: 12 }}>Stay connected with fellow interns and get updates.</p>
-              <a href="https://chat.whatsapp.com/DwpnyVgKQIyFmNvxo8mK3B" target="_blank" rel="noopener noreferrer"
+              <a href={import.meta.env.VITE_WHATSAPP_GROUP_URL || "https://chat.whatsapp.com/DwpnyVgKQIyFmNvxo8mK3B"} target="_blank" rel="noopener noreferrer"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#25D366', color: 'white', padding: '10px 20px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
                 Join WhatsApp Group
               </a>

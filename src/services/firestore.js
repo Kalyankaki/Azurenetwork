@@ -92,6 +92,10 @@ export async function createUser(uid, data) {
 
 export async function onboardUser(uid, data) {
   const { requestedRole, nrivaMembership, displayName, ...profileData } = data
+  // Sanitize: never allow client to set roles, coordinator, or admin fields via onboarding
+  delete profileData.roles
+  delete profileData.coordinator
+  delete profileData.uid
   const updates = {
     onboarded: true,
     requestedRole,
@@ -100,6 +104,7 @@ export async function onboardUser(uid, data) {
     updatedAt: serverTimestamp(),
   }
   if (displayName) updates.displayName = displayName
+  // Only intern role is auto-approved; employer/admin require manual admin approval
   if (requestedRole === 'intern') {
     updates.roles = ['intern']
   }

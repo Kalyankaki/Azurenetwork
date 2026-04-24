@@ -2,7 +2,10 @@
 // Proxies Anthropic API calls so the API key stays on the server.
 // Environment variable: ANTHROPIC_API_KEY (set in Vercel, NOT prefixed with VITE_)
 
+import { rateLimit } from './_rateLimit.js'
+
 export default async function handler(req, res) {
+  if (rateLimit(req, res, { maxRequests: 10 })) return
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }

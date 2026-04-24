@@ -1,8 +1,11 @@
 // AI Assistant - Vercel serverless function
 // Provides role-specific help using Claude
 
+import { rateLimit } from './_rateLimit.js'
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  if (rateLimit(req, res, { maxRequests: 15 })) return
 
   const key = process.env.ANTHROPIC_API_KEY
   if (!key) return res.status(500).json({ error: 'AI not configured' })

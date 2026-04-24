@@ -10,7 +10,7 @@ import {
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth'
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore'
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, clearIndexedDbPersistence } from 'firebase/firestore'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 const firebaseConfig = {
@@ -107,6 +107,8 @@ export async function uploadResume(file, applicantUid) {
 export async function logOut() {
   try {
     await signOut(auth)
+    // Clear cached Firestore data on logout (privacy on shared devices)
+    try { await clearIndexedDbPersistence(db) } catch { /* may fail if other tabs open */ }
     return { error: null }
   } catch (error) {
     return { error: error.message }
