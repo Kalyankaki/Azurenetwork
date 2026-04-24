@@ -111,53 +111,24 @@ export default function HomePage() {
         padding: '40px 20px', textAlign: 'center',
       }}>
         <img src="/NRIVAYouthLogo.jpg" alt="NRIVA"
-          style={{ width: 120, height: 120, objectFit: 'contain', marginBottom: 24 }}
+          style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 20, borderRadius: '50%' }}
           onError={(e) => { e.target.style.display = 'none' }} />
 
-        <div style={{
-          display: 'inline-block', background: 'rgba(255,111,0,0.2)', color: '#ffa040',
-          padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, marginBottom: 20,
-        }}>
-          NRI Vasavi Association, USA &middot; 501(c)(3) Non-Profit
-        </div>
-
         <h1 style={{
-          color: 'white', fontSize: 'clamp(28px, 5vw, 44px)',
-          fontWeight: 800, lineHeight: 1.2, marginBottom: 12, maxWidth: 760,
+          color: 'white', fontSize: 'clamp(32px, 6vw, 52px)',
+          fontWeight: 800, lineHeight: 1.15, marginBottom: 16, maxWidth: 600,
         }}>
-          Connecting to Serve.<br />
-          <span style={{ color: '#ffa040' }}>Transforming Lives through the 2026 NRIVA Internship Program.</span>
+          Your next internship<br />
+          <span style={{ color: '#ffa040' }}>starts here.</span>
         </h1>
 
         <p style={{
-          color: 'rgba(255,255,255,0.78)', fontSize: 16, lineHeight: 1.6,
-          maxWidth: 620, margin: '0 auto 20px',
+          color: 'rgba(255,255,255,0.65)', fontSize: 17, lineHeight: 1.6,
+          maxWidth: 440, margin: '0 auto 32px',
         }}>
-          Rooted in our mission to uplift the Vasavi community worldwide, this program
-          pairs talented students with purpose-driven employers &mdash; so the next generation
-          learns, leads, and gives back.
+          Real experience. Real mentors. Real impact.<br />
+          Built by the NRIVA Youth Committee for students like you.
         </p>
-
-        {/* Values banner */}
-        <div style={{
-          display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10,
-          marginBottom: 28, maxWidth: 640,
-        }}>
-          {[
-            { label: 'Dharmam', sub: 'Righteousness' },
-            { label: 'Seelam', sub: 'Integrity' },
-            { label: 'Ahimsa', sub: 'Non-violence' },
-          ].map(v => (
-            <div key={v.label} style={{
-              background: 'rgba(255,111,0,0.12)', border: '1px solid rgba(255,160,64,0.35)',
-              padding: '8px 16px', borderRadius: 999, color: '#ffa040',
-              fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'baseline', gap: 6,
-            }}>
-              <span>{v.label}</span>
-              <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>&middot; {v.sub}</span>
-            </div>
-          ))}
-        </div>
 
         <div style={{
           background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)',
@@ -275,27 +246,6 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-      </div>
-
-      <div style={{
-        maxWidth: 1000, margin: '0 auto', padding: '0 20px 40px',
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        gap: 16, width: '100%',
-      }}>
-        {[
-          { icon: '🎓', title: 'For Students (10th Grade - College)', desc: 'Browse internships, apply online, and track your application status.' },
-          { icon: '🏢', title: 'For Employers', desc: 'Post opportunities, review applicants, and manage your hiring pipeline with AI-powered tools.' },
-          { icon: '⚙️', title: 'For Admins', desc: 'Oversee the program, manage users, assign coordinators, and view comprehensive analytics.' },
-        ].map(({ icon, title, desc }) => (
-          <div key={title} style={{
-            background: 'rgba(255,255,255,0.06)', borderRadius: 12,
-            padding: '20px 24px', border: '1px solid rgba(255,255,255,0.1)',
-          }}>
-            <span style={{ fontSize: 24 }}>{icon}</span>
-            <h3 style={{ color: '#ffa040', fontSize: 15, fontWeight: 600, margin: '8px 0 6px' }}>{title}</h3>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 1.5 }}>{desc}</p>
-          </div>
-        ))}
       </div>
 
       <footer style={{
