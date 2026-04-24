@@ -54,7 +54,7 @@ export default function EmployerApplicants() {
   }, [appsForInternship, activeInternship])
 
   const top5 = ranked.slice(0, 5)
-  const allMatches = ranked.filter(c => c.match.overall >= filters.minMatch && c.match.availability >= filters.minAvail)
+  const allMatches = ranked.filter(c => c?.match?.overall >= filters.minMatch && c?.match?.availability >= filters.minAvail)
     .filter(c => {
       if (!filters.search) return true
       const q = filters.search.toLowerCase()
@@ -348,7 +348,11 @@ function ApplicantModal({ selected, internship, onClose, onUpdateStatus }) {
             <div><strong>School:</strong> {selected.school || '—'}</div>
             <div><strong>Grade Level:</strong> {selected.gradeLevel || '—'}</div>
             <div><strong>Hours/day:</strong> {selected.hoursPerDay || '—'}</div>
-            <div><strong>Available:</strong> {formatDate(selected.availableFrom)} → {formatDate(selected.availableTo)}</div>
+            <div><strong>Available:</strong> {
+              selected.availableFrom || selected.availableTo
+                ? `${selected.availableFrom ? formatDate(selected.availableFrom) : '—'} → ${selected.availableTo ? formatDate(selected.availableTo) : '—'}`
+                : '—'
+            }</div>
             {selected.nrivaMembership && <div><strong>NRIVA Member:</strong> {selected.nrivaMembership}</div>}
           </div>
 

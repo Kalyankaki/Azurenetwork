@@ -115,10 +115,28 @@ export default function InternApplications() {
                     <div className="timeline-content">Application received and under review</div>
                   </div>
                 )}
-                {(selected.status === 'shortlisted' || selected.status === 'accepted') && (
+                {(selected.status === 'shortlisted' || selected.status === 'offered' || selected.status === 'offer_accepted' || selected.status === 'offer_declined' || selected.status === 'accepted') && (
                   <div className="timeline-item">
                     <div className="timeline-date">{formatDate(addDays(selected.appliedDate, 5))}</div>
-                    <div className="timeline-content">Shortlisted for interview</div>
+                    <div className="timeline-content">Shortlisted</div>
+                  </div>
+                )}
+                {(selected.status === 'offered' || selected.status === 'offer_accepted' || selected.status === 'offer_declined') && (
+                  <div className="timeline-item">
+                    <div className="timeline-date">{formatDate(addDays(selected.appliedDate, 7))}</div>
+                    <div className="timeline-content">Offer extended by employer</div>
+                  </div>
+                )}
+                {selected.status === 'offer_accepted' && (
+                  <div className="timeline-item">
+                    <div className="timeline-date">{formatDate(addDays(selected.appliedDate, 8))}</div>
+                    <div className="timeline-content">You accepted the offer! 🎉</div>
+                  </div>
+                )}
+                {selected.status === 'offer_declined' && (
+                  <div className="timeline-item">
+                    <div className="timeline-date">{formatDate(addDays(selected.appliedDate, 8))}</div>
+                    <div className="timeline-content">Offer declined</div>
                   </div>
                 )}
                 {selected.status === 'accepted' && (

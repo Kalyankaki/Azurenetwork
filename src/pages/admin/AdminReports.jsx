@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useInternships, useApplications } from '../../hooks/useFirestore'
+import { formatDate } from '../../utils/date'
+import { statusBadgeClass, statusDisplay } from '../../utils/status'
 
 function safeDiv(a, b) {
   if (!b || b === 0) return 0
@@ -197,9 +199,8 @@ export default function AdminReports() {
                   <th>Applicant</th>
                   <th>Position</th>
                   <th>School</th>
-                  <th>Major</th>
-                  <th>GPA</th>
                   <th>Grade Level</th>
+                  <th>Applied</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -212,12 +213,11 @@ export default function AdminReports() {
                     </td>
                     <td style={{ fontSize: 13 }}>{app.internshipTitle}</td>
                     <td style={{ fontSize: 13 }}>{app.school || app.university || '—'}</td>
-                    <td style={{ fontSize: 13 }}>{app.major || '—'}</td>
-                    <td style={{ fontSize: 13, fontWeight: 500 }}>{app.gpa || '—'}</td>
                     <td style={{ fontSize: 13 }}>{app.gradeLevel || app.graduationYear || '—'}</td>
+                    <td style={{ fontSize: 13 }}>{formatDate(app.appliedDate)}</td>
                     <td>
-                      <span className={`badge badge-${app.status === 'shortlisted' ? 'open' : app.status === 'under_review' ? 'pending' : app.status === 'accepted' ? 'filled' : app.status === 'pending' ? 'pending' : 'closed'}`}>
-                        {(app.status || 'pending').replace('_', ' ')}
+                      <span className={`badge badge-${statusBadgeClass(app.status)}`}>
+                        {statusDisplay(app.status)}
                       </span>
                     </td>
                   </tr>

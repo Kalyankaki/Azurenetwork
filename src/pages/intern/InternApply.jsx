@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships } from '../../hooks/useFirestore'
 import { createApplication, getApplicationCount, getUser, MAX_INTERN_APPLICATIONS } from '../../services/firestore'
@@ -52,6 +52,7 @@ export default function InternApply() {
         internshipId: id,
         internshipTitle: internship.title,
         company: internship.company,
+        employerUid: internship.employerUid || null,
         applicantUid: user.uid,
         applicantName: user.displayName || 'Unknown',
         email: user.email,

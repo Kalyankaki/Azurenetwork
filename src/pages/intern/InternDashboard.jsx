@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useInternships, useApplications } from '../../hooks/useFirestore'
 import { MAX_INTERN_APPLICATIONS, getUser } from '../../services/firestore'
 import { formatDate } from '../../utils/date'
+import { statusBadgeClass, statusDisplay } from '../../utils/status'
 
 function scoreMatch(internship, userProfile) {
   if (!userProfile) return 0
@@ -124,8 +125,8 @@ export default function InternDashboard() {
                     <td>{app.company}</td>
                     <td>{formatDate(app.appliedDate)}</td>
                     <td>
-                      <span className={`badge badge-${app.status === 'shortlisted' ? 'open' : app.status === 'under_review' ? 'pending' : app.status === 'accepted' ? 'filled' : 'closed'}`}>
-                        {(app.status || 'pending').replace('_', ' ')}
+                      <span className={`badge badge-${statusBadgeClass(app.status)}`}>
+                        {statusDisplay(app.status)}
                       </span>
                     </td>
                   </tr>
