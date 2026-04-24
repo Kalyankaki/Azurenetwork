@@ -86,7 +86,7 @@ export default function AIAssistant({ portalContext }) {
         <div style={{
           position: 'fixed', bottom: 88, right: 24, zIndex: 999,
           width: 380, maxWidth: 'calc(100vw - 48px)',
-          height: 520, maxHeight: 'calc(100vh - 120px)',
+          height: 520, maxHeight: 'calc(100dvh - 120px)',
           background: 'white', borderRadius: 16,
           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
           display: 'flex', flexDirection: 'column',

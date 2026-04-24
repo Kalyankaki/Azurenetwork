@@ -140,7 +140,7 @@ export default function HomePage() {
         </p>
 
         <div style={{
-          background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)',
+          background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
           borderRadius: 16, padding: '28px 32px', maxWidth: 400, width: '100%',
           boxShadow: '0 20px 60px rgba(0,0,0,0.3)', marginBottom: 24,
         }}>
@@ -169,15 +169,15 @@ export default function HomePage() {
 
           <form onSubmit={handleEmail} style={{ textAlign: 'left' }}>
             {mode === 'signup' && (
-              <input type="text" placeholder="Full name" value={form.displayName}
+              <input type="text" placeholder="Full name" autoComplete="name" value={form.displayName}
                 onChange={(e) => setForm({ ...form, displayName: e.target.value })}
                 style={emailInputStyle} required />
             )}
-            <input type="email" placeholder="Email" value={form.email}
+            <input type="email" placeholder="Email" autoComplete="email" value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               style={emailInputStyle} required />
             {mode !== 'reset' && (
-              <input type="password" placeholder="Password" value={form.password}
+              <input type="password" placeholder="Password" autoComplete="current-password" value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 style={emailInputStyle} required minLength={6} />
             )}

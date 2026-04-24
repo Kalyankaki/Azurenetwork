@@ -227,7 +227,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
           <>
             <div style={fieldStyle}>
               <label style={labelStyle}>Full Name <span style={{ color: '#c62828' }}>*</span></label>
-              <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your full name" required style={inputStyle} />
+              <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your full name" autoComplete="name" required style={inputStyle} />
             </div>
             <div style={fieldStyle}>
               <label style={labelStyle}>Email</label>
