@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { onAuthChange, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, logOut } from '../firebase'
-import { createUser, getUser, getUserRoles, isSuperAdmin } from '../services/firestore'
+import { createUser, getUser, getUserRoles, isSuperAdmin, updateUserRoles } from '../services/firestore'
 
 const AuthContext = createContext(null)
 
@@ -53,6 +53,23 @@ export function AuthProvider({ children }) {
               console.warn('createUser failed:', e?.message)
             }
             firestoreUser = { roles: [] }
+          }
+          // One-time auto-approve migration: existing onboarded users with
+          // requestedRole=employer but no 'employer' role (from before approval
+          // was removed) get it granted on next sign-in.
+          if (
+            firestoreUser.onboarded &&
+            firestoreUser.requestedRole === 'employer' &&
+            !(firestoreUser.roles || []).includes('employer') &&
+            !isSuper
+          ) {
+            try {
+              const nextRoles = Array.from(new Set([...(firestoreUser.roles || []), 'employer']))
+              await updateUserRoles(firebaseUser.uid, nextRoles, 'auto-migration')
+              firestoreUser = { ...firestoreUser, roles: nextRoles }
+            } catch (e) {
+              console.warn('auto-approve employer migration failed:', e?.message)
+            }
           }
           const roles = getUserRoles(firebaseUser.email, firestoreUser.roles || [])
           setAvailableRoles(roles)
