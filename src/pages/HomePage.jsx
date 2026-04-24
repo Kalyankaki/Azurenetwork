@@ -77,9 +77,18 @@ export default function HomePage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
+      background: 'linear-gradient(180deg, #1a2332 0%, #263238 40%, #2c3e50 100%)',
       display: 'flex', flexDirection: 'column',
     }}>
+      {/* Pre-launch banner */}
+      <div style={{
+        background: 'linear-gradient(90deg, #ff6f00 0%, #ffa040 100%)',
+        color: 'white', textAlign: 'center', padding: '10px 16px',
+        fontSize: 13, fontWeight: 600,
+      }}>
+        🚀 Pre-Launch — The NRIVA Internship Portal officially kicks off April 29th! Submissions from employers and students are welcome.
+      </div>
+
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
