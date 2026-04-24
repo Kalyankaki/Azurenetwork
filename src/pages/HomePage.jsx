@@ -133,11 +133,20 @@ export default function HomePage() {
 
         <p style={{
           color: 'rgba(255,255,255,0.65)', fontSize: 17, lineHeight: 1.6,
-          maxWidth: 440, margin: '0 auto 32px',
+          maxWidth: 440, margin: '0 auto 20px',
         }}>
           Real experience. Real mentors. Real impact.<br />
           Built by the NRIVA Youth Committee for students like you.
         </p>
+
+        <div style={{
+          display: 'inline-block', background: 'rgba(255,160,64,0.15)',
+          border: '1px solid rgba(255,160,64,0.3)', borderRadius: 20,
+          padding: '6px 18px', fontSize: 13, color: '#ffa040',
+          fontWeight: 500, marginBottom: 28,
+        }}>
+          Open to students in 10th grade through college
+        </div>
 
         <div style={{
           background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',

@@ -44,7 +44,7 @@ export default function Layout({ role }) {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, logout, userCoordinator } = useAuth()
+  const { user, logout, userCoordinator, availableRoles } = useAuth()
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
 
   useEffect(() => {
@@ -160,8 +160,10 @@ export default function Layout({ role }) {
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
-            <button onClick={() => navigate('/select-role')} className="btn btn-sm btn-outline"
-              style={{ fontSize: 12, padding: '4px 10px' }}>Switch Role</button>
+            {availableRoles.length > 1 && (
+              <button onClick={() => navigate('/select-role')} className="btn btn-sm btn-outline"
+                style={{ fontSize: 12, padding: '4px 10px' }}>Switch Role</button>
+            )}
             <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setShowUserMenu(!showUserMenu)}>
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="" style={{ width: 32, height: 32, borderRadius: '50%' }} />
