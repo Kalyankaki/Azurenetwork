@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useInternships, useApplications, useUsers } from '../../hooks/useFirestore'
 import { formatDate } from '../../utils/date'
-import { statusBadgeClass, statusDisplay, statusLabel } from '../../utils/status'
+import { statusBadgeClass, statusDisplay, statusLabel, APPLICATION_STATUS_LABELS } from '../../utils/status'
 import { exportCSV } from '../../utils/csv'
+import { INTERNSHIP_STATUSES, isSuperAdmin } from '../../services/firestore'
 
 function safeDiv(a, b) {
   if (!b || b === 0) return 0
@@ -14,11 +15,55 @@ function safePct(a, b) {
   return Math.round((a / b) * 100)
 }
 
+function matchesText(haystacks, needle) {
+  if (!needle) return true
+  const q = needle.trim().toLowerCase()
+  if (!q) return true
+  return haystacks.some(h => (h || '').toString().toLowerCase().includes(q))
+}
+
+const INTERNSHIP_STATUS_OPTIONS = [
+  { value: 'all', label: 'All Statuses' },
+  { value: INTERNSHIP_STATUSES.OPEN, label: 'Open' },
+  { value: INTERNSHIP_STATUSES.PENDING_APPROVAL, label: 'Pending Approval' },
+  { value: INTERNSHIP_STATUSES.CLOSED, label: 'Closed' },
+  { value: INTERNSHIP_STATUSES.FILLED, label: 'Filled' },
+  { value: INTERNSHIP_STATUSES.REJECTED, label: 'Rejected' },
+]
+
+const APPLICATION_STATUS_OPTIONS = [
+  { value: 'all', label: 'All Statuses' },
+  ...Object.entries(APPLICATION_STATUS_LABELS).map(([value, label]) => ({ value, label })),
+]
+
+const INTERN_ONBOARDED_OPTIONS = [
+  { value: 'all', label: 'All Interns' },
+  { value: 'onboarded', label: 'Onboarded' },
+  { value: 'pending', label: 'Not Onboarded' },
+]
+
+const EMPLOYER_ACTIVITY_OPTIONS = [
+  { value: 'all', label: 'All Employers' },
+  { value: 'active', label: 'With Postings' },
+  { value: 'inactive', label: 'No Postings' },
+]
+
+const filterRow = { display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }
+const searchInput = { flex: '1 1 260px', minWidth: 200, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--nriva-border)', fontSize: 13 }
+const selectInput = { padding: '8px 12px', borderRadius: 8, border: '1px solid var(--nriva-border)', fontSize: 13, background: 'white' }
+const resultCount = { fontSize: 12, color: 'var(--nriva-text-light)', marginLeft: 'auto' }
+
 export default function AdminReports() {
   const { data: internships } = useInternships()
   const { data: applications } = useApplications()
   const { data: users } = useUsers()
   const [activeTab, setActiveTab] = useState('overview')
+
+  // Per-tab filter state
+  const [internFilter, setInternFilter] = useState({ q: '', status: 'all' })
+  const [appFilter, setAppFilter] = useState({ q: '', status: 'all' })
+  const [employerFilter, setEmployerFilter] = useState({ q: '', status: 'all' })
+  const [internUserFilter, setInternUserFilter] = useState({ q: '', status: 'all' })
 
   const totalPositions = internships.reduce((sum, i) => sum + (i.positions || 0), 0)
   const totalApplicants = applications.length
@@ -29,6 +74,47 @@ export default function AdminReports() {
     const key = a.internshipId || 'unknown'
     appCountByInternship[key] = (appCountByInternship[key] || 0) + 1
   })
+
+  // Build a map of applicantUid -> application count for interns tab
+  const appCountByApplicant = useMemo(() => {
+    const out = {}
+    applications.forEach(a => {
+      const key = a.applicantUid || 'unknown'
+      out[key] = (out[key] || 0) + 1
+    })
+    return out
+  }, [applications])
+
+  const filteredInternships = useMemo(() => {
+    return internships.filter(job => {
+      if (internFilter.status !== 'all' && job.status !== internFilter.status) return false
+      return matchesText([job.title, job.company, job.location, job.employerName, job.employer], internFilter.q)
+    })
+  }, [internships, internFilter])
+
+  const filteredApplications = useMemo(() => {
+    return applications.filter(app => {
+      if (appFilter.status !== 'all' && app.status !== appFilter.status) return false
+      return matchesText([app.applicantName, app.email, app.internshipTitle, app.company, app.school, app.university], appFilter.q)
+    })
+  }, [applications, appFilter])
+
+  // Interns = users with 'intern' role (excluding super admin by email)
+  const internUsers = useMemo(() => {
+    return users.filter(u => {
+      if (isSuperAdmin(u.email)) return false
+      const roles = u.roles || []
+      return roles.includes('intern') || u.requestedRole === 'intern'
+    })
+  }, [users])
+
+  const filteredInternUsers = useMemo(() => {
+    return internUsers.filter(u => {
+      if (internUserFilter.status === 'onboarded' && !u.onboarded) return false
+      if (internUserFilter.status === 'pending' && u.onboarded) return false
+      return matchesText([u.displayName, u.email, u.school, u.gradeLevel, (u.skills || []).join(' ')], internUserFilter.q)
+    })
+  }, [internUsers, internUserFilter])
 
   return (
     <div>
@@ -51,7 +137,7 @@ export default function AdminReports() {
       </div>
 
       <div className="tabs">
-        {['overview', 'internships', 'applications', 'employers'].map(tab => (
+        {['overview', 'internships', 'applications', 'interns', 'employers'].map(tab => (
           <button
             key={tab}
             className={`tab ${activeTab === tab ? 'active' : ''}`}
@@ -172,6 +258,25 @@ export default function AdminReports() {
       {activeTab === 'internships' && (
         <div className="card">
           <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Internship Details Report</h3>
+          <div style={filterRow}>
+            <input
+              type="text"
+              placeholder="Search title, company, location, employer…"
+              value={internFilter.q}
+              onChange={(e) => setInternFilter(f => ({ ...f, q: e.target.value }))}
+              style={searchInput}
+            />
+            <select
+              value={internFilter.status}
+              onChange={(e) => setInternFilter(f => ({ ...f, status: e.target.value }))}
+              style={selectInput}
+            >
+              {INTERNSHIP_STATUS_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <span style={resultCount}>{filteredInternships.length} of {internships.length}</span>
+          </div>
           <div className="table-wrapper">
             <table>
               <thead>
@@ -187,7 +292,9 @@ export default function AdminReports() {
                 </tr>
               </thead>
               <tbody>
-                {internships.map(job => (
+                {filteredInternships.length === 0 ? (
+                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--nriva-text-light)' }}>No internships match the filters.</td></tr>
+                ) : filteredInternships.map(job => (
                   <tr key={job.id}>
                     <td style={{ fontWeight: 500, fontSize: 13 }}>{job.title}</td>
                     <td style={{ fontSize: 13 }}>{job.company}</td>
@@ -208,6 +315,25 @@ export default function AdminReports() {
       {activeTab === 'applications' && (
         <div className="card">
           <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Application Pipeline Report</h3>
+          <div style={filterRow}>
+            <input
+              type="text"
+              placeholder="Search applicant, email, position, school…"
+              value={appFilter.q}
+              onChange={(e) => setAppFilter(f => ({ ...f, q: e.target.value }))}
+              style={searchInput}
+            />
+            <select
+              value={appFilter.status}
+              onChange={(e) => setAppFilter(f => ({ ...f, status: e.target.value }))}
+              style={selectInput}
+            >
+              {APPLICATION_STATUS_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <span style={resultCount}>{filteredApplications.length} of {applications.length}</span>
+          </div>
           <div className="table-wrapper">
             <table>
               <thead>
@@ -221,7 +347,9 @@ export default function AdminReports() {
                 </tr>
               </thead>
               <tbody>
-                {applications.map(app => (
+                {filteredApplications.length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--nriva-text-light)' }}>No applications match the filters.</td></tr>
+                ) : filteredApplications.map(app => (
                   <tr key={app.id}>
                     <td>
                       <div style={{ fontWeight: 500, fontSize: 13 }}>{app.applicantName}</div>
@@ -238,6 +366,84 @@ export default function AdminReports() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'interns' && (
+        <div className="card">
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Intern Roster</h3>
+          <div style={filterRow}>
+            <input
+              type="text"
+              placeholder="Search name, email, school, skills…"
+              value={internUserFilter.q}
+              onChange={(e) => setInternUserFilter(f => ({ ...f, q: e.target.value }))}
+              style={searchInput}
+            />
+            <select
+              value={internUserFilter.status}
+              onChange={(e) => setInternUserFilter(f => ({ ...f, status: e.target.value }))}
+              style={selectInput}
+            >
+              {INTERN_ONBOARDED_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <span style={resultCount}>{filteredInternUsers.length} of {internUsers.length}</span>
+          </div>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>School</th>
+                  <th>Grade</th>
+                  <th>Skills</th>
+                  <th>Applications</th>
+                  <th>Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInternUsers.length === 0 ? (
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--nriva-text-light)' }}>No interns match the filters.</td></tr>
+                ) : filteredInternUsers.map(u => {
+                  const skills = u.skills || []
+                  const shownSkills = skills.slice(0, 3)
+                  const extra = skills.length - shownSkills.length
+                  return (
+                    <tr key={u.id}>
+                      <td>
+                        <div style={{ fontWeight: 500, fontSize: 13 }}>{u.displayName || '—'}</div>
+                        {!u.onboarded && (
+                          <div style={{ fontSize: 11, color: '#b45309' }}>Not onboarded</div>
+                        )}
+                      </td>
+                      <td style={{ fontSize: 13 }}>{u.email || '—'}</td>
+                      <td style={{ fontSize: 13 }}>{u.school || '—'}</td>
+                      <td style={{ fontSize: 13 }}>{u.gradeLevel || '—'}</td>
+                      <td style={{ fontSize: 13 }}>
+                        {skills.length === 0 ? (
+                          <span style={{ color: 'var(--nriva-text-light)' }}>—</span>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                            {shownSkills.map(s => (
+                              <span key={s} style={{ fontSize: 11, padding: '2px 8px', background: '#eef2ff', color: '#1a237e', borderRadius: 10 }}>{s}</span>
+                            ))}
+                            {extra > 0 && (
+                              <span style={{ fontSize: 11, color: 'var(--nriva-text-light)' }}>+{extra}</span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ fontSize: 13, fontWeight: 600 }}>{appCountByApplicant[u.id] || 0}</td>
+                      <td style={{ fontSize: 13 }}>{formatDate(u.createdAt)}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -263,6 +469,11 @@ export default function AdminReports() {
           }
         })
         const empList = Object.values(empData).sort((a, b) => b.totalApps - a.totalApps)
+        const filteredEmpList = empList.filter(e => {
+          if (employerFilter.status === 'active' && e.postings === 0) return false
+          if (employerFilter.status === 'inactive' && e.postings > 0) return false
+          return matchesText([e.name, e.company], employerFilter.q)
+        })
         return (
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -274,6 +485,25 @@ export default function AdminReports() {
             })), 'nriva_employer_performance')}>
               Export CSV
             </button>
+          </div>
+          <div style={filterRow}>
+            <input
+              type="text"
+              placeholder="Search employer or company…"
+              value={employerFilter.q}
+              onChange={(e) => setEmployerFilter(f => ({ ...f, q: e.target.value }))}
+              style={searchInput}
+            />
+            <select
+              value={employerFilter.status}
+              onChange={(e) => setEmployerFilter(f => ({ ...f, status: e.target.value }))}
+              style={selectInput}
+            >
+              {EMPLOYER_ACTIVITY_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <span style={resultCount}>{filteredEmpList.length} of {empList.length}</span>
           </div>
           <div className="table-wrapper">
             <table>
@@ -289,7 +519,9 @@ export default function AdminReports() {
                 </tr>
               </thead>
               <tbody>
-                {empList.map(e => {
+                {filteredEmpList.length === 0 ? (
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--nriva-text-light)' }}>No employers match the filters.</td></tr>
+                ) : filteredEmpList.map(e => {
                   const reviewRate = e.totalApps > 0 ? Math.round((e.reviewed / e.totalApps) * 100) : 0
                   return (
                     <tr key={e.name}>
