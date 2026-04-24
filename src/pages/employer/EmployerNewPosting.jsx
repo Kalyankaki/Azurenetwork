@@ -166,6 +166,19 @@ export default function EmployerNewPosting() {
       </div>
 
       <form onSubmit={handleSubmit}>
+        {/* NRIVA committee tip */}
+        <div style={{
+          background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10,
+          padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'start', gap: 12,
+        }}>
+          <span style={{ fontSize: 18, flexShrink: 0 }}>💡</span>
+          <div style={{ fontSize: 13, color: '#4338ca', lineHeight: 1.5 }}>
+            <strong>NRIVA Committees:</strong> If this is an internal NRIVA committee internship,
+            use <strong>NRIVA - [Committee Name]</strong> as the company name.
+            For example: <em>&quot;NRIVA - Youth Committee&quot;</em>, <em>&quot;NRIVA - Media Committee&quot;</em>, <em>&quot;NRIVA - Health Committee&quot;</em>
+          </div>
+        </div>
+
         {/* Company Info */}
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
@@ -174,7 +187,7 @@ export default function EmployerNewPosting() {
           <div className="form-group">
             <label>Company / Organization Name <span className="required">*</span></label>
             <input className="form-control" name="company" value={form.company} onChange={handleChange} required
-              placeholder="e.g., TechVasavi Solutions" />
+              placeholder="e.g., TechVasavi Solutions or NRIVA - Youth Committee" />
           </div>
           <div className="form-row">
             <div className="form-group">
