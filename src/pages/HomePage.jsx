@@ -80,40 +80,6 @@ export default function HomePage() {
       background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
       display: 'flex', flexDirection: 'column',
     }}>
-      {/* Pre-launch banner */}
-      <div style={{
-        background: 'linear-gradient(90deg, #ff6f00 0%, #ffa040 100%)',
-        color: 'white', textAlign: 'center', padding: '10px 16px',
-        fontSize: 13, fontWeight: 600,
-      }}>
-        🚀 Pre-Launch — The NRIVA Internship Portal officially kicks off April 29th! Submissions from employers and students are welcome.
-      </div>
-
-      {/* Top brand bar */}
-      <div style={{
-        background: 'rgba(0,0,0,0.25)', borderBottom: '1px solid rgba(255,255,255,0.08)',
-        padding: '10px 20px', display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/NRIVAYouthLogo.jpg" alt="NRIVA"
-            style={{ width: 28, height: 28, objectFit: 'contain' }}
-            onError={(e) => { e.target.style.display = 'none' }} />
-          <span style={{ color: 'white', fontSize: 13, fontWeight: 600, letterSpacing: 0.3 }}>
-            NRI Vasavi Association &middot; Internship Program
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12 }}>
-          <a href="https://nriva.org" target="_blank" rel="noopener noreferrer"
-            style={{ color: 'rgba(255,255,255,0.75)', textDecoration: 'none' }}>nriva.org</a>
-          <a href="https://nriva.org/donate/" target="_blank" rel="noopener noreferrer"
-            style={{
-              color: '#1a237e', background: '#ffa040', padding: '6px 12px',
-              borderRadius: 6, fontWeight: 600, textDecoration: 'none',
-            }}>Donate</a>
-        </div>
-      </div>
-
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
@@ -271,57 +237,6 @@ export default function HomePage() {
           </div>
         ))}
       </div>
-
-      <footer style={{
-        background: '#0d1642', borderTop: '1px solid rgba(255,255,255,0.1)',
-        padding: '40px 20px 24px', color: 'rgba(255,255,255,0.7)',
-      }}>
-        <div style={{
-          maxWidth: 1000, margin: '0 auto',
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: 32, marginBottom: 32,
-        }}>
-          <div>
-            <h4 style={{ color: '#ffa040', fontSize: 15, fontWeight: 600, marginBottom: 12 }}>About NRIVA</h4>
-            <p style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 8 }}>501(c)(3) Non-Profit Organization</p>
-            <p style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 8 }}>Tax ID: 26-1923816</p>
-            <p style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 12 }}>Connecting to Serve &middot; Transforming Lives</p>
-            <p style={{ fontSize: 12, lineHeight: 1.6, opacity: 0.6 }}>
-              Connecting Vasavites globally to serve humanity through education, health, and cultural preservation.
-            </p>
-            <p style={{ fontSize: 12, lineHeight: 1.6, opacity: 0.6, marginTop: 8 }}>
-              Dharmam (righteousness) &middot; Seelam (integrity) &middot; Ahimsa (non-violence)
-            </p>
-          </div>
-          <div>
-            <h4 style={{ color: '#ffa040', fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Quick Links</h4>
-            {[
-              { label: 'About Us', href: 'https://nriva.org/about-us/' },
-              { label: 'All Services', href: 'https://nriva.org/services/' },
-              { label: 'Donate', href: 'https://nriva.org/donate/' },
-              { label: 'FAQ / Help', href: 'https://nriva.org/faq/' },
-              { label: 'Membership', href: 'https://nriva.org/membership/' },
-              { label: 'Privacy Policy', href: 'https://nriva.org/privacy-policy/' },
-            ].map(link => (
-              <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.7)', marginBottom: 8, textDecoration: 'none' }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#ffa040'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}>
-                {link.label}
-              </a>
-            ))}
-          </div>
-          <div>
-            <h4 style={{ color: '#ffa040', fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Contact Us</h4>
-            <p style={{ fontSize: 13, marginBottom: 8 }}>1-855-WE-NRIVA</p>
-            <p style={{ fontSize: 13, marginBottom: 8 }}><a href="mailto:info@nriva.org" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>info@nriva.org</a></p>
-            <p style={{ fontSize: 13, marginBottom: 16 }}><a href="https://nriva.org" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none' }}>nriva.org</a></p>
-          </div>
-        </div>
-        <div style={{ textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16, fontSize: 11, opacity: 0.5 }}>
-          &copy; {new Date().getFullYear()} NRI Vasavi Association (NRIVA). All rights reserved.
-        </div>
-      </footer>
     </div>
   )
 }

@@ -136,19 +136,11 @@ export default function Layout({ role }) {
         transition: 'margin-left 0.3s ease',
         minHeight: '100vh', overflow: 'auto',
       }}>
-        {/* Pre-launch banner */}
-        <div style={{
-          background: 'linear-gradient(90deg, #ff6f00 0%, #ffa040 100%)',
-          color: 'white', textAlign: 'center', padding: '10px 16px',
-          fontSize: 13, fontWeight: 600, position: 'sticky', top: 0, zIndex: 51,
-        }}>
-          🚀 Pre-Launch — The NRIVA Internship Portal officially kicks off April 29th! Submissions from employers and students are welcome.
-        </div>
         <header style={{
           background: 'white', padding: '12px 24px',
           borderBottom: '1px solid var(--nriva-border)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          position: 'sticky', top: 37, zIndex: 50,
+          position: 'sticky', top: 0, zIndex: 50,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {isMobile && (
