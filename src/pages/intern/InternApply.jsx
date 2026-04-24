@@ -44,7 +44,9 @@ export default function InternApply() {
     skills: '',
     experience: '',
     whyInterested: '',
-    availability: '',
+    availableFrom: '',
+    availableTo: '',
+    hoursPerDay: '',
     referral: '',
   })
 
@@ -105,7 +107,9 @@ export default function InternApply() {
         skills: form.skills,
         experience: form.experience,
         whyInterested: form.whyInterested,
-        availability: form.availability,
+        availableFrom: form.availableFrom,
+        availableTo: form.availableTo,
+        hoursPerDay: form.hoursPerDay,
         referral: form.referral,
         chapter: form.chapter,
         resumeUrl: resumeData?.url || null,
@@ -283,15 +287,25 @@ export default function InternApply() {
             <textarea className="form-control" name="whyInterested" value={form.whyInterested} onChange={handleChange} required
               placeholder="Tell us why you're a great fit for this position..." />
           </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Available From <span className="required">*</span></label>
+              <input className="form-control" type="date" name="availableFrom" value={form.availableFrom} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label>Available To <span className="required">*</span></label>
+              <input className="form-control" type="date" name="availableTo" value={form.availableTo} onChange={handleChange} required />
+            </div>
+          </div>
           <div className="form-group">
-            <label>Availability <span className="required">*</span></label>
-            <select className="form-control" name="availability" value={form.availability} onChange={handleChange} required>
+            <label>Hours Available Per Day <span className="required">*</span></label>
+            <select className="form-control" name="hoursPerDay" value={form.hoursPerDay} onChange={handleChange} required>
               <option value="">Select...</option>
-              <option value="immediate">Immediately</option>
-              <option value="2_weeks">Within 2 weeks</option>
-              <option value="1_month">Within 1 month</option>
-              <option value="summer_only">Summer only</option>
-              <option value="specific">Specific date</option>
+              <option value="1-2 hours">1-2 hours</option>
+              <option value="2-4 hours">2-4 hours</option>
+              <option value="4-6 hours">4-6 hours</option>
+              <option value="6-8 hours">6-8 hours</option>
+              <option value="Flexible">Flexible</option>
             </select>
           </div>
           <div className="form-group">
