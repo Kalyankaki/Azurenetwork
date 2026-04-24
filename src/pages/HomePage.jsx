@@ -77,7 +77,7 @@ export default function HomePage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'url("/hero-bg.jpg") center/cover no-repeat fixed',
+      background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
       display: 'flex', flexDirection: 'column',
     }}>
       {/* Top brand bar */}
