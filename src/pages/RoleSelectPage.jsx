@@ -1,33 +1,41 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { onboardUser, sendAdminNotification } from '../services/firestore'
+import { onboardUser, sendAdminNotification, GRADE_LEVELS } from '../services/firestore'
+
+const INTERN_SKILLS = [
+  'Python', 'JavaScript', 'React', 'Java', 'HTML/CSS',
+  'Data Analysis', 'Excel / Google Sheets', 'SQL',
+  'Graphic Design', 'Video Editing', 'Canva / Figma',
+  'Social Media Marketing', 'Content Writing', 'Public Speaking',
+  'Research', 'Financial Analysis', 'Project Management',
+  'AI / Machine Learning', 'Mobile App Development', 'Cloud / DevOps',
+]
+
+const INTERNSHIP_CATEGORIES = [
+  { id: 'software', label: 'Software Development', icon: '💻' },
+  { id: 'data', label: 'Data & Analytics', icon: '📊' },
+  { id: 'marketing', label: 'Marketing & Social Media', icon: '📱' },
+  { id: 'design', label: 'Graphic Design & UI/UX', icon: '🎨' },
+  { id: 'finance', label: 'Finance & Accounting', icon: '💰' },
+  { id: 'ai', label: 'AI & Content Creation', icon: '🤖' },
+  { id: 'healthcare', label: 'Healthcare & Medical', icon: '🏥' },
+  { id: 'sales', label: 'Sales & Business Dev', icon: '📈' },
+  { id: 'engineering', label: 'Engineering & Cloud', icon: '☁️' },
+  { id: 'media', label: 'Journalism & Media', icon: '📝' },
+  { id: 'nonprofit', label: 'Non-Profit & Community', icon: '🤝' },
+  { id: 'other', label: 'Other', icon: '✨' },
+]
+
+const EMPLOYER_INDUSTRIES = [
+  'Technology', 'Healthcare', 'Finance', 'Education', 'Non-Profit',
+  'Media & Entertainment', 'Engineering', 'Consulting', 'Retail', 'Other',
+]
 
 const roleConfig = [
-  {
-    id: 'intern',
-    title: 'Intern',
-    description: 'Browse and apply for internship positions (10th grade - college)',
-    icon: '🎓',
-    color: '#1a237e',
-    autoApproved: true,
-  },
-  {
-    id: 'employer',
-    title: 'Employer',
-    description: 'Post internship opportunities and manage applicants',
-    icon: '🏢',
-    color: '#1b5e20',
-    autoApproved: false,
-  },
-  {
-    id: 'admin',
-    title: 'Administrator',
-    description: 'Oversee the internship program and manage users',
-    icon: '⚙️',
-    color: '#b71c1c',
-    autoApproved: false,
-  },
+  { id: 'intern', title: 'Intern', icon: '🎓', color: '#1a237e', autoApproved: true },
+  { id: 'employer', title: 'Employer', icon: '🏢', color: '#1b5e20', autoApproved: false },
+  { id: 'admin', title: 'Administrator', icon: '⚙️', color: '#b71c1c', autoApproved: false },
 ]
 
 export default function RoleSelectPage() {
@@ -46,12 +54,6 @@ export default function RoleSelectPage() {
     }
   }, [visibleRoles.length])
 
-  const handleSelect = (roleId) => {
-    selectRole(roleId)
-    navigate(`/${roleId}`)
-  }
-
-  // New user onboarding form
   if (isNewUser) {
     return <OnboardingForm user={user} logout={logout} navigate={navigate}
       selectRole={selectRole} refreshRoles={refreshRoles}
@@ -59,165 +61,122 @@ export default function RoleSelectPage() {
       error={error} setError={setError} />
   }
 
-  // Existing user with roles - show role selection
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ textAlign: 'center', marginBottom: 32, color: 'white' }}>
-        <img src="/NRIVAYouthLogo.jpg" alt="NRIVA"
-          style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 16 }}
-          onError={(e) => { e.target.style.display = 'none' }} />
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>
-          Welcome, {user?.displayName || 'User'}!
-        </h1>
+        <img src="/NRIVAYouthLogo.jpg" alt="NRIVA" style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 16, borderRadius: '50%' }} onError={(e) => { e.target.style.display = 'none' }} />
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Welcome, {user?.displayName || 'User'}!</h1>
         <p style={{ opacity: 0.7, fontSize: 15 }}>Select your role to continue</p>
       </div>
-
       <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 800 }}>
         {visibleRoles.map((role) => (
-          <button key={role.id} onClick={() => handleSelect(role.id)}
-            style={{
-              background: 'white', borderRadius: 16, padding: '32px 28px',
-              width: 220, border: '2px solid transparent',
-              cursor: 'pointer', textAlign: 'center', transition: 'all 0.3s',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.2)'; e.currentTarget.style.borderColor = role.color }}
-            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'transparent' }}>
+          <button key={role.id} onClick={() => { selectRole(role.id); navigate(`/${role.id}`) }}
+            style={{ background: 'white', borderRadius: 16, padding: '32px 28px', width: 220, border: '2px solid transparent', cursor: 'pointer', textAlign: 'center', transition: 'all 0.3s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = role.color }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'transparent' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>{role.icon}</div>
             <h3 style={{ fontSize: 18, fontWeight: 700, color: role.color, marginBottom: 8 }}>{role.title}</h3>
-            <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>{role.description}</p>
           </button>
         ))}
       </div>
-
-      <button onClick={() => window.history.back()}
-        style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 24, background: 'none', border: 'none', cursor: 'pointer' }}>
-        Go back
-      </button>
     </div>
   )
 }
 
 function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, submitting, setSubmitting, error, setError }) {
+  const [step, setStep] = useState(1)
   const [selectedRole, setSelectedRole] = useState('')
-  const [membership, setMembership] = useState('')
   const [displayName, setDisplayName] = useState(user?.displayName || '')
+  const [membership, setMembership] = useState('')
   const [signupComplete, setSignupComplete] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!selectedRole) { setError('Please select a role'); return }
-    if (!displayName.trim()) { setError('Please enter your name'); return }
+  // Intern-specific
+  const [gradeLevel, setGradeLevel] = useState('')
+  const [school, setSchool] = useState('')
+  const [skills, setSkills] = useState([])
+  const [interests, setInterests] = useState([])
+  const [availability, setAvailability] = useState('')
+  const [aboutMe, setAboutMe] = useState('')
 
+  // Employer-specific
+  const [companyName, setCompanyName] = useState('')
+  const [industry, setIndustry] = useState('')
+  const [companySize, setCompanySize] = useState('')
+  const [jobTitle, setJobTitle] = useState('')
+  const [internshipTypes, setInternshipTypes] = useState([])
+  const [companyWebsite, setCompanyWebsite] = useState('')
+
+  const toggleItem = (arr, setArr, item) => {
+    setArr(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])
+  }
+
+  const handleSubmit = async () => {
     setSubmitting(true)
     setError(null)
     try {
-      const roles = await onboardUser(user.uid, {
+      const profileData = {
         requestedRole: selectedRole,
         nrivaMembership: membership.trim(),
         displayName: displayName.trim(),
-      })
-
-      // Send notification to admin about new signup (email + Firestore)
-      const notifyData = {
-        userName: displayName.trim(),
-        userEmail: user.email,
-        requestedRole: selectedRole,
-        nrivaMembership: membership.trim() || 'None',
-        userUid: user.uid,
       }
-      try {
-        await sendAdminNotification({ type: 'new_signup', ...notifyData })
-        // Also try email via serverless function
-        fetch('/api/notify-signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(notifyData),
-        }).catch(() => {})
-      } catch {
-        // Notification is best-effort
-      }
-
-      // Refresh auth context to get updated roles
-      await refreshRoles()
 
       if (selectedRole === 'intern') {
-        selectRole('intern')
-        setSignupComplete(true)
-        setSubmitting(false)
-      } else {
-        setSignupComplete(true)
-        setSubmitting(false)
+        Object.assign(profileData, {
+          gradeLevel, school: school.trim(), skills, interests,
+          availability, aboutMe: aboutMe.trim(),
+        })
+      } else if (selectedRole === 'employer') {
+        Object.assign(profileData, {
+          companyName: companyName.trim(), industry, companySize,
+          jobTitle: jobTitle.trim(), internshipTypes,
+          companyWebsite: companyWebsite.trim(),
+        })
       }
+
+      await onboardUser(user.uid, profileData)
+
+      try {
+        const notifyData = { userName: displayName.trim(), userEmail: user.email, requestedRole: selectedRole, nrivaMembership: membership.trim() || 'None', userUid: user.uid }
+        await sendAdminNotification({ type: 'new_signup', ...notifyData })
+        fetch('/api/notify-signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(notifyData) }).catch(() => {})
+      } catch { /* best-effort */ }
+
+      await refreshRoles()
+      if (selectedRole === 'intern') selectRole('intern')
+      setSignupComplete(true)
+      setSubmitting(false)
     } catch (err) {
       setError(err.message || 'Failed to save. Please try again.')
       setSubmitting(false)
     }
   }
 
-  const selectedConfig = roleConfig.find(r => r.id === selectedRole)
-
   if (signupComplete) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', padding: 20,
-      }}>
-        <div style={{
-          background: 'white', borderRadius: 20, padding: '40px 32px',
-          maxWidth: 480, width: '100%', textAlign: 'center',
-        }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>
-            {selectedRole === 'intern' ? '🎉' : '⏳'}
-          </div>
+      <div style={pageStyle}>
+        <div style={{ background: 'white', borderRadius: 20, padding: '40px 32px', maxWidth: 480, width: '100%', textAlign: 'center' }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>{selectedRole === 'intern' ? '🎉' : '⏳'}</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1a237e', marginBottom: 8 }}>
             {selectedRole === 'intern' ? 'Welcome Aboard!' : 'Request Submitted!'}
           </h2>
           <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
             {selectedRole === 'intern'
-              ? 'Your intern account is ready. You can now browse and apply for internships.'
-              : `Your ${selectedRole} role request has been submitted. An NRIVA administrator will review and approve your account shortly.`}
+              ? 'Your intern account is ready. We\'ll match you with internships based on your skills and interests.'
+              : `Your ${selectedRole} role request has been submitted. An admin will review and approve your account shortly.`}
           </p>
-
           {selectedRole === 'intern' && (
-            <div style={{
-              background: '#dcfce7', border: '1px solid #86efac', borderRadius: 12,
-              padding: '16px 20px', marginBottom: 20, textAlign: 'left',
-            }}>
-              <div style={{ fontWeight: 600, fontSize: 15, color: '#15803d', marginBottom: 8 }}>
-                Join our WhatsApp Group
-              </div>
-              <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, marginBottom: 12 }}>
-                Stay connected with fellow interns and get important updates about the internship program.
-              </p>
+            <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 12, padding: '16px 20px', marginBottom: 20, textAlign: 'left' }}>
+              <div style={{ fontWeight: 600, fontSize: 15, color: '#15803d', marginBottom: 8 }}>Join our WhatsApp Group</div>
+              <p style={{ fontSize: 13, color: '#166534', lineHeight: 1.5, marginBottom: 12 }}>Stay connected with fellow interns and get updates.</p>
               <a href="https://chat.whatsapp.com/DwpnyVgKQIyFmNvxo8mK3B" target="_blank" rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  background: '#25D366', color: 'white', padding: '10px 20px',
-                  borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none',
-                }}>
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#25D366', color: 'white', padding: '10px 20px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
                 Join WhatsApp Group
               </a>
             </div>
           )}
-
-          <button
-            onClick={() => {
-              if (selectedRole === 'intern') navigate('/intern', { replace: true })
-              else { logout(); navigate('/') }
-            }}
-            style={{
-              width: '100%', padding: '12px 20px', borderRadius: 10,
-              border: 'none', background: '#1a237e', color: 'white',
-              fontSize: 14, fontWeight: 600, cursor: 'pointer',
-            }}>
-            {selectedRole === 'intern' ? 'Go to Intern Dashboard' : 'Return to Home'}
+          <button onClick={() => { if (selectedRole === 'intern') navigate('/intern', { replace: true }); else { logout(); navigate('/') } }}
+            style={{ width: '100%', padding: '12px 20px', borderRadius: 10, border: 'none', background: '#1a237e', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+            {selectedRole === 'intern' ? 'Go to Dashboard' : 'Return to Home'}
           </button>
         </div>
       </div>
@@ -225,137 +184,210 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}>
-      <div style={{
-        background: 'white', borderRadius: 20, padding: '36px 32px',
-        maxWidth: 520, width: '100%',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <img src="/NRIVAYouthLogo.jpg" alt="NRIVA"
-            style={{ width: 60, height: 60, objectFit: 'contain', marginBottom: 12 }}
-            onError={(e) => { e.target.style.display = 'none' }} />
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1a237e', marginBottom: 4 }}>
-            Welcome to NRIVA Internship Program!
-          </h2>
-          <p style={{ color: '#64748b', fontSize: 14 }}>
-            Tell us about yourself to get started
-          </p>
+    <div style={pageStyle}>
+      <div style={{ background: 'white', borderRadius: 20, padding: '32px 28px', maxWidth: 560, width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <img src="/NRIVAYouthLogo.jpg" alt="NRIVA" style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: 10, borderRadius: '50%' }} onError={(e) => { e.target.style.display = 'none' }} />
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1a237e', marginBottom: 2 }}>Join NRIVA Internship Program</h2>
+          <p style={{ color: '#64748b', fontSize: 13 }}>Step {step} of {selectedRole === 'intern' ? 3 : selectedRole === 'employer' ? 3 : 2}</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontWeight: 500, fontSize: 14, marginBottom: 6 }}>
-              Full Name <span style={{ color: '#c62828' }}>*</span>
-            </label>
-            <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your full name" required
-              style={inputStyle} />
-          </div>
+        {/* Progress bar */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 24 }}>
+          {[1, 2, 3].map(s => (
+            <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: s <= step ? '#1a237e' : '#e2e8f0', transition: 'all 0.3s' }} />
+          ))}
+        </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontWeight: 500, fontSize: 14, marginBottom: 6 }}>
-              Email
-            </label>
-            <input type="email" value={user?.email || ''} disabled
-              style={{ ...inputStyle, background: '#f8fafc', color: '#94a3b8' }} />
-          </div>
+        {/* Step 1: Basic info + role */}
+        {step === 1 && (
+          <>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Full Name <span style={{ color: '#c62828' }}>*</span></label>
+              <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your full name" required style={inputStyle} />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Email</label>
+              <input type="email" value={user?.email || ''} disabled style={{ ...inputStyle, background: '#f8fafc', color: '#94a3b8' }} />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>NRIVA Membership ID</label>
+              <input type="text" value={membership} onChange={(e) => setMembership(e.target.value)} placeholder="e.g., NRIVA-12345 (optional)" style={inputStyle} />
+              <p style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Don&apos;t have one? <a href="https://nriva.org/membership" target="_blank" rel="noopener noreferrer" style={{ color: '#1a237e', fontWeight: 500 }}>Sign up at nriva.org/membership</a></p>
+              <p style={{ fontSize: 12, color: '#b45309', marginTop: 2, fontStyle: 'italic' }}>* Life members get priority for internship placements</p>
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>I want to join as <span style={{ color: '#c62828' }}>*</span></label>
+              <div style={{ display: 'flex', gap: 12 }}>
+                {roleConfig.filter(r => r.id !== 'admin').map((role) => (
+                  <button key={role.id} type="button" onClick={() => setSelectedRole(role.id)}
+                    style={{ flex: 1, padding: '16px 12px', borderRadius: 12, textAlign: 'center', border: `2px solid ${selectedRole === role.id ? role.color : '#e2e8f0'}`, background: selectedRole === role.id ? `${role.color}10` : 'white', cursor: 'pointer' }}>
+                    <div style={{ fontSize: 28, marginBottom: 6 }}>{role.icon}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: role.color }}>{role.title}</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{role.autoApproved ? '✓ Instant access' : 'Requires approval'}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {error && <div style={errorStyle}>{error}</div>}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button type="button" onClick={() => { logout(); navigate('/') }} style={{ ...btnOutline, flex: 1 }}>Sign Out</button>
+              <button type="button" disabled={!selectedRole || !displayName.trim()} onClick={() => { if (!selectedRole) { setError('Please select a role'); return } if (!displayName.trim()) { setError('Please enter your name'); return } setError(null); setStep(2) }}
+                style={{ ...btnPrimary, flex: 2, opacity: (!selectedRole || !displayName.trim()) ? 0.5 : 1 }}>Continue</button>
+            </div>
+          </>
+        )}
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontWeight: 500, fontSize: 14, marginBottom: 6 }}>
-              NRIVA Membership ID
-            </label>
-            <input type="text" value={membership} onChange={(e) => setMembership(e.target.value)}
-              placeholder="e.g., NRIVA-12345 (optional)"
-              style={inputStyle} />
-            <p style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.5 }}>
-              Don&apos;t have one? Sign up at{' '}
-              <a href="https://nriva.org/membership" target="_blank" rel="noopener noreferrer"
-                style={{ color: '#1a237e', fontWeight: 500 }}>
-                nriva.org/membership
-              </a>
-            </p>
-            <p style={{ fontSize: 12, color: '#b45309', marginTop: 4, fontStyle: 'italic' }}>
-              * Life members will be given priority for internship placements
-            </p>
-          </div>
+        {/* Step 2: Role-specific details */}
+        {step === 2 && selectedRole === 'intern' && (
+          <>
+            <h3 style={sectionTitle}>Tell us about yourself</h3>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Current Grade Level <span style={{ color: '#c62828' }}>*</span></label>
+              <select value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)} style={inputStyle}>
+                <option value="">Select...</option>
+                {GRADE_LEVELS.map(gl => <option key={gl} value={gl}>{gl}</option>)}
+              </select>
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>School / University <span style={{ color: '#c62828' }}>*</span></label>
+              <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} placeholder="e.g., Lincoln High School or UT Austin" style={inputStyle} />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Your Skills (select all that apply)</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {INTERN_SKILLS.map(s => (
+                  <button key={s} type="button" onClick={() => toggleItem(skills, setSkills, s)}
+                    style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500, border: skills.includes(s) ? 'none' : '1px solid #e2e8f0', background: skills.includes(s) ? '#1a237e' : 'white', color: skills.includes(s) ? 'white' : '#64748b', cursor: 'pointer', transition: 'all 0.2s' }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Availability</label>
+              <select value={availability} onChange={(e) => setAvailability(e.target.value)} style={inputStyle}>
+                <option value="">Select...</option>
+                <option value="summer">Summer only (Jun-Aug)</option>
+                <option value="fall">Fall semester</option>
+                <option value="spring">Spring semester</option>
+                <option value="year-round">Year-round</option>
+                <option value="flexible">Flexible</option>
+              </select>
+            </div>
+            {error && <div style={errorStyle}>{error}</div>}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button type="button" onClick={() => setStep(1)} style={{ ...btnOutline, flex: 1 }}>Back</button>
+              <button type="button" onClick={() => { if (!gradeLevel) { setError('Please select your grade level'); return } if (!school.trim()) { setError('Please enter your school'); return } setError(null); setStep(3) }}
+                style={{ ...btnPrimary, flex: 2 }}>Continue</button>
+            </div>
+          </>
+        )}
 
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontWeight: 500, fontSize: 14, marginBottom: 10 }}>
-              I want to join as <span style={{ color: '#c62828' }}>*</span>
-            </label>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              {roleConfig.filter(r => r.id !== 'admin').map((role) => (
-                <button key={role.id} type="button"
-                  onClick={() => setSelectedRole(role.id)}
-                  style={{
-                    flex: 1, minWidth: 140, padding: '16px 12px',
-                    borderRadius: 12, textAlign: 'center',
-                    border: `2px solid ${selectedRole === role.id ? role.color : '#e2e8f0'}`,
-                    background: selectedRole === role.id ? `${role.color}10` : 'white',
-                    cursor: 'pointer', transition: 'all 0.2s',
-                  }}>
-                  <div style={{ fontSize: 28, marginBottom: 6 }}>{role.icon}</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: role.color }}>{role.title}</div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-                    {role.autoApproved ? '✓ Instant access' : 'Requires approval'}
-                  </div>
+        {step === 2 && selectedRole === 'employer' && (
+          <>
+            <h3 style={sectionTitle}>About your organization</h3>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Company / Organization Name <span style={{ color: '#c62828' }}>*</span></label>
+              <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g., TechVasavi Solutions" style={inputStyle} />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Your Job Title <span style={{ color: '#c62828' }}>*</span></label>
+              <input type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g., Engineering Manager" style={inputStyle} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Industry</label>
+                <select value={industry} onChange={(e) => setIndustry(e.target.value)} style={inputStyle}>
+                  <option value="">Select...</option>
+                  {EMPLOYER_INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </div>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Company Size</label>
+                <select value={companySize} onChange={(e) => setCompanySize(e.target.value)} style={inputStyle}>
+                  <option value="">Select...</option>
+                  <option value="1-10">1-10 employees</option>
+                  <option value="11-50">11-50</option>
+                  <option value="51-200">51-200</option>
+                  <option value="201-1000">201-1000</option>
+                  <option value="1000+">1000+</option>
+                </select>
+              </div>
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Company Website</label>
+              <input type="url" value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="https://..." style={inputStyle} />
+            </div>
+            {error && <div style={errorStyle}>{error}</div>}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button type="button" onClick={() => setStep(1)} style={{ ...btnOutline, flex: 1 }}>Back</button>
+              <button type="button" onClick={() => { if (!companyName.trim()) { setError('Please enter company name'); return } if (!jobTitle.trim()) { setError('Please enter your job title'); return } setError(null); setStep(3) }}
+                style={{ ...btnPrimary, flex: 2 }}>Continue</button>
+            </div>
+          </>
+        )}
+
+        {/* Step 3: Preferences */}
+        {step === 3 && selectedRole === 'intern' && (
+          <>
+            <h3 style={sectionTitle}>What kind of internships interest you?</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              {INTERNSHIP_CATEGORIES.map(cat => (
+                <button key={cat.id} type="button" onClick={() => toggleItem(interests, setInterests, cat.id)}
+                  style={{ padding: '12px', borderRadius: 10, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, border: interests.includes(cat.id) ? '2px solid #1a237e' : '1px solid #e2e8f0', background: interests.includes(cat.id) ? '#eef2ff' : 'white', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <span style={{ fontSize: 20 }}>{cat.icon}</span>
+                  <span style={{ fontSize: 12, fontWeight: interests.includes(cat.id) ? 600 : 400, color: interests.includes(cat.id) ? '#1a237e' : '#64748b' }}>{cat.label}</span>
                 </button>
               ))}
             </div>
-          </div>
-
-          {selectedConfig && !selectedConfig.autoApproved && (
-            <div style={{
-              background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8,
-              padding: '10px 14px', fontSize: 13, color: '#92400e', marginBottom: 16,
-            }}>
-              The {selectedConfig.title.toLowerCase()} role requires admin approval. You&apos;ll be notified once approved.
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Anything else you&apos;d like us to know?</label>
+              <textarea value={aboutMe} onChange={(e) => setAboutMe(e.target.value)} placeholder="Tell us about your goals, projects you've worked on, or what you hope to learn..." style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} />
             </div>
-          )}
-
-          {error && (
-            <div style={{
-              background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8,
-              padding: '10px 14px', fontSize: 13, color: '#dc2626', marginBottom: 16,
-            }}>
-              {error}
+            {error && <div style={errorStyle}>{error}</div>}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button type="button" onClick={() => setStep(2)} style={{ ...btnOutline, flex: 1 }}>Back</button>
+              <button type="button" disabled={submitting} onClick={handleSubmit}
+                style={{ ...btnPrimary, flex: 2, opacity: submitting ? 0.6 : 1 }}>
+                {submitting ? 'Setting up...' : 'Get Started'}
+              </button>
             </div>
-          )}
+          </>
+        )}
 
-          <button type="submit" disabled={submitting || !selectedRole}
-            style={{
-              width: '100%', padding: '14px 20px', borderRadius: 10,
-              border: 'none', fontSize: 15, fontWeight: 600, cursor: 'pointer',
-              background: selectedRole ? '#1a237e' : '#e2e8f0',
-              color: selectedRole ? 'white' : '#94a3b8',
-              opacity: submitting ? 0.6 : 1,
-              transition: 'all 0.2s',
-            }}>
-            {submitting ? 'Setting up your account...' :
-              selectedRole === 'intern' ? 'Get Started as Intern' :
-              selectedRole ? `Request ${selectedConfig?.title} Access` :
-              'Select a role above'}
-          </button>
-
-          <button type="button" onClick={async () => { await logout(); navigate('/') }}
-            style={{
-              width: '100%', marginTop: 12, padding: '10px', border: 'none',
-              background: 'none', color: '#64748b', fontSize: 13, cursor: 'pointer',
-            }}>
-            Sign Out
-          </button>
-        </form>
+        {step === 3 && selectedRole === 'employer' && (
+          <>
+            <h3 style={sectionTitle}>What types of interns are you looking for?</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              {INTERNSHIP_CATEGORIES.map(cat => (
+                <button key={cat.id} type="button" onClick={() => toggleItem(internshipTypes, setInternshipTypes, cat.id)}
+                  style={{ padding: '12px', borderRadius: 10, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, border: internshipTypes.includes(cat.id) ? '2px solid #1b5e20' : '1px solid #e2e8f0', background: internshipTypes.includes(cat.id) ? '#f0fdf4' : 'white', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <span style={{ fontSize: 20 }}>{cat.icon}</span>
+                  <span style={{ fontSize: 12, fontWeight: internshipTypes.includes(cat.id) ? 600 : 400, color: internshipTypes.includes(cat.id) ? '#1b5e20' : '#64748b' }}>{cat.label}</span>
+                </button>
+              ))}
+            </div>
+            {error && <div style={errorStyle}>{error}</div>}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button type="button" onClick={() => setStep(2)} style={{ ...btnOutline, flex: 1 }}>Back</button>
+              <button type="button" disabled={submitting} onClick={handleSubmit}
+                style={{ ...btnPrimary, flex: 2, background: '#1b5e20', opacity: submitting ? 0.6 : 1 }}>
+                {submitting ? 'Submitting...' : 'Request Employer Access'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
-const inputStyle = {
-  width: '100%', padding: '11px 14px', borderRadius: 8,
-  border: '1px solid #e2e8f0', fontSize: 14, boxSizing: 'border-box',
-}
+const pageStyle = { minHeight: '100vh', background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }
+const inputStyle = { width: '100%', padding: '11px 14px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 14, boxSizing: 'border-box' }
+const labelStyle = { display: 'block', fontWeight: 500, fontSize: 14, marginBottom: 6 }
+const fieldStyle = { marginBottom: 16 }
+const sectionTitle = { fontSize: 16, fontWeight: 600, color: '#1a237e', marginBottom: 16 }
+const errorStyle = { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#dc2626', marginBottom: 12 }
+const btnPrimary = { padding: '12px 20px', borderRadius: 10, border: 'none', background: '#1a237e', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }
+const btnOutline = { padding: '12px 20px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: 14, cursor: 'pointer' }

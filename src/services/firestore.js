@@ -90,20 +90,20 @@ export async function createUser(uid, data) {
   return userData
 }
 
-export async function onboardUser(uid, { requestedRole, nrivaMembership, displayName }) {
+export async function onboardUser(uid, data) {
+  const { requestedRole, nrivaMembership, displayName, ...profileData } = data
   const updates = {
     onboarded: true,
     requestedRole,
     nrivaMembership: nrivaMembership || '',
+    ...profileData,
     updatedAt: serverTimestamp(),
   }
   if (displayName) updates.displayName = displayName
-  // Intern role is auto-approved
   if (requestedRole === 'intern') {
     updates.roles = ['intern']
   }
   await updateDoc(doc(db, 'users', uid), updates)
-  // Update public stats counter
   if (requestedRole === 'intern') {
     try {
       await setDoc(doc(db, 'public_stats', 'counts'), { students: increment(1) }, { merge: true })
