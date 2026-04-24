@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { onboardUser, sendAdminNotification, GRADE_LEVELS } from '../services/firestore'
+import { uploadResume } from '../firebase'
 
 const INTERN_SKILLS = [
   'Python', 'JavaScript', 'React', 'Java', 'HTML/CSS',
@@ -99,6 +100,8 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   const [aboutMe, setAboutMe] = useState('')
   const [linkedIn, setLinkedIn] = useState('')
   const [portfolio, setPortfolio] = useState('')
+  const [resumeFile, setResumeFile] = useState(null)
+  const [experienceSummary, setExperienceSummary] = useState('')
 
   // Employer-specific
   const [companyName, setCompanyName] = useState('')
@@ -123,10 +126,24 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
       }
 
       if (selectedRole === 'intern') {
+        // Upload resume if provided
+        let resumeData = null
+        if (resumeFile) {
+          try {
+            resumeData = await uploadResume(resumeFile, user.uid)
+          } catch (err) {
+            setError('Resume upload failed: ' + err.message)
+            setSubmitting(false)
+            return
+          }
+        }
         Object.assign(profileData, {
           gradeLevel, school: school.trim(), skills, interests,
           availability, aboutMe: aboutMe.trim(),
           linkedIn: linkedIn.trim(), portfolio: portfolio.trim(),
+          experienceSummary: experienceSummary.trim(),
+          resumeUrl: resumeData?.url || null,
+          resumeName: resumeData?.name || null,
         })
       } else if (selectedRole === 'employer') {
         Object.assign(profileData, {
@@ -355,8 +372,31 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
               ))}
             </div>
             <div style={fieldStyle}>
+              <label style={labelStyle}>Experience Summary</label>
+              <textarea value={experienceSummary} onChange={(e) => setExperienceSummary(e.target.value)}
+                placeholder="Describe your experience: school projects, clubs, volunteering, past jobs or internships, awards..."
+                style={{ ...inputStyle, minHeight: 90, resize: 'vertical' }} />
+              <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                This helps employers find you for the right opportunities
+              </p>
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Resume / CV (PDF, DOC, DOCX - max 5MB)</label>
+              <input type="file" accept=".pdf,.doc,.docx"
+                onChange={(e) => setResumeFile(e.target.files[0] || null)}
+                style={{ ...inputStyle, padding: 8 }} />
+              {resumeFile && (
+                <div style={{ fontSize: 12, color: '#15803d', marginTop: 4 }}>
+                  Selected: {resumeFile.name} ({(resumeFile.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+              <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                Uploaded once, used for all your applications
+              </p>
+            </div>
+            <div style={fieldStyle}>
               <label style={labelStyle}>Anything else you&apos;d like us to know?</label>
-              <textarea value={aboutMe} onChange={(e) => setAboutMe(e.target.value)} placeholder="Tell us about your goals, projects you've worked on, or what you hope to learn..." style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} />
+              <textarea value={aboutMe} onChange={(e) => setAboutMe(e.target.value)} placeholder="Goals, career aspirations, fun facts..." style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }} />
             </div>
             {error && <div style={errorStyle}>{error}</div>}
             <div style={{ display: 'flex', gap: 12 }}>

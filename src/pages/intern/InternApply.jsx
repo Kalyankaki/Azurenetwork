@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships } from '../../hooks/useFirestore'
-import { createApplication, getApplicationCount, GRADE_LEVELS, MAX_INTERN_APPLICATIONS } from '../../services/firestore'
-import { uploadResume } from '../../firebase'
+import { createApplication, getApplicationCount, getUser, MAX_INTERN_APPLICATIONS } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 export default function InternApply() {
@@ -14,7 +13,6 @@ export default function InternApply() {
   const internship = internships.find(i => String(i.id) === String(id))
   const [toast, setToast] = useState(null)
   const [submitted, setSubmitted] = useState(false)
-  const [resumeFile, setResumeFile] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
   const [form, setForm] = useState({
@@ -44,16 +42,12 @@ export default function InternApply() {
 
     setSubmitting(true)
     try {
-      let resumeData = null
-      if (resumeFile) {
-        try {
-          resumeData = await uploadResume(resumeFile, user.uid)
-        } catch (err) {
-          setToast('Resume upload failed: ' + err.message)
-          setSubmitting(false)
-          return
-        }
-      }
+      // Pull profile data to include with the application (for employer's matching)
+      let profile = {}
+      try {
+        profile = await getUser(user.uid) || {}
+      } catch { /* continue */ }
+
       await createApplication({
         internshipId: id,
         internshipTitle: internship.title,
@@ -61,6 +55,17 @@ export default function InternApply() {
         applicantUid: user.uid,
         applicantName: user.displayName || 'Unknown',
         email: user.email,
+        // Profile data snapshot (for matching)
+        profileSkills: profile.skills || [],
+        profileInterests: profile.interests || [],
+        gradeLevel: profile.gradeLevel || '',
+        school: profile.school || '',
+        linkedIn: profile.linkedIn || '',
+        portfolio: profile.portfolio || '',
+        resumeUrl: profile.resumeUrl || null,
+        resumeName: profile.resumeName || null,
+        nrivaMembership: profile.nrivaMembership || '',
+        // Application-specific
         relevantSkills: form.relevantSkills,
         priorExperience: form.priorExperience,
         whyInterested: form.whyInterested,
@@ -69,8 +74,6 @@ export default function InternApply() {
         availableTo: form.availableTo,
         hoursPerDay: form.hoursPerDay,
         notesToEmployer: form.notesToEmployer,
-        resumeUrl: resumeData?.url || null,
-        resumeName: resumeData?.name || null,
       })
       setSubmitted(true)
       setToast('Application submitted!')
@@ -187,19 +190,6 @@ export default function InternApply() {
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
             Additional
           </h2>
-          <div className="form-group">
-            <label>Resume / CV (PDF, DOC, DOCX - max 5MB)</label>
-            <input className="form-control" type="file" accept=".pdf,.doc,.docx"
-              onChange={(e) => setResumeFile(e.target.files[0] || null)} style={{ padding: 8 }} />
-            {resumeFile && (
-              <div style={{ fontSize: 12, color: 'var(--nriva-success)', marginTop: 4 }}>
-                Selected: {resumeFile.name} ({(resumeFile.size / 1024).toFixed(1)} KB)
-              </div>
-            )}
-            <p style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 4 }}>
-              Optional if you already uploaded one during registration
-            </p>
-          </div>
           <div className="form-group">
             <label>Notes to the Employer</label>
             <textarea className="form-control" name="notesToEmployer" value={form.notesToEmployer} onChange={handleChange}
