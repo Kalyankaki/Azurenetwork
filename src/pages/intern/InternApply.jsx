@@ -81,7 +81,12 @@ export default function InternApply() {
       setTimeout(() => navigate('/intern/applications'), 2500)
     } catch (err) {
       setSubmitting(false)
-      setToast('Error: ' + err.message)
+      console.error('Application submit error:', err)
+      if (err?.code === 'permission-denied') {
+        setToast('Permission denied. Please sign out and sign back in, then try again.')
+      } else {
+        setToast('Error submitting application: ' + (err?.message || 'Unknown error. Please try again.'))
+      }
     }
   }
 
