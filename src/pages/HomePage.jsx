@@ -231,21 +231,27 @@ export default function HomePage() {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
-          {[
-            { value: stats.students, label: 'Students Signed Up' },
-            { value: stats.internships, label: 'Internships Available' },
-            { value: stats.companies, label: 'Companies Partnered' },
-          ].map(({ value, label }) => (
-            <div key={label} style={{
-              background: 'rgba(255,255,255,0.08)', padding: '12px 20px',
-              borderRadius: 10, color: 'white', textAlign: 'center',
-            }}>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{value}</div>
-              <div style={{ fontSize: 11, opacity: 0.6 }}>{label}</div>
-            </div>
-          ))}
-        </div>
+      </div>
+
+      <div style={{
+        maxWidth: 1000, margin: '0 auto', padding: '0 20px 40px',
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+        gap: 16, width: '100%',
+      }}>
+        {[
+          { icon: '🎓', title: 'For Students', desc: 'Browse internships, apply online, and track your application status. Open to 10th grade through college.' },
+          { icon: '🏢', title: 'For Employers', desc: 'Post opportunities, review applicants, and manage your hiring pipeline with AI-powered tools.' },
+          { icon: '⚙️', title: 'For Admins', desc: 'Oversee the program, manage users, assign coordinators, and view analytics.' },
+        ].map(({ icon, title, desc }) => (
+          <div key={title} style={{
+            background: 'rgba(255,255,255,0.06)', borderRadius: 12,
+            padding: '20px 24px', border: '1px solid rgba(255,255,255,0.1)',
+          }}>
+            <span style={{ fontSize: 24 }}>{icon}</span>
+            <h3 style={{ color: '#ffa040', fontSize: 15, fontWeight: 600, margin: '8px 0 6px' }}>{title}</h3>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 1.5 }}>{desc}</p>
+          </div>
+        ))}
       </div>
 
       <footer style={{
