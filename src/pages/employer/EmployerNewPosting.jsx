@@ -40,6 +40,9 @@ export default function EmployerNewPosting() {
     applicationDeadline: '',
     startDate: '',
     additionalNotes: '',
+    internshipPlan: '',
+    expectations: '',
+    mentorshipDetails: '',
   })
 
   const handleChange = (e) => {
@@ -124,6 +127,9 @@ export default function EmployerNewPosting() {
         gradeLevelMin: form.gradeLevelMin,
         gradeLevelMax: form.gradeLevelMax || null,
         expectedHoursPerDay: form.expectedHoursPerDay,
+        internshipPlan: form.internshipPlan,
+        expectations: form.expectations,
+        mentorshipDetails: form.mentorshipDetails,
         contactEmail: form.contactEmail,
         contactPhone: form.contactPhone,
       })
@@ -371,6 +377,28 @@ export default function EmployerNewPosting() {
             <label>Benefits & Perks</label>
             <textarea className="form-control" name="benefits" value={form.benefits} onChange={handleChange}
               placeholder="e.g., Mentorship, Certificate of completion, Networking opportunities..." />
+          </div>
+        </div>
+
+        {/* Internship Plan */}
+        <div className="card" style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20, paddingBottom: 12, borderBottom: '1px solid var(--nriva-border)' }}>
+            Internship Plan & Expectations
+          </h2>
+          <div className="form-group">
+            <label>Internship Plan <span className="required">*</span></label>
+            <textarea className="form-control" name="internshipPlan" value={form.internshipPlan} onChange={handleChange} required
+              placeholder="Outline the plan for the internship: what projects will the intern work on, what will a typical week look like, what milestones are expected?" style={{ minHeight: 100 }} />
+          </div>
+          <div className="form-group">
+            <label>What You Expect from Interns</label>
+            <textarea className="form-control" name="expectations" value={form.expectations} onChange={handleChange}
+              placeholder="Work ethic, communication style, deliverables, attendance expectations..." />
+          </div>
+          <div className="form-group">
+            <label>Mentorship & Support</label>
+            <textarea className="form-control" name="mentorshipDetails" value={form.mentorshipDetails} onChange={handleChange}
+              placeholder="Who will mentor the intern? How often will they meet? What support will be provided?" />
           </div>
         </div>
 

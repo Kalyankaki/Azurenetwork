@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useApplications } from '../../hooks/useFirestore'
+import { updateApplicationStatus } from '../../services/firestore'
 import { formatDate, addDays } from '../../utils/date'
 
 const statusLabels = {
@@ -8,6 +9,9 @@ const statusLabels = {
   under_review: { label: 'Under Review', class: 'pending' },
   shortlisted: { label: 'Shortlisted', class: 'open' },
   accepted: { label: 'Accepted', class: 'filled' },
+  offered: { label: 'Offer Received', class: 'open' },
+  offer_accepted: { label: 'Offer Accepted', class: 'filled' },
+  offer_declined: { label: 'Offer Declined', class: 'closed' },
   rejected: { label: 'Not Selected', class: 'closed' },
 }
 
@@ -125,6 +129,33 @@ export default function InternApplications() {
                 )}
               </div>
             </div>
+            {selected.status === 'offered' && (
+              <div style={{ padding: '0 24px 16px' }}>
+                <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 10, padding: 16, textAlign: 'center' }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>🎉</div>
+                  <h4 style={{ fontSize: 16, fontWeight: 600, color: '#15803d', marginBottom: 8 }}>
+                    You&apos;ve received an offer!
+                  </h4>
+                  <p style={{ fontSize: 13, color: '#166534', marginBottom: 16 }}>
+                    {selected.company} has offered you the {selected.internshipTitle} position. Would you like to accept?
+                  </p>
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                    <button className="btn btn-success" onClick={async () => {
+                      await updateApplicationStatus(selected.id, 'offer_accepted')
+                      setSelected({ ...selected, status: 'offer_accepted' })
+                    }}>
+                      Accept Offer
+                    </button>
+                    <button className="btn btn-outline" style={{ color: '#dc2626', borderColor: '#dc2626' }} onClick={async () => {
+                      await updateApplicationStatus(selected.id, 'offer_declined')
+                      setSelected({ ...selected, status: 'offer_declined' })
+                    }}>
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setSelected(null)}>Close</button>
             </div>

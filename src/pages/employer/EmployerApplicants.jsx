@@ -4,13 +4,16 @@ import { updateApplicationStatus } from '../../services/firestore'
 import { formatDate } from '../../utils/date'
 import Toast from '../../components/Toast'
 
-const statusOptions = ['pending', 'under_review', 'shortlisted', 'accepted', 'rejected']
+const statusOptions = ['pending', 'under_review', 'shortlisted', 'offered', 'offer_accepted', 'offer_declined', 'rejected']
 
 const statusLabels = {
   pending: 'Pending',
   under_review: 'Under Review',
   shortlisted: 'Shortlisted',
   accepted: 'Accepted',
+  offered: 'Offer Sent',
+  offer_accepted: 'Offer Accepted',
+  offer_declined: 'Offer Declined',
   rejected: 'Rejected',
 }
 
@@ -19,6 +22,9 @@ const statusBadgeClass = {
   under_review: 'pending',
   shortlisted: 'open',
   accepted: 'filled',
+  offered: 'pending',
+  offer_accepted: 'filled',
+  offer_declined: 'closed',
   rejected: 'closed',
 }
 
@@ -249,16 +255,51 @@ export default function EmployerApplicants() {
               <div style={{ marginTop: 24 }}>
                 <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Update Status</h4>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {statusOptions.map(s => (
-                    <button
-                      key={s}
+                  {['pending', 'under_review', 'shortlisted', 'rejected'].map(s => (
+                    <button key={s}
                       className={`btn btn-sm ${selected.status === s ? 'btn-primary' : 'btn-outline'}`}
-                      onClick={() => updateStatus(selected.id, s)}
-                    >
+                      onClick={() => updateStatus(selected.id, s)}>
                       {statusLabels[s]}
                     </button>
                   ))}
                 </div>
+
+                {/* Offer workflow */}
+                {(selected.status === 'shortlisted' || selected.status === 'accepted') && selected.status !== 'offered' && (
+                  <div style={{ marginTop: 16, padding: 16, background: '#f0fdf4', borderRadius: 10, border: '1px solid #86efac' }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 600, color: '#15803d', marginBottom: 8 }}>Send Internship Offer</h4>
+                    <p style={{ fontSize: 13, color: '#166534', marginBottom: 12 }}>
+                      This will notify the intern that they&apos;ve been selected. They&apos;ll need to accept or decline through the portal.
+                    </p>
+                    <button className="btn btn-success" onClick={() => updateStatus(selected.id, 'offered')}>
+                      Send Offer to {selected.applicantName}
+                    </button>
+                  </div>
+                )}
+
+                {selected.status === 'offered' && (
+                  <div style={{ marginTop: 16, padding: 16, background: '#fffbeb', borderRadius: 10, border: '1px solid #fde68a' }}>
+                    <p style={{ fontSize: 13, color: '#92400e' }}>
+                      Offer sent — waiting for {selected.applicantName} to accept or decline.
+                    </p>
+                  </div>
+                )}
+
+                {selected.status === 'offer_accepted' && (
+                  <div style={{ marginTop: 16, padding: 16, background: '#dcfce7', borderRadius: 10, border: '1px solid #86efac' }}>
+                    <h4 style={{ fontSize: 14, fontWeight: 600, color: '#15803d', marginBottom: 8 }}>Offer Accepted!</h4>
+                    <p style={{ fontSize: 13, color: '#166534', marginBottom: 12 }}>
+                      {selected.applicantName} has accepted the internship. You can now send onboarding information.
+                    </p>
+                    <button className="btn btn-primary" onClick={() => {
+                      const subject = encodeURIComponent(`Welcome aboard! Onboarding for ${selected.internshipTitle}`)
+                      const body = encodeURIComponent(`Hi ${selected.applicantName},\n\nCongratulations! We're excited to have you join us as an intern for the ${selected.internshipTitle} position.\n\nHere are your next steps:\n1. \n2. \n3. \n\nStart date: \nReporting to: \n\nPlease let us know if you have any questions.\n\nBest regards`)
+                      window.open(`mailto:${selected.email}?subject=${subject}&body=${body}`, '_blank')
+                    }}>
+                      Send Onboarding Email
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="modal-footer">

@@ -97,6 +97,8 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   const [interests, setInterests] = useState([])
   const [availability, setAvailability] = useState('')
   const [aboutMe, setAboutMe] = useState('')
+  const [linkedIn, setLinkedIn] = useState('')
+  const [portfolio, setPortfolio] = useState('')
 
   // Employer-specific
   const [companyName, setCompanyName] = useState('')
@@ -124,6 +126,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
         Object.assign(profileData, {
           gradeLevel, school: school.trim(), skills, interests,
           availability, aboutMe: aboutMe.trim(),
+          linkedIn: linkedIn.trim(), portfolio: portfolio.trim(),
         })
       } else if (selectedRole === 'employer') {
         Object.assign(profileData, {
@@ -274,6 +277,16 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
                 <option value="year-round">Year-round</option>
                 <option value="flexible">Flexible</option>
               </select>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>LinkedIn Profile</label>
+                <input type="url" value={linkedIn} onChange={(e) => setLinkedIn(e.target.value)} placeholder="https://linkedin.com/in/..." style={inputStyle} />
+              </div>
+              <div style={fieldStyle}>
+                <label style={labelStyle}>Portfolio / GitHub</label>
+                <input type="url" value={portfolio} onChange={(e) => setPortfolio(e.target.value)} placeholder="https://..." style={inputStyle} />
+              </div>
             </div>
             {error && <div style={errorStyle}>{error}</div>}
             <div style={{ display: 'flex', gap: 12 }}>
