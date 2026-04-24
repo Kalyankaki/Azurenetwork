@@ -104,9 +104,9 @@ export async function onboardUser(uid, data) {
     updatedAt: serverTimestamp(),
   }
   if (displayName) updates.displayName = displayName
-  // Only intern role is auto-approved; employer/admin require manual admin approval
-  if (requestedRole === 'intern') {
-    updates.roles = ['intern']
+  // Auto-approve interns and employers (admin still requires manual admin approval)
+  if (requestedRole === 'intern' || requestedRole === 'employer') {
+    updates.roles = [requestedRole]
   }
   await updateDoc(doc(db, 'users', uid), updates)
   if (requestedRole === 'intern') {
@@ -115,7 +115,7 @@ export async function onboardUser(uid, data) {
     } catch { /* non-critical */ }
   }
   logActivity('user_onboarded', { userUid: uid, requestedRole, nrivaMembership })
-  return requestedRole === 'intern' ? ['intern'] : []
+  return (requestedRole === 'intern' || requestedRole === 'employer') ? [requestedRole] : []
 }
 
 export async function getApplicationCount(applicantUid) {
