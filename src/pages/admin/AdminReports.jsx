@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useInternships, useApplications } from '../../hooks/useFirestore'
+import { useInternships, useApplications, useUsers } from '../../hooks/useFirestore'
 import { formatDate } from '../../utils/date'
-import { statusBadgeClass, statusDisplay } from '../../utils/status'
+import { statusBadgeClass, statusDisplay, statusLabel } from '../../utils/status'
+import { exportCSV } from '../../utils/csv'
 
 function safeDiv(a, b) {
   if (!b || b === 0) return 0
@@ -16,6 +17,7 @@ function safePct(a, b) {
 export default function AdminReports() {
   const { data: internships } = useInternships()
   const { data: applications } = useApplications()
+  const { data: users } = useUsers()
   const [activeTab, setActiveTab] = useState('overview')
 
   const totalPositions = internships.reduce((sum, i) => sum + (i.positions || 0), 0)
@@ -32,6 +34,20 @@ export default function AdminReports() {
     <div>
       <div className="page-header">
         <h1>Reports & Analytics</h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-sm btn-outline" onClick={() => exportCSV(
+            internships.map(i => ({ title: i.title, company: i.company, employer: i.employerName, status: i.status, location: i.location, type: i.type, duration: i.duration, positions: i.positions, deadline: i.deadline })),
+            'nriva_internships'
+          )}>Export Internships</button>
+          <button className="btn btn-sm btn-outline" onClick={() => exportCSV(
+            applications.map(a => ({ applicant: a.applicantName, email: a.email, internship: a.internshipTitle, company: a.company, status: statusLabel(a.status), school: a.school, gradeLevel: a.gradeLevel, availableFrom: a.availableFrom, availableTo: a.availableTo, hoursPerDay: a.hoursPerDay })),
+            'nriva_applications'
+          )}>Export Applications</button>
+          <button className="btn btn-sm btn-outline" onClick={() => exportCSV(
+            users.filter(u => (u.roles || []).includes('intern')).map(u => ({ name: u.displayName, email: u.email, school: u.school, gradeLevel: u.gradeLevel, skills: (u.skills || []).join('; '), interests: (u.interests || []).join('; '), membership: u.nrivaMembership })),
+            'nriva_interns'
+          )}>Export Interns</button>
+        </div>
       </div>
 
       <div className="tabs">
@@ -228,9 +244,37 @@ export default function AdminReports() {
         </div>
       )}
 
-      {activeTab === 'employers' && (
+      {activeTab === 'employers' && (() => {
+        const empData = {}
+        internships.forEach(i => {
+          const key = i.employerName || i.employer || 'Unknown'
+          if (!empData[key]) empData[key] = { name: key, company: i.company, postings: 0, openPos: 0, totalApps: 0, reviewed: 0, offered: 0, accepted: 0 }
+          empData[key].postings++
+          if (i.status === 'open') empData[key].openPos += (i.positions || 0)
+        })
+        applications.forEach(a => {
+          const intern = internships.find(i => i.id === a.internshipId)
+          const key = intern?.employerName || intern?.employer || 'Unknown'
+          if (empData[key]) {
+            empData[key].totalApps++
+            if (['under_review', 'shortlisted', 'offered', 'offer_accepted', 'rejected'].includes(a.status)) empData[key].reviewed++
+            if (['offered', 'offer_accepted', 'offer_declined'].includes(a.status)) empData[key].offered++
+            if (a.status === 'offer_accepted') empData[key].accepted++
+          }
+        })
+        const empList = Object.values(empData).sort((a, b) => b.totalApps - a.totalApps)
+        return (
         <div className="card">
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Employer Activity Report</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600 }}>Employer Performance Report</h3>
+            <button className="btn btn-sm btn-outline" onClick={() => exportCSV(empList.map(e => ({
+              employer: e.name, company: e.company, postings: e.postings, open_positions: e.openPos,
+              applications: e.totalApps, reviewed: e.reviewed, review_rate: e.totalApps > 0 ? Math.round((e.reviewed / e.totalApps) * 100) + '%' : 'N/A',
+              offers_sent: e.offered, offers_accepted: e.accepted,
+            })), 'nriva_employer_performance')}>
+              Export CSV
+            </button>
+          </div>
           <div className="table-wrapper">
             <table>
               <thead>
@@ -238,19 +282,28 @@ export default function AdminReports() {
                   <th>Employer</th>
                   <th>Company</th>
                   <th>Postings</th>
-                  <th>Positions Open</th>
+                  <th>Applications</th>
+                  <th>Review Rate</th>
+                  <th>Offers</th>
+                  <th>Accepted</th>
                 </tr>
               </thead>
               <tbody>
-                {Array.from(new Set(internships.map(i => i.employerName || i.employer).filter(Boolean))).map(employer => {
-                  const postings = internships.filter(i => (i.employerName || i.employer) === employer)
-                  const openPositions = postings.filter(p => p.status === 'open').reduce((sum, p) => sum + (p.positions || 0), 0)
+                {empList.map(e => {
+                  const reviewRate = e.totalApps > 0 ? Math.round((e.reviewed / e.totalApps) * 100) : 0
                   return (
-                    <tr key={employer}>
-                      <td style={{ fontWeight: 500, fontSize: 13 }}>{employer}</td>
-                      <td style={{ fontSize: 13 }}>{postings[0]?.company || '—'}</td>
-                      <td style={{ fontSize: 13, fontWeight: 600 }}>{postings.length}</td>
-                      <td style={{ fontSize: 13 }}>{openPositions}</td>
+                    <tr key={e.name}>
+                      <td style={{ fontWeight: 500, fontSize: 13 }}>{e.name}</td>
+                      <td style={{ fontSize: 13 }}>{e.company || '—'}</td>
+                      <td style={{ fontSize: 13, fontWeight: 600 }}>{e.postings}</td>
+                      <td style={{ fontSize: 13 }}>{e.totalApps}</td>
+                      <td>
+                        <span style={{ fontWeight: 600, fontSize: 13, color: reviewRate >= 80 ? '#15803d' : reviewRate >= 50 ? '#ca8a04' : '#dc2626' }}>
+                          {reviewRate}%
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 13 }}>{e.offered}</td>
+                      <td style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>{e.accepted}</td>
                     </tr>
                   )
                 })}
@@ -258,7 +311,8 @@ export default function AdminReports() {
             </table>
           </div>
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

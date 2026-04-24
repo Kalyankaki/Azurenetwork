@@ -1,6 +1,15 @@
 import { Link } from 'react-router-dom'
 import { useInternships, useApplications, useMessages, useUsers } from '../../hooks/useFirestore'
 import { INTERNSHIP_STATUSES, isSuperAdmin } from '../../services/firestore'
+import { statusLabel } from '../../utils/status'
+
+const STALE_DAYS = 7
+
+function daysSince(ts) {
+  if (!ts) return 999
+  const d = ts.toDate ? ts.toDate() : ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts)
+  return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24))
+}
 
 export default function AdminDashboard() {
   const { data: internships } = useInternships()
@@ -8,211 +17,199 @@ export default function AdminDashboard() {
   const { data: messages } = useMessages()
   const { data: users } = useUsers()
 
+  // Counts
   const openPositions = internships.filter(i => i.status === 'open').length
   const pendingApprovals = internships.filter(i => i.status === INTERNSHIP_STATUSES.PENDING_APPROVAL).length
-  const totalApplicants = applications.length
-  const shortlisted = applications.filter(a => a.status === 'shortlisted').length
-  const accepted = applications.filter(a => a.status === 'accepted').length
   const openMessages = messages.filter(m => m.status === 'open').length
   const resolvedMessages = messages.filter(m => m.status === 'resolved').length
-  // Pending = onboarded with a non-intern requestedRole that hasn't been granted yet, OR not onboarded at all
   const pendingUsers = users.filter(u => {
     if (isSuperAdmin(u.email)) return false
-    const roles = u.roles || []
-    if (roles.length > 0) return false
-    return true
+    return !(u.roles || []).length
   }).length
+
+  // Pipeline funnel
+  const pipeline = {
+    total: applications.length,
+    pending: applications.filter(a => a.status === 'pending').length,
+    under_review: applications.filter(a => a.status === 'under_review').length,
+    shortlisted: applications.filter(a => a.status === 'shortlisted').length,
+    offered: applications.filter(a => a.status === 'offered').length,
+    offer_accepted: applications.filter(a => a.status === 'offer_accepted').length,
+    offer_declined: applications.filter(a => a.status === 'offer_declined').length,
+    rejected: applications.filter(a => a.status === 'rejected').length,
+  }
+
+  // Stale applications (pending/under_review for > STALE_DAYS)
+  const staleApps = applications.filter(a =>
+    (a.status === 'pending' || a.status === 'under_review') &&
+    daysSince(a.appliedDate) > STALE_DAYS
+  )
+
+  // Offers pending response
+  const pendingOffers = applications.filter(a => a.status === 'offered')
+
+  // Employer performance
+  const employerMap = {}
+  internships.forEach(i => {
+    const key = i.employerUid || i.employerName || 'unknown'
+    if (!employerMap[key]) employerMap[key] = { name: i.employerName || 'Unknown', postings: 0, apps: 0, reviewed: 0, offered: 0, accepted: 0 }
+    employerMap[key].postings++
+  })
+  applications.forEach(a => {
+    const intern = internships.find(i => i.id === a.internshipId)
+    const key = intern?.employerUid || intern?.employerName || 'unknown'
+    if (employerMap[key]) {
+      employerMap[key].apps++
+      if (['under_review', 'shortlisted', 'offered', 'offer_accepted', 'rejected'].includes(a.status)) employerMap[key].reviewed++
+      if (['offered', 'offer_accepted', 'offer_declined'].includes(a.status)) employerMap[key].offered++
+      if (a.status === 'offer_accepted') employerMap[key].accepted++
+    }
+  })
+  const employers = Object.values(employerMap).sort((a, b) => b.postings - a.postings)
+
+  // Intern placement tracker
+  const placed = applications.filter(a => a.status === 'offer_accepted').length
+  const lookingInterns = users.filter(u => (u.roles || []).includes('intern')).length
+  const withOffers = new Set(applications.filter(a => a.status === 'offered').map(a => a.applicantUid)).size
 
   return (
     <div>
       <div className="page-header">
         <div>
-          <h1>Admin Dashboard</h1>
+          <h1>Program Dashboard</h1>
           <p style={{ color: 'var(--nriva-text-light)', fontSize: 14, marginTop: 4 }}>
             NRIVA Internship Program Overview
           </p>
         </div>
       </div>
 
+      {/* Alert banners */}
+      {pendingApprovals > 0 && (
+        <Link to="/admin/internships" style={{ textDecoration: 'none' }}>
+          <AlertBanner icon="⏳" color="#f59e0b" bg="#fffbeb" border="#fbbf24"
+            title={`${pendingApprovals} internship${pendingApprovals === 1 ? '' : 's'} awaiting approval`}
+            subtitle="Review before students can see them" badge={`${pendingApprovals} pending`} />
+        </Link>
+      )}
+      {staleApps.length > 0 && (
+        <Link to="/admin/applications" style={{ textDecoration: 'none' }}>
+          <AlertBanner icon="🚨" color="#dc2626" bg="#fef2f2" border="#fecaca"
+            title={`${staleApps.length} application${staleApps.length === 1 ? '' : 's'} waiting ${STALE_DAYS}+ days with no review`}
+            subtitle="Students are waiting — please follow up with employers" badge={`${staleApps.length} stale`} />
+        </Link>
+      )}
+      {pendingOffers.length > 0 && (
+        <AlertBanner icon="📩" color="#7c3aed" bg="#f5f3ff" border="#c4b5fd"
+          title={`${pendingOffers.length} offer${pendingOffers.length === 1 ? '' : 's'} waiting for intern response`}
+          subtitle={pendingOffers.slice(0, 3).map(a => a.applicantName).join(', ')} badge={`${pendingOffers.length} pending`} />
+      )}
+      {pendingUsers > 0 && (
+        <Link to="/admin/users" style={{ textDecoration: 'none' }}>
+          <AlertBanner icon="👤" color="#7c3aed" bg="#f5f3ff" border="#a78bfa"
+            title={`${pendingUsers} user${pendingUsers === 1 ? '' : 's'} awaiting role assignment`}
+            subtitle="Sign up completed but no roles assigned" badge={`${pendingUsers} pending`} />
+        </Link>
+      )}
+      {openMessages > 0 && (
+        <Link to="/admin/messages" style={{ textDecoration: 'none' }}>
+          <AlertBanner icon="✉️" color="#c2410c" bg="#fff7ed" border="#fbbf24"
+            title="Messages & Issues"
+            subtitle={`${openMessages} open · ${resolvedMessages} resolved`}
+            badge={openMessages > 0 ? `${openMessages} need attention` : null} />
+        </Link>
+      )}
+
+      {/* Key stats */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-label">Total Internships</div>
-          <div className="stat-value">{internships.length}</div>
-          <div style={{ fontSize: 12, color: 'var(--nriva-success)', marginTop: 4 }}>
-            {openPositions} currently open
-          </div>
+          <div className="stat-label">Open Internships</div>
+          <div className="stat-value">{openPositions}</div>
+          <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 4 }}>of {internships.length} total</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Total Applications</div>
-          <div className="stat-value">{totalApplicants}</div>
-          <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 4 }}>
-            across all positions
-          </div>
+          <div className="stat-value">{pipeline.total}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Shortlisted</div>
-          <div className="stat-value" style={{ color: 'var(--nriva-warning)' }}>{shortlisted}</div>
-          <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 4 }}>
-            awaiting interviews
-          </div>
+          <div className="stat-label">Interns Placed</div>
+          <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>{placed}</div>
+          <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 4 }}>{withOffers} with pending offers</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Accepted</div>
-          <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>{accepted}</div>
-          <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 4 }}>
-            offers extended
-          </div>
+          <div className="stat-label">Registered Interns</div>
+          <div className="stat-value">{lookingInterns}</div>
         </div>
       </div>
 
-      {/* Pending approval banner */}
-      {pendingApprovals > 0 && (
-        <Link to="/admin/internships" style={{ textDecoration: 'none' }}>
-          <div className="card" style={{
-            marginBottom: 16, padding: '16px 20px',
-            border: '2px solid #fbbf24', background: '#fffbeb',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 24 }}>⏳</span>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 15, color: '#92400e' }}>
-                    Internships Awaiting Approval
-                  </div>
-                  <div style={{ fontSize: 13, color: '#b45309' }}>
-                    {pendingApprovals} posting{pendingApprovals === 1 ? '' : 's'} need review before students can see them
-                  </div>
-                </div>
-              </div>
-              <span style={{
-                background: '#f59e0b', color: 'white', padding: '4px 12px',
-                borderRadius: 20, fontSize: 13, fontWeight: 700,
-              }}>
-                {pendingApprovals} pending
-              </span>
-            </div>
-          </div>
-        </Link>
-      )}
-
-      {/* Pending users banner */}
-      {pendingUsers > 0 && (
-        <Link to="/admin/users" style={{ textDecoration: 'none' }}>
-          <div className="card" style={{
-            marginBottom: 16, padding: '16px 20px',
-            border: '2px solid #a78bfa', background: '#f5f3ff',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 24 }}>👤</span>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 15, color: '#5b21b6' }}>
-                    Users Awaiting Role Assignment
-                  </div>
-                  <div style={{ fontSize: 13, color: '#6d28d9' }}>
-                    {pendingUsers} user{pendingUsers === 1 ? '' : 's'} signed up but have no roles assigned yet
-                  </div>
-                </div>
-              </div>
-              <span style={{
-                background: '#7c3aed', color: 'white', padding: '4px 12px',
-                borderRadius: 20, fontSize: 13, fontWeight: 700,
-              }}>
-                {pendingUsers} pending
-              </span>
-            </div>
-          </div>
-        </Link>
-      )}
-
-      {/* Messages/Issues Summary */}
-      {(openMessages > 0 || resolvedMessages > 0) && (
-        <Link to="/admin/messages" style={{ textDecoration: 'none' }}>
-          <div className="card" style={{
-            marginBottom: 24, padding: '16px 20px',
-            border: openMessages > 0 ? '2px solid #fbbf24' : '1px solid var(--nriva-border)',
-            background: openMessages > 0 ? '#fffbeb' : 'white',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 24 }}>✉️</span>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--nriva-text)' }}>
-                    Messages & Issues
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--nriva-text-light)' }}>
-                    {openMessages} open · {resolvedMessages} resolved
-                  </div>
-                </div>
-              </div>
-              {openMessages > 0 && (
-                <span style={{
-                  background: '#dc2626', color: 'white', padding: '4px 12px',
-                  borderRadius: 20, fontSize: 13, fontWeight: 700,
+      {/* Pipeline funnel */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Application Pipeline</h2>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+          {[
+            { key: 'pending', label: 'Pending', color: '#f59e0b' },
+            { key: 'under_review', label: 'Reviewing', color: '#3b82f6' },
+            { key: 'shortlisted', label: 'Shortlisted', color: '#8b5cf6' },
+            { key: 'offered', label: 'Offered', color: '#06b6d4' },
+            { key: 'offer_accepted', label: 'Accepted', color: '#22c55e' },
+            { key: 'rejected', label: 'Rejected', color: '#ef4444' },
+          ].map(stage => {
+            const count = pipeline[stage.key] || 0
+            const pct = pipeline.total > 0 ? Math.max(2, (count / pipeline.total) * 100) : 0
+            return (
+              <div key={stage.key} style={{ flex: pct, minWidth: count > 0 ? 40 : 0, textAlign: 'center' }}>
+                <div style={{
+                  background: stage.color, height: 32, borderRadius: 4,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'white', fontSize: 12, fontWeight: 700,
                 }}>
-                  {openMessages} need attention
-                </span>
-              )}
-            </div>
-          </div>
-        </Link>
-      )}
+                  {count > 0 ? count : ''}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--nriva-text-light)', marginTop: 4 }}>{stage.label}</div>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, fontSize: 12, color: 'var(--nriva-text-light)' }}>
+          <span>Conversion: {pipeline.total > 0 ? Math.round((pipeline.offer_accepted / pipeline.total) * 100) : 0}% placed</span>
+          <span>·</span>
+          <span>{pipeline.offered + pipeline.offer_accepted + pipeline.offer_declined} offers sent</span>
+        </div>
+      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth > 768 ? '2fr 1fr' : '1fr', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth > 768 ? '1fr 1fr' : '1fr', gap: 24 }}>
+        {/* Employer Performance */}
         <div className="card">
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Recent Applications</h2>
-          {applications.length === 0 ? (
-            <p style={{ color: 'var(--nriva-text-light)', fontSize: 14 }}>No applications yet.</p>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Employer Performance</h3>
+          {employers.length === 0 ? (
+            <p style={{ color: 'var(--nriva-text-light)', fontSize: 13 }}>No employer data yet.</p>
           ) : (
             <div className="table-wrapper">
               <table>
-                <thead>
-                  <tr><th>Applicant</th><th>Position</th><th>Status</th></tr>
-                </thead>
+                <thead><tr><th>Employer</th><th>Apps</th><th>Reviewed</th><th>Offers</th></tr></thead>
                 <tbody>
-                  {applications.slice(0, 8).map(app => (
-                    <tr key={app.id}>
-                      <td style={{ fontWeight: 500, fontSize: 13 }}>{app.applicantName}</td>
-                      <td style={{ fontSize: 13 }}>{app.internshipTitle}</td>
-                      <td><span className={`badge badge-${app.status === 'shortlisted' ? 'open' : app.status === 'accepted' ? 'filled' : 'pending'}`}>
-                        {(app.status || 'pending').replace('_', ' ')}
-                      </span></td>
-                    </tr>
-                  ))}
+                  {employers.slice(0, 8).map((e, i) => {
+                    const reviewRate = e.apps > 0 ? Math.round((e.reviewed / e.apps) * 100) : 0
+                    return (
+                      <tr key={i}>
+                        <td style={{ fontWeight: 500, fontSize: 13 }}>{e.name}</td>
+                        <td style={{ fontSize: 13 }}>{e.apps}</td>
+                        <td>
+                          <span style={{ fontWeight: 600, color: reviewRate >= 80 ? '#15803d' : reviewRate >= 50 ? '#ca8a04' : '#dc2626', fontSize: 13 }}>
+                            {reviewRate}%
+                          </span>
+                        </td>
+                        <td style={{ fontSize: 13 }}>{e.offered} sent · {e.accepted} accepted</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
 
+        {/* Quick Actions + Intern Tracker */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div className="card">
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Internships by Status</h3>
-            {internships.length === 0 ? (
-              <p style={{ color: 'var(--nriva-text-light)', fontSize: 13 }}>No internships yet.</p>
-            ) : (
-              ['open', 'closed', 'filled'].map(status => {
-                const count = internships.filter(i => i.status === status).length
-                const pct = internships.length > 0 ? Math.round((count / internships.length) * 100) : 0
-                return (
-                  <div key={status} style={{ marginBottom: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-                      <span style={{ textTransform: 'capitalize' }}>{status}</span>
-                      <span style={{ fontWeight: 600 }}>{count}</span>
-                    </div>
-                    <div style={{ height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', width: `${pct}%`,
-                        background: status === 'open' ? 'var(--nriva-success)' : status === 'closed' ? 'var(--nriva-danger)' : 'var(--nriva-primary)',
-                        borderRadius: 4, transition: 'width 0.5s ease',
-                      }} />
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-
           <div className="card">
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Quick Actions</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -223,7 +220,51 @@ export default function AdminDashboard() {
               <Link to="/admin/reports" className="btn btn-outline" style={{ justifyContent: 'center' }}>View Reports</Link>
             </div>
           </div>
+
+          <div className="card">
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Internships by Status</h3>
+            {['open', 'pending_approval', 'closed', 'filled', 'rejected'].map(status => {
+              const count = internships.filter(i => i.status === status).length
+              if (count === 0) return null
+              const pct = internships.length > 0 ? Math.round((count / internships.length) * 100) : 0
+              return (
+                <div key={status} style={{ marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
+                    <span style={{ textTransform: 'capitalize' }}>{status.replace('_', ' ')}</span>
+                    <span style={{ fontWeight: 600 }}>{count}</span>
+                  </div>
+                  <div style={{ height: 6, background: '#e2e8f0', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', width: `${pct}%`, borderRadius: 3,
+                      background: status === 'open' ? '#22c55e' : status === 'pending_approval' ? '#f59e0b' : status === 'filled' ? '#3b82f6' : '#94a3b8',
+                    }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function AlertBanner({ icon, color, bg, border, title, subtitle, badge }) {
+  return (
+    <div className="card" style={{ marginBottom: 12, padding: '14px 20px', border: `2px solid ${border}`, background: bg }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 22 }}>{icon}</span>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14, color }}>{title}</div>
+            <div style={{ fontSize: 12, color, opacity: 0.8 }}>{subtitle}</div>
+          </div>
+        </div>
+        {badge && (
+          <span style={{ background: color, color: 'white', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+            {badge}
+          </span>
+        )}
       </div>
     </div>
   )
