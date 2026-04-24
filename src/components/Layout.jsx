@@ -2,6 +2,7 @@ import { Outlet, NavLink, Link, useLocation, useNavigate } from 'react-router-do
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import ContactAdmin from './ContactAdmin'
+import AIAssistant from './AIAssistant'
 
 const navItems = {
   intern: [
@@ -205,6 +206,7 @@ export default function Layout({ role }) {
       </main>
 
       {/* Contact Admin button for non-admin roles */}
+      <AIAssistant />
       {role !== 'admin' && <ContactAdmin />}
     </div>
   )

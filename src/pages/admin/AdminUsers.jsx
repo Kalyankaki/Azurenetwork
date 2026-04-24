@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useUsers } from '../../hooks/useFirestore'
-import { updateUserRoles, updateUserCoordinator, isSuperAdmin } from '../../services/firestore'
+import { updateUserRoles, updateUserCoordinator, deleteUser, isSuperAdmin } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 const ALL_ROLES = ['intern', 'employer', 'admin']
@@ -13,6 +13,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('')
   const [confirmAction, setConfirmAction] = useState(null)
   const [coordinatorModal, setCoordinatorModal] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [coordForm, setCoordForm] = useState({ name: '', email: '', phone: '' })
 
   // Sort: pending users (no roles) first, then by createdAt desc
@@ -198,10 +199,18 @@ export default function AdminUsers() {
                         )}
                       </td>
                       <td>
-                        <button className="btn btn-sm btn-outline" onClick={() => openCoordinatorModal(user)}
-                          style={{ fontSize: 11, padding: '3px 10px' }}>
-                          {user.coordinator ? 'Edit' : 'Assign'} Coordinator
-                        </button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-sm btn-outline" onClick={() => openCoordinatorModal(user)}
+                            style={{ fontSize: 11, padding: '3px 10px' }}>
+                            {user.coordinator ? 'Edit' : 'Assign'} Coordinator
+                          </button>
+                          {!isSuper && (
+                            <button className="btn btn-sm btn-outline" onClick={() => setDeleteConfirm(user)}
+                              style={{ fontSize: 11, padding: '3px 10px', color: 'var(--nriva-danger)', borderColor: 'var(--nriva-danger)' }}>
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -289,6 +298,32 @@ export default function AdminUsers() {
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setConfirmAction(null)}>Cancel</button>
               <button className="btn btn-danger" onClick={handleConfirmedToggle}>Remove Role</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="modal-header"><h2>Delete User</h2></div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14 }}>
+                Are you sure you want to delete <strong>{deleteConfirm.displayName || deleteConfirm.email}</strong>?
+                This will remove their account and all role assignments. This action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setDeleteConfirm(null)}>Cancel</button>
+              <button className="btn btn-danger" onClick={async () => {
+                try {
+                  await deleteUser(deleteConfirm.id)
+                  setToast(`User ${deleteConfirm.displayName || deleteConfirm.email} deleted`)
+                  setDeleteConfirm(null)
+                } catch (err) {
+                  setToast('Error: ' + err.message)
+                }
+              }}>Delete User</button>
             </div>
           </div>
         </div>

@@ -150,6 +150,11 @@ export async function getAllUsers() {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
 }
 
+export async function deleteUser(uid) {
+  await deleteDoc(doc(db, 'users', uid))
+  logActivity('user_deleted', { userUid: uid })
+}
+
 export function getUserRoles(email, firestoreRoles = []) {
   if (email === SUPER_ADMIN_EMAIL) return ['intern', 'employer', 'admin']
   return firestoreRoles

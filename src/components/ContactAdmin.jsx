@@ -42,7 +42,7 @@ export default function ContactAdmin() {
       <button
         onClick={() => setOpen(true)}
         style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
+          position: 'fixed', bottom: 88, right: 24, zIndex: 1000,
           width: 56, height: 56, borderRadius: '50%',
           background: 'linear-gradient(135deg, #1a237e, #283593)',
           color: 'white', border: 'none', cursor: 'pointer',

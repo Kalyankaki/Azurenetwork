@@ -14,7 +14,7 @@ service cloud.firestore {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if isAdmin();
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
     match /internships/{docId} {
       allow read: if true;  // Public - internship listings are visible to everyone
