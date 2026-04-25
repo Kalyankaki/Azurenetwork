@@ -110,8 +110,7 @@ export default function HomePage() {
           color: 'rgba(255,255,255,0.65)', fontSize: 17, lineHeight: 1.6,
           maxWidth: 440, margin: '0 auto 20px',
         }}>
-          Real experience. Real mentors. Real impact.<br />
-          Built by the NRIVA Youth Committee for students like you.
+          Real experience. Real mentors. Real impact.
         </p>
 
         <div style={{
@@ -234,7 +233,6 @@ export default function HomePage() {
         {[
           { icon: '🎓', title: 'For Students', desc: 'Browse internships, apply online, and track your application status. Open to 10th grade through college.' },
           { icon: '🏢', title: 'For Employers', desc: 'Post opportunities, review applicants, and manage your hiring pipeline with AI-powered tools.' },
-          { icon: '⚙️', title: 'For Admins', desc: 'Oversee the program, manage users, assign coordinators, and view analytics.' },
         ].map(({ icon, title, desc }) => (
           <div key={title} style={{
             background: 'rgba(255,255,255,0.06)', borderRadius: 12,
