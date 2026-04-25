@@ -1,13 +1,30 @@
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships, useApplications } from '../../hooks/useFirestore'
+import { rankCandidates } from '../../utils/matching'
 import { formatDate } from '../../utils/date'
+import { statusLabel, statusBadgeClass } from '../../utils/status'
 
 export default function EmployerDashboard() {
   const { user } = useAuth()
   const { data: myPostings } = useInternships({ employerUid: user?.uid })
   const { data: allApps } = useApplications()
-  const recentApps = allApps.slice(0, 4)
+  const [selectedPostingId, setSelectedPostingId] = useState('')
+
+  const activePosting = selectedPostingId
+    ? myPostings.find(p => p.id === selectedPostingId)
+    : myPostings.find(p => p.status === 'open') || myPostings[0]
+
+  const appsForPosting = useMemo(() =>
+    allApps.filter(a => a.internshipId === activePosting?.id),
+    [allApps, activePosting?.id]
+  )
+
+  const topCandidates = useMemo(() => {
+    if (!activePosting) return []
+    return rankCandidates(appsForPosting, activePosting).slice(0, 3)
+  }, [appsForPosting, activePosting])
 
   return (
     <div>
@@ -30,15 +47,17 @@ export default function EmployerDashboard() {
         </div>
         <div className="stat-card">
           <div className="stat-label">Total Applicants</div>
-          <div className="stat-value">{myPostings.reduce((sum, p) => sum + (p.applicants || 0), 0)}</div>
+          <div className="stat-value">{allApps.length}</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Shortlisted</div>
           <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>{allApps.filter(a => a.status === 'shortlisted').length}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Positions Filled</div>
-          <div className="stat-value" style={{ color: 'var(--nriva-accent)' }}>{myPostings.filter(p => p.status === 'filled').length}</div>
+          <div className="stat-label">Offers Sent</div>
+          <div className="stat-value" style={{ color: 'var(--nriva-accent)' }}>
+            {allApps.filter(a => ['offered', 'offer_accepted', 'offer_declined'].includes(a.status)).length}
+          </div>
         </div>
       </div>
 
@@ -52,24 +71,21 @@ export default function EmployerDashboard() {
         <div className="table-wrapper">
           <table>
             <thead>
-              <tr>
-                <th>Position</th>
-                <th>Status</th>
-                <th>Applicants</th>
-                <th>Positions</th>
-                <th>Deadline</th>
-              </tr>
+              <tr><th>Position</th><th>Status</th><th>Applicants</th><th>Deadline</th></tr>
             </thead>
             <tbody>
-              {myPostings.map(job => (
+              {myPostings.length === 0 ? (
+                <tr><td colSpan="4" style={{ textAlign: 'center', padding: 24, color: 'var(--nriva-text-light)' }}>
+                  No postings yet. <Link to="/employer/new-posting" style={{ color: 'var(--nriva-primary)' }}>Create one →</Link>
+                </td></tr>
+              ) : myPostings.map(job => (
                 <tr key={job.id}>
                   <td>
                     <div style={{ fontWeight: 500 }}>{job.title}</div>
                     <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{job.company}</div>
                   </td>
-                  <td><span className={`badge badge-${job.status}`}>{job.status}</span></td>
-                  <td>{job.applicants || 0}</td>
-                  <td>{job.positions || 0}</td>
+                  <td><span className={`badge badge-${job.status === 'pending_approval' ? 'pending' : job.status || 'open'}`}>{job.status === 'pending_approval' ? 'Pending' : job.status}</span></td>
+                  <td>{allApps.filter(a => a.internshipId === job.id).length}</td>
                   <td>{formatDate(job.deadline)}</td>
                 </tr>
               ))}
@@ -78,47 +94,71 @@ export default function EmployerDashboard() {
         </div>
       </div>
 
+      {/* Top Candidates section */}
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600 }}>Recent Applications</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600 }}>🏆 Top Candidates</h2>
           <Link to="/employer/applicants" style={{ color: 'var(--nriva-primary)', fontSize: 14, fontWeight: 500 }}>
             View All →
           </Link>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {recentApps.length === 0 ? (
-            <p style={{ color: 'var(--nriva-text-light)', fontSize: 14, padding: '12px 0' }}>
-              No applications yet.
-            </p>
-          ) : recentApps.map(app => (
-            <div key={app.id} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '12px 16px', border: '1px solid var(--nriva-border)', borderRadius: 8,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+
+        {myPostings.length > 1 && (
+          <select className="form-control" style={{ marginBottom: 16, maxWidth: 400 }}
+            value={activePosting?.id || ''} onChange={(e) => setSelectedPostingId(e.target.value)}>
+            {myPostings.map(p => (
+              <option key={p.id} value={p.id}>{p.title} ({allApps.filter(a => a.internshipId === p.id).length} applicants)</option>
+            ))}
+          </select>
+        )}
+
+        {topCandidates.length === 0 ? (
+          <p style={{ color: 'var(--nriva-text-light)', fontSize: 14, padding: '12px 0' }}>
+            No applicants yet for {activePosting?.title || 'this internship'}.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {topCandidates.map((c, idx) => (
+              <Link key={c.id} to="/employer/applicants" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{
-                  width: 40, height: 40, borderRadius: '50%', background: '#e8eaf6',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 600, color: 'var(--nriva-primary)', fontSize: 14,
-                }}>
-                  {(app.applicantName || '?').split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '14px 16px', border: '1px solid var(--nriva-border)', borderRadius: 10,
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--nriva-primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--nriva-border)'}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: idx === 0 ? '#fef3c7' : '#e8eaf6',
+                    color: idx === 0 ? '#92400e' : 'var(--nriva-primary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: 14, flexShrink: 0,
+                  }}>#{idx + 1}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{c.applicantName}</div>
+                    <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <span>{c.school || c.email || '—'}</span>
+                      {c.gradeLevel && <span>· {c.gradeLevel}</span>}
+                      {c.linkedIn && <span style={{ color: '#0077b5' }}>· LinkedIn</span>}
+                      {c.resumeUrl && <span style={{ color: '#15803d' }}>· Resume</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                    <span className={`badge badge-${statusBadgeClass(c.status)}`}>
+                      {statusLabel(c.status)}
+                    </span>
+                    <div style={{
+                      fontSize: 18, fontWeight: 700,
+                      color: c.match.overall >= 75 ? '#15803d' : c.match.overall >= 50 ? '#ca8a04' : '#dc2626',
+                    }}>
+                      {c.match.overall}%
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontWeight: 500, fontSize: 14 }}>{app.applicantName || '—'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{app.internshipTitle || '—'}</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span className={`badge badge-${app.status === 'shortlisted' ? 'open' : app.status === 'under_review' ? 'pending' : app.status === 'accepted' ? 'filled' : 'closed'}`}>
-                  {(app.status || 'pending').replace('_', ' ')}
-                </span>
-                <span style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>
-                  {formatDate(app.appliedDate)}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

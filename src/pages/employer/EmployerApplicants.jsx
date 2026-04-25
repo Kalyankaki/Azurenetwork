@@ -122,7 +122,7 @@ export default function EmployerApplicants() {
           <p>Applications for this internship will appear here.</p>
         </div>
       ) : activeTab === 'top' ? (
-        <TopCandidates candidates={top5} onSelect={setSelected} internship={activeInternship} />
+        <TopCandidates candidates={top5} onSelect={setSelected} onUpdateStatus={updateStatus} />
       ) : (
         <AllMatches candidates={allMatches} filters={filters} setFilters={setFilters} onSelect={setSelected} />
       )}
@@ -152,56 +152,121 @@ function MatchBar({ score, label }) {
   )
 }
 
-function TopCandidates({ candidates, onSelect }) {
+function TopCandidates({ candidates, onSelect, onUpdateStatus }) {
   if (candidates.length === 0) {
     return <div className="empty-state"><p>No candidates to rank yet.</p></div>
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {candidates.map((c, idx) => (
-        <div key={c.id} className="card" style={{ display: 'flex', gap: 16, alignItems: 'flex-start', cursor: 'pointer' }}
-          onClick={() => onSelect(c)}>
-          <div style={{
-            width: 48, height: 48, borderRadius: '50%',
-            background: idx === 0 ? '#fef3c7' : '#e8eaf6',
-            color: idx === 0 ? '#92400e' : 'var(--nriva-primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: 18, flexShrink: 0,
-          }}>
-            #{idx + 1}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 600 }}>{c.applicantName}</h3>
-                <p style={{ fontSize: 13, color: 'var(--nriva-text-light)' }}>
-                  {c.school || 'Unknown school'} · {c.gradeLevel || 'Grade unknown'}
-                </p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: c.match.overall >= 75 ? '#15803d' : '#ca8a04' }}>
-                  {c.match.overall}%
+        <div key={c.id} className="card" style={{ padding: '20px 24px' }}>
+          {/* Header: rank + name + match */}
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%',
+              background: idx === 0 ? '#fef3c7' : idx < 3 ? '#e8eaf6' : '#f1f5f9',
+              color: idx === 0 ? '#92400e' : 'var(--nriva-primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 18, flexShrink: 0,
+            }}>
+              #{idx + 1}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 2 }}>{c.applicantName}</h3>
+                  <p style={{ fontSize: 13, color: 'var(--nriva-text-light)' }}>
+                    {c.school || c.email || '—'} · {c.gradeLevel || '—'}
+                  </p>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--nriva-text-light)' }}>match</div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: c.match.overall >= 75 ? '#15803d' : c.match.overall >= 50 ? '#ca8a04' : '#dc2626' }}>
+                    {c.match.overall}%
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--nriva-text-light)' }}>match</div>
+                </div>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 10 }}>
-              <MatchBar score={c.match.skills} label="Skills" />
-              <MatchBar score={c.match.availability} label="Availability" />
-              <MatchBar score={c.match.hours} label="Hours" />
-              <MatchBar score={c.match.interest} label="Interest Fit" />
-              <MatchBar score={c.match.grade} label="Grade Level" />
-              <MatchBar score={c.match.experience} label="Experience" />
-            </div>
-            {c.match.matchedSkills.length > 0 && (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-                {c.match.matchedSkills.slice(0, 5).map(s => (
-                  <span key={s} style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 500 }}>
-                    ✓ {s}
-                  </span>
-                ))}
-              </div>
+          </div>
+
+          {/* Quick info row */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12, fontSize: 12 }}>
+            {c.email && (
+              <a href={`mailto:${c.email}`} style={{ color: 'var(--nriva-primary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                ✉ {c.email}
+              </a>
             )}
+            {c.linkedIn && (
+              <a href={c.linkedIn} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'none', fontWeight: 500 }}>
+                LinkedIn ↗
+              </a>
+            )}
+            {c.portfolio && (
+              <a href={c.portfolio} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--nriva-primary)', textDecoration: 'none', fontWeight: 500 }}>
+                Portfolio ↗
+              </a>
+            )}
+            {c.resumeUrl && (
+              <a href={c.resumeUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#15803d', textDecoration: 'none', fontWeight: 500 }}>
+                📎 Resume
+              </a>
+            )}
+            {c.hoursPerDay && <span style={{ color: 'var(--nriva-text-light)' }}>🕐 {c.hoursPerDay}/day</span>}
+            {c.availableFrom && <span style={{ color: 'var(--nriva-text-light)' }}>📅 {formatDate(c.availableFrom)} → {formatDate(c.availableTo)}</span>}
+          </div>
+
+          {/* Match bars */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 10 }}>
+            <MatchBar score={c.match.skills} label="Skills" />
+            <MatchBar score={c.match.availability} label="Availability" />
+            <MatchBar score={c.match.hours} label="Hours" />
+            <MatchBar score={c.match.interest} label="Interest Fit" />
+            <MatchBar score={c.match.grade} label="Grade Level" />
+            <MatchBar score={c.match.experience} label="Experience" />
+          </div>
+
+          {/* Matched skills */}
+          {c.match.matchedSkills.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+              {c.match.matchedSkills.slice(0, 6).map(s => (
+                <span key={s} style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 500 }}>
+                  ✓ {s}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Why interested preview */}
+          {c.whyInterested && (
+            <p style={{ fontSize: 12, color: 'var(--nriva-text-light)', lineHeight: 1.5, marginBottom: 12, fontStyle: 'italic' }}>
+              "{c.whyInterested.length > 120 ? c.whyInterested.substring(0, 120) + '...' : c.whyInterested}"
+            </p>
+          )}
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid var(--nriva-border)', paddingTop: 12 }}>
+            <button className="btn btn-sm btn-outline" onClick={() => onSelect(c)}>
+              View Full Profile
+            </button>
+            {c.status === 'pending' && (
+              <button className="btn btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); onUpdateStatus(c.id, 'under_review') }}>
+                Start Review
+              </button>
+            )}
+            {(c.status === 'under_review' || c.status === 'pending') && (
+              <button className="btn btn-sm btn-success" onClick={(e) => { e.stopPropagation(); onUpdateStatus(c.id, 'shortlisted') }}>
+                Shortlist
+              </button>
+            )}
+            {c.status === 'shortlisted' && (
+              <button className="btn btn-sm btn-accent" onClick={(e) => { e.stopPropagation(); onUpdateStatus(c.id, 'offered') }}
+                style={{ background: '#7c3aed', color: 'white' }}>
+                Send Offer
+              </button>
+            )}
+            <span className={`badge badge-${statusBadgeClass[c.status] || 'pending'}`} style={{ marginLeft: 'auto' }}>
+              {statusLabels[c.status] || 'Pending'}
+            </span>
           </div>
         </div>
       ))}
