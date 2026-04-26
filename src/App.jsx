@@ -10,6 +10,7 @@ const InternDashboard = lazy(() => import('./pages/intern/InternDashboard'))
 const InternBrowse = lazy(() => import('./pages/intern/InternBrowse'))
 const InternApplications = lazy(() => import('./pages/intern/InternApplications'))
 const InternApply = lazy(() => import('./pages/intern/InternApply'))
+const InternProfile = lazy(() => import('./pages/intern/InternProfile'))
 const EmployerDashboard = lazy(() => import('./pages/employer/EmployerDashboard'))
 const EmployerPostings = lazy(() => import('./pages/employer/EmployerPostings'))
 const EmployerNewPosting = lazy(() => import('./pages/employer/EmployerNewPosting'))
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="browse" element={<InternBrowse />} />
           <Route path="apply/:id" element={<InternApply />} />
           <Route path="applications" element={<InternApplications />} />
+          <Route path="profile" element={<InternProfile />} />
         </Route>
 
         <Route path="/employer" element={
