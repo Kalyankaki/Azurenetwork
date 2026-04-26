@@ -54,7 +54,7 @@ export default function InternApply() {
         company: internship.company,
         employerUid: internship.employerUid || null,
         applicantUid: user.uid,
-        applicantName: user.displayName || 'Unknown',
+        applicantName: user.displayName || user.email?.split('@')[0] || user.email,
         email: user.email,
         // Profile data snapshot (for matching)
         profileSkills: profile.skills || [],

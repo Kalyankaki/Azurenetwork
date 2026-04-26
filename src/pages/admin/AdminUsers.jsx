@@ -173,7 +173,7 @@ export default function AdminUsers() {
                           )}
                           <div>
                             <div style={{ fontWeight: 500, fontSize: 14 }}>
-                              {user.displayName || 'Unknown'}
+                              {user.displayName || user.email?.split('@')[0] || user.email || '—'}
                               {isSuper && (
                                 <span style={{
                                   marginLeft: 8, fontSize: 10, background: '#ff6f00', color: 'white',
