@@ -19,7 +19,7 @@ export default function AdminUsers() {
   const [coordForm, setCoordForm] = useState({ name: '', email: '', phone: '' })
 
   // Unique locations from user school/chapter fields
-  const userLocations = [...new Set(users.map(u => u.school || u.chapter).filter(Boolean))].sort()
+  const userLocations = [...new Set(users.map(u => u.chapter || u.location || u.city).filter(Boolean))].sort()
 
   // Sort: pending users (no roles) first, then by createdAt desc
   const sorted = [...users].sort((a, b) => {
@@ -35,11 +35,11 @@ export default function AdminUsers() {
     const q = search.toLowerCase()
     const matchSearch = !q || (u.email || '').toLowerCase().includes(q) ||
       (u.displayName || '').toLowerCase().includes(q) ||
-      (u.school || '').toLowerCase().includes(q)
+      (u.city || u.chapter || u.school || '').toLowerCase().includes(q)
     const matchRole = roleFilter === 'all' ||
       (roleFilter === 'none' ? !(u.roles || []).length : (u.roles || []).includes(roleFilter))
     const matchLocation = locationFilter === 'all' ||
-      (u.school || u.chapter || '') === locationFilter
+      (u.chapter || u.location || u.city || '') === locationFilter
     return matchSearch && matchRole && matchLocation
   })
 
@@ -107,7 +107,7 @@ export default function AdminUsers() {
       </div>
 
       <div className="filter-bar">
-        <input className="search-input" placeholder="Search by name, email, or school..."
+        <input className="search-input" placeholder="Search by name, email, or location..."
           value={search} onChange={(e) => setSearch(e.target.value)} />
         <select className="filter-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
           <option value="all">All Roles</option>

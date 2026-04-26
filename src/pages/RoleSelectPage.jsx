@@ -108,6 +108,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   // Intern-specific
   const [gradeLevel, setGradeLevel] = useState('')
   const [school, setSchool] = useState('')
+  const [city, setCity] = useState('')
   const [skills, setSkills] = useState([])
   const [interests, setInterests] = useState([])
   const [availability, setAvailability] = useState('')
@@ -152,7 +153,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
           }
         }
         Object.assign(profileData, {
-          gradeLevel, school: school.trim(), skills, interests,
+          gradeLevel, school: school.trim(), city: city.trim(), skills, interests,
           availability, aboutMe: aboutMe.trim(),
           linkedIn: linkedIn.trim(), portfolio: portfolio.trim(),
           experienceSummary: experienceSummary.trim(),
@@ -289,6 +290,10 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
             <div style={fieldStyle}>
               <label style={labelStyle}>School / University <span style={{ color: '#c62828' }}>*</span></label>
               <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} placeholder="e.g., Lincoln High School or UT Austin" style={inputStyle} />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>City / Location <span style={{ color: '#c62828' }}>*</span></label>
+              <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g., Austin, TX" autoComplete="address-level2" style={inputStyle} />
             </div>
             <div style={fieldStyle}>
               <label style={labelStyle}>Your Skills (select all that apply)</label>
