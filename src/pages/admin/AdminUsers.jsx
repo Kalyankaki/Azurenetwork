@@ -16,6 +16,7 @@ export default function AdminUsers() {
   const [confirmAction, setConfirmAction] = useState(null)
   const [coordinatorModal, setCoordinatorModal] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [profileModal, setProfileModal] = useState(null)
   const [coordForm, setCoordForm] = useState({ name: '', email: '', phone: '' })
 
   // Unique locations from user school/chapter fields
@@ -157,7 +158,8 @@ export default function AdminUsers() {
                 {filtered.map(user => {
                   const isSuper = isSuperAdmin(user.email)
                   return (
-                    <tr key={user.id}>
+                    <tr key={user.id} style={{ cursor: 'pointer' }}
+                      onClick={() => setProfileModal(user)}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           {user.photoURL ? (
@@ -191,7 +193,8 @@ export default function AdminUsers() {
                             const hasRole = isSuper || (user.roles || []).includes(role)
                             return (
                               <button key={role}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation()
                                   if (isSuper) return
                                   if (hasRole && role === 'admin') setConfirmAction({ user, role })
                                   else toggleRole(user, role)
@@ -226,7 +229,8 @@ export default function AdminUsers() {
                       <td>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           {(user.roles || []).includes('employer') && !user.employerApproved && !isSuper && (
-                            <button className="btn btn-sm btn-success" onClick={async () => {
+                            <button className="btn btn-sm btn-success" onClick={async (e) => {
+                              e.stopPropagation()
                               try {
                                 await approveEmployer(user.id)
                                 setToast(`Employer ${user.displayName || user.email} approved`)
@@ -235,12 +239,12 @@ export default function AdminUsers() {
                               Approve
                             </button>
                           )}
-                          <button className="btn btn-sm btn-outline" onClick={() => openCoordinatorModal(user)}
+                          <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); openCoordinatorModal(user) }}
                             style={{ fontSize: 11, padding: '3px 10px' }}>
                             {user.coordinator ? 'Edit' : 'Assign'} Coordinator
                           </button>
                           {!isSuper && (
-                            <button className="btn btn-sm btn-outline" onClick={() => setDeleteConfirm(user)}
+                            <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); setDeleteConfirm(user) }}
                               style={{ fontSize: 11, padding: '3px 10px', color: 'var(--nriva-danger)', borderColor: 'var(--nriva-danger)' }}>
                               Delete
                             </button>
@@ -364,7 +368,165 @@ export default function AdminUsers() {
         </div>
       )}
 
+      {/* User Profile Modal */}
+      {profileModal && (
+        <div className="modal-overlay" onClick={() => setProfileModal(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
+            <div className="modal-header">
+              <h2>User Profile</h2>
+              <button onClick={() => setProfileModal(null)} aria-label="Close"
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>✕</button>
+            </div>
+            <div className="modal-body">
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                {profileModal.photoURL ? (
+                  <img src={profileModal.photoURL} alt="" style={{ width: 56, height: 56, borderRadius: '50%' }} />
+                ) : (
+                  <div style={{
+                    width: 56, height: 56, borderRadius: '50%', background: '#e8eaf6',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, color: 'var(--nriva-primary)', fontSize: 22,
+                  }}>
+                    {(profileModal.displayName || profileModal.email || '?')[0].toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <h3 style={{ fontSize: 20, fontWeight: 600 }}>
+                    {profileModal.displayName || profileModal.email?.split('@')[0] || '—'}
+                  </h3>
+                  <p style={{ fontSize: 14, color: 'var(--nriva-text-light)' }}>{profileModal.email}</p>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                    {(profileModal.roles || []).map(r => (
+                      <span key={r} className={`badge badge-${r === 'admin' ? 'closed' : r === 'employer' ? 'open' : 'filled'}`}>
+                        {r}
+                      </span>
+                    ))}
+                    {isSuperAdmin(profileModal.email) && (
+                      <span style={{ fontSize: 10, background: '#ff6f00', color: 'white', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>SUPER ADMIN</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Details grid */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14,
+                padding: '16px 0', borderTop: '1px solid var(--nriva-border)',
+              }}>
+                {profileModal.requestedRole && (
+                  <div><div style={profLabel}>Requested Role</div><div style={profValue}>{profileModal.requestedRole}</div></div>
+                )}
+                {profileModal.nrivaMembership && (
+                  <div><div style={profLabel}>NRIVA Membership</div><div style={profValue}>{profileModal.nrivaMembership}</div></div>
+                )}
+                {profileModal.gradeLevel && (
+                  <div><div style={profLabel}>Grade Level</div><div style={profValue}>{profileModal.gradeLevel}</div></div>
+                )}
+                {profileModal.school && (
+                  <div><div style={profLabel}>School</div><div style={profValue}>{profileModal.school}</div></div>
+                )}
+                {profileModal.city && (
+                  <div><div style={profLabel}>Location</div><div style={profValue}>{profileModal.city}</div></div>
+                )}
+                {profileModal.availability && (
+                  <div><div style={profLabel}>Availability</div><div style={profValue}>{profileModal.availability}</div></div>
+                )}
+                {profileModal.companyName && (
+                  <div><div style={profLabel}>Company</div><div style={profValue}>{profileModal.companyName}</div></div>
+                )}
+                {profileModal.jobTitle && (
+                  <div><div style={profLabel}>Job Title</div><div style={profValue}>{profileModal.jobTitle}</div></div>
+                )}
+                {profileModal.industry && (
+                  <div><div style={profLabel}>Industry</div><div style={profValue}>{profileModal.industry}</div></div>
+                )}
+                {profileModal.companySize && (
+                  <div><div style={profLabel}>Company Size</div><div style={profValue}>{profileModal.companySize}</div></div>
+                )}
+                {profileModal.companyWebsite && (
+                  <div><div style={profLabel}>Website</div><div style={profValue}>
+                    <a href={profileModal.companyWebsite} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--nriva-primary)' }}>{profileModal.companyWebsite}</a>
+                  </div></div>
+                )}
+                {profileModal.employerApproved !== undefined && (profileModal.roles || []).includes('employer') && (
+                  <div><div style={profLabel}>Employer Status</div><div style={profValue}>
+                    {profileModal.employerApproved ? '✅ Approved' : '⏳ Pending approval'}
+                  </div></div>
+                )}
+              </div>
+
+              {/* Skills & Interests */}
+              {(profileModal.skills || []).length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={profLabel}>Skills</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                    {profileModal.skills.map(s => (
+                      <span key={s} style={{ background: '#e8eaf6', color: 'var(--nriva-primary)', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500 }}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(profileModal.interests || []).length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={profLabel}>Internship Interests</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                    {profileModal.interests.map(i => (
+                      <span key={i} style={{ background: '#f0fdf4', color: '#15803d', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500 }}>{i}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Links */}
+              {(profileModal.linkedIn || profileModal.portfolio || profileModal.resumeUrl) && (
+                <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
+                  {profileModal.linkedIn && (
+                    <a href={profileModal.linkedIn} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline">LinkedIn ↗</a>
+                  )}
+                  {profileModal.portfolio && (
+                    <a href={profileModal.portfolio} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline">Portfolio ↗</a>
+                  )}
+                  {profileModal.resumeUrl && (
+                    <a href={profileModal.resumeUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-primary">📎 Resume</a>
+                  )}
+                </div>
+              )}
+
+              {/* Experience / About */}
+              {profileModal.experienceSummary && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={profLabel}>Experience</div>
+                  <p style={{ fontSize: 13, color: 'var(--nriva-text-light)', lineHeight: 1.5, marginTop: 4 }}>{profileModal.experienceSummary}</p>
+                </div>
+              )}
+              {profileModal.aboutMe && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={profLabel}>About</div>
+                  <p style={{ fontSize: 13, color: 'var(--nriva-text-light)', lineHeight: 1.5, marginTop: 4 }}>{profileModal.aboutMe}</p>
+                </div>
+              )}
+
+              {/* Coordinator */}
+              {profileModal.coordinator && (
+                <div style={{ marginTop: 16, padding: 12, background: '#f0f9ff', borderRadius: 8, border: '1px solid #bae6fd' }}>
+                  <div style={profLabel}>Assigned Coordinator</div>
+                  <div style={{ fontWeight: 500, fontSize: 14, marginTop: 4 }}>{profileModal.coordinator.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{profileModal.coordinator.email}</div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setProfileModal(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && <Toast message={toast} type="success" onClose={() => setToast(null)} />}
     </div>
   )
 }
+
+const profLabel = { fontSize: 11, color: 'var(--nriva-text-light)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }
+const profValue = { fontSize: 14, fontWeight: 500, marginTop: 2 }
