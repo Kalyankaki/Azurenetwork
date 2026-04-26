@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useInternships, useApplications } from '../../hooks/useFirestore'
 import { useAuth } from '../../contexts/AuthContext'
 import {
@@ -19,16 +19,61 @@ export default function AdminInternships() {
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [locationFilter, setLocationFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [employerFilter, setEmployerFilter] = useState('all')
+  const [sortField, setSortField] = useState('deadline')
+  const [sortDir, setSortDir] = useState('asc')
   const [rejectReason, setRejectReason] = useState('')
   const [rejectingId, setRejectingId] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
-  const filtered = internships.filter(job => {
-    const matchSearch = (job.title || '').toLowerCase().includes(search.toLowerCase()) ||
-      (job.company || '').toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === 'all' || job.status === statusFilter
-    return matchSearch && matchStatus
-  })
+  // Unique values for filters
+  const locations = useMemo(() => [...new Set(internships.map(i => i.location).filter(Boolean))].sort(), [internships])
+  const types = useMemo(() => [...new Set(internships.map(i => i.type).filter(Boolean))].sort(), [internships])
+  const employers = useMemo(() => [...new Set(internships.map(i => i.employerName || i.employer).filter(Boolean))].sort(), [internships])
+
+  const filtered = useMemo(() => {
+    let result = internships.filter(job => {
+      const q = search.toLowerCase()
+      const matchSearch = !q || (job.title || '').toLowerCase().includes(q) ||
+        (job.company || '').toLowerCase().includes(q) ||
+        (job.employerName || job.employer || '').toLowerCase().includes(q)
+      const matchStatus = statusFilter === 'all' || job.status === statusFilter
+      const matchLocation = locationFilter === 'all' || job.location === locationFilter
+      const matchType = typeFilter === 'all' || job.type === typeFilter
+      const matchEmployer = employerFilter === 'all' || (job.employerName || job.employer) === employerFilter
+      return matchSearch && matchStatus && matchLocation && matchType && matchEmployer
+    })
+
+    // Sort
+    result.sort((a, b) => {
+      let va, vb
+      switch (sortField) {
+        case 'title': va = (a.title || '').toLowerCase(); vb = (b.title || '').toLowerCase(); break
+        case 'company': va = (a.company || '').toLowerCase(); vb = (b.company || '').toLowerCase(); break
+        case 'employer': va = (a.employerName || a.employer || '').toLowerCase(); vb = (b.employerName || b.employer || '').toLowerCase(); break
+        case 'location': va = (a.location || ''); vb = (b.location || ''); break
+        case 'type': va = (a.type || ''); vb = (b.type || ''); break
+        case 'applicants': va = appCountMap[a.id] || 0; vb = appCountMap[b.id] || 0; break
+        case 'positions': va = a.positions || 0; vb = b.positions || 0; break
+        case 'status': va = (a.status || ''); vb = (b.status || ''); break
+        case 'deadline': va = a.deadline || ''; vb = b.deadline || ''; break
+        case 'startDate': va = a.startDate || ''; vb = b.startDate || ''; break
+        default: va = a.deadline || ''; vb = b.deadline || ''
+      }
+      if (va < vb) return sortDir === 'asc' ? -1 : 1
+      if (va > vb) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+    return result
+  }, [internships, search, statusFilter, locationFilter, typeFilter, employerFilter, sortField, sortDir, appCountMap])
+
+  const toggleSort = (field) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDir('asc') }
+  }
+  const sortIcon = (field) => sortField === field ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''
 
   const pendingCount = internships.filter(i => i.status === INTERNSHIP_STATUSES.PENDING_APPROVAL).length
 
@@ -101,7 +146,7 @@ export default function AdminInternships() {
       )}
 
       <div className="filter-bar">
-        <input className="search-input" placeholder="Search by title or company..."
+        <input className="search-input" placeholder="Search by title, company, or employer..."
           value={search} onChange={(e) => setSearch(e.target.value)} />
         <select className="filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="all">All Statuses</option>
@@ -111,6 +156,18 @@ export default function AdminInternships() {
           <option value="filled">Filled</option>
           <option value={INTERNSHIP_STATUSES.REJECTED}>Rejected</option>
         </select>
+        <select className="filter-select" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}>
+          <option value="all">All Locations</option>
+          {locations.map(l => <option key={l} value={l}>{l}</option>)}
+        </select>
+        <select className="filter-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+          <option value="all">All Types</option>
+          {types.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select className="filter-select" value={employerFilter} onChange={(e) => setEmployerFilter(e.target.value)}>
+          <option value="all">All Employers</option>
+          {employers.map(e => <option key={e} value={e}>{e}</option>)}
+        </select>
       </div>
 
       <div className="card">
@@ -118,13 +175,15 @@ export default function AdminInternships() {
           <table>
             <thead>
               <tr>
-                <th>Position</th>
-                <th>Employer</th>
-                <th>Location</th>
-                <th>Type</th>
-                <th>Applicants</th>
-                <th>Status</th>
-                <th>Deadline</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('title')}>Position{sortIcon('title')}</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('employer')}>Employer{sortIcon('employer')}</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('location')}>Location{sortIcon('location')}</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('type')}>Type{sortIcon('type')}</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('applicants')}>Applicants{sortIcon('applicants')}</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('positions')}>Positions{sortIcon('positions')}</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('status')}>Status{sortIcon('status')}</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('startDate')}>Start Date{sortIcon('startDate')}</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('deadline')}>Deadline{sortIcon('deadline')}</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -143,10 +202,8 @@ export default function AdminInternships() {
                   <td style={{ fontSize: 13 }}>{job.employerName || job.employer || '—'}</td>
                   <td style={{ fontSize: 13 }}>{job.location || '—'}</td>
                   <td style={{ fontSize: 13 }}>{job.type || '—'}</td>
-                  <td>
-                    <span style={{ fontWeight: 600 }}>{appCountMap[job.id] || 0}</span>
-                    <span style={{ color: 'var(--nriva-text-light)' }}> / {job.positions || 0}</span>
-                  </td>
+                  <td style={{ fontSize: 13, fontWeight: 600 }}>{appCountMap[job.id] || 0}</td>
+                  <td style={{ fontSize: 13 }}>{job.positions || 0}</td>
                   <td>
                     <span className={`badge badge-${
                       job.status === INTERNSHIP_STATUSES.PENDING_APPROVAL ? 'pending' :
@@ -157,6 +214,7 @@ export default function AdminInternships() {
                         (job.status || 'open')}
                     </span>
                   </td>
+                  <td style={{ fontSize: 13 }}>{formatDate(job.startDate) !== '—' ? formatDate(job.startDate) : '—'}</td>
                   <td style={{ fontSize: 13 }}>{formatDate(job.deadline)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
