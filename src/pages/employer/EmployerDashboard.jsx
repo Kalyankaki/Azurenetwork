@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { useInternships, useApplications } from '../../hooks/useFirestore'
-import { rankCandidates } from '../../utils/matching'
+import { useInternships, useApplications, useUsers } from '../../hooks/useFirestore'
+import { rankCandidates, scoreCandidate } from '../../utils/matching'
 import { formatDate } from '../../utils/date'
 import { statusLabel, statusBadgeClass } from '../../utils/status'
 
@@ -11,6 +11,7 @@ export default function EmployerDashboard() {
   const navigate = useNavigate()
   const { data: myPostings } = useInternships({ employerUid: user?.uid })
   const { data: allApps } = useApplications()
+  const { data: allUsers } = useUsers()
   const [selectedPostingId, setSelectedPostingId] = useState('')
   const [candidateTab, setCandidateTab] = useState('top')
   const [aiQuery, setAiQuery] = useState('')
@@ -34,9 +35,46 @@ export default function EmployerDashboard() {
 
   const topCandidates = ranked.slice(0, 5)
 
-  // Filtered candidates for "All" tab
+  // All interns (from users collection) with match scoring
+  const allInterns = useMemo(() => {
+    if (!activePosting) return []
+    const appliedUids = new Set(appsForPosting.map(a => a.applicantUid))
+    return allUsers
+      .filter(u => (u.roles || []).includes('intern'))
+      .map(u => {
+        const application = appsForPosting.find(a => a.applicantUid === u.uid)
+        // Build a profile-like object for scoring
+        const profile = {
+          applicantName: u.displayName || u.email || '—',
+          email: u.email,
+          school: u.school || '',
+          gradeLevel: u.gradeLevel || '',
+          linkedIn: u.linkedIn || '',
+          portfolio: u.portfolio || '',
+          resumeUrl: u.resumeUrl || null,
+          profileSkills: u.skills || [],
+          profileInterests: u.interests || [],
+          nrivaMembership: u.nrivaMembership || '',
+          availableFrom: application?.availableFrom || '',
+          availableTo: application?.availableTo || '',
+          hoursPerDay: application?.hoursPerDay || u.availability || '',
+          relevantSkills: application?.relevantSkills || '',
+          priorExperience: application?.priorExperience || u.experienceSummary || '',
+          whyInterested: application?.whyInterested || '',
+          status: application?.status || null,
+          applicationId: application?.id || null,
+          applied: !!application,
+          uid: u.uid,
+        }
+        const match = scoreCandidate(profile, activePosting)
+        return { ...profile, match }
+      })
+      .sort((a, b) => b.match.overall - a.match.overall)
+  }, [allUsers, activePosting, appsForPosting])
+
+  // Filtered from all interns
   const allFiltered = useMemo(() => {
-    return ranked.filter(c => {
+    return allInterns.filter(c => {
       if (filters.location && !(c.school || '').toLowerCase().includes(filters.location.toLowerCase())) return false
       if (filters.education && !(c.gradeLevel || '').toLowerCase().includes(filters.education.toLowerCase())) return false
       if (filters.gpa) {
@@ -49,7 +87,7 @@ export default function EmployerDashboard() {
       }
       return true
     })
-  }, [ranked, filters])
+  }, [allInterns, filters])
 
   const handleAiSearch = async () => {
     if (!aiQuery.trim() || !activePosting) return
@@ -59,7 +97,7 @@ export default function EmployerDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `I have ${ranked.length} candidates for the "${activePosting.title}" internship. Here are their profiles:\n\n${ranked.slice(0, 20).map((c, i) => `${i + 1}. ${c.applicantName} - School: ${c.school || 'N/A'}, Grade: ${c.gradeLevel || 'N/A'}, Skills: ${(c.profileSkills || []).join(', ') || c.relevantSkills || 'N/A'}, Match: ${c.match?.overall}%, Availability: ${c.availableFrom || 'N/A'} to ${c.availableTo || 'N/A'}, Hours: ${c.hoursPerDay || 'N/A'}, Why interested: ${(c.whyInterested || '').substring(0, 80)}`).join('\n')}\n\nBased on this data, ${aiQuery}`,
+          message: `I have ${allInterns.length} registered interns for the "${activePosting.title}" internship (${appsForPosting.length} have applied). Here are their profiles:\n\n${allInterns.slice(0, 25).map((c, i) => `${i + 1}. ${c.applicantName} - School: ${c.school || 'N/A'}, Grade: ${c.gradeLevel || 'N/A'}, Skills: ${(c.profileSkills || []).join(', ') || c.relevantSkills || 'N/A'}, Match: ${c.match?.overall}%, Applied: ${c.applied ? 'Yes' : 'No'}, Availability: ${c.hoursPerDay || 'N/A'}`).join('\n')}\n\nBased on this data, ${aiQuery}`,
           role: 'employer',
         }),
       })
@@ -180,7 +218,7 @@ export default function EmployerDashboard() {
             🏆 Top 5
           </button>
           <button className={`tab ${candidateTab === 'all' ? 'active' : ''}`} onClick={() => setCandidateTab('all')}>
-            📋 All Candidates ({appsForPosting.length})
+            📋 All Interns ({allInterns.length})
           </button>
         </div>
 
@@ -332,9 +370,13 @@ export default function EmployerDashboard() {
                           <div style={{ color: 'var(--nriva-text-light)', fontSize: 11 }}>{c.hoursPerDay || ''}</div>
                         </td>
                         <td>
-                          <span className={`badge badge-${statusBadgeClass(c.status)}`}>
-                            {statusLabel(c.status)}
-                          </span>
+                          {c.applied ? (
+                            <span className={`badge badge-${statusBadgeClass(c.status)}`}>
+                              {statusLabel(c.status)}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>Not applied</span>
+                          )}
                         </td>
                       </tr>
                     ))}
