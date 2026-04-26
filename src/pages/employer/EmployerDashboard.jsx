@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships, useApplications } from '../../hooks/useFirestore'
 import { rankCandidates } from '../../utils/matching'
@@ -8,9 +8,15 @@ import { statusLabel, statusBadgeClass } from '../../utils/status'
 
 export default function EmployerDashboard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const { data: myPostings } = useInternships({ employerUid: user?.uid })
   const { data: allApps } = useApplications()
   const [selectedPostingId, setSelectedPostingId] = useState('')
+  const [candidateTab, setCandidateTab] = useState('top')
+  const [aiQuery, setAiQuery] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResults, setAiResults] = useState(null)
+  const [filters, setFilters] = useState({ location: '', availability: '', education: '', gpa: '' })
 
   const activePosting = selectedPostingId
     ? myPostings.find(p => p.id === selectedPostingId)
@@ -21,10 +27,55 @@ export default function EmployerDashboard() {
     [allApps, activePosting?.id]
   )
 
-  const topCandidates = useMemo(() => {
+  const ranked = useMemo(() => {
     if (!activePosting) return []
-    return rankCandidates(appsForPosting, activePosting).slice(0, 3)
+    return rankCandidates(appsForPosting, activePosting)
   }, [appsForPosting, activePosting])
+
+  const topCandidates = ranked.slice(0, 5)
+
+  // Filtered candidates for "All" tab
+  const allFiltered = useMemo(() => {
+    return ranked.filter(c => {
+      if (filters.location && !(c.school || '').toLowerCase().includes(filters.location.toLowerCase())) return false
+      if (filters.education && !(c.gradeLevel || '').toLowerCase().includes(filters.education.toLowerCase())) return false
+      if (filters.gpa) {
+        const minGpa = parseFloat(filters.gpa)
+        const cGpa = parseFloat(c.gpa || '0')
+        if (!isNaN(minGpa) && cGpa < minGpa) return false
+      }
+      if (filters.availability) {
+        if (c.match?.availability < parseInt(filters.availability, 10)) return false
+      }
+      return true
+    })
+  }, [ranked, filters])
+
+  const handleAiSearch = async () => {
+    if (!aiQuery.trim() || !activePosting) return
+    setAiLoading(true)
+    try {
+      const res = await fetch('/api/ai-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `I have ${ranked.length} candidates for the "${activePosting.title}" internship. Here are their profiles:\n\n${ranked.slice(0, 20).map((c, i) => `${i + 1}. ${c.applicantName} - School: ${c.school || 'N/A'}, Grade: ${c.gradeLevel || 'N/A'}, Skills: ${(c.profileSkills || []).join(', ') || c.relevantSkills || 'N/A'}, Match: ${c.match?.overall}%, Availability: ${c.availableFrom || 'N/A'} to ${c.availableTo || 'N/A'}, Hours: ${c.hoursPerDay || 'N/A'}, Why interested: ${(c.whyInterested || '').substring(0, 80)}`).join('\n')}\n\nBased on this data, ${aiQuery}`,
+          role: 'employer',
+        }),
+      })
+      const data = await res.json()
+      setAiResults(data.reply || data.error || 'No results')
+    } catch {
+      setAiResults('AI search unavailable. Please try again.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const selectPosting = (id) => {
+    setSelectedPostingId(id)
+    setAiResults(null)
+  }
 
   return (
     <div>
@@ -61,6 +112,7 @@ export default function EmployerDashboard() {
         </div>
       </div>
 
+      {/* My Internship Postings - clickable rows */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>My Internship Postings</h2>
@@ -71,92 +123,225 @@ export default function EmployerDashboard() {
         <div className="table-wrapper">
           <table>
             <thead>
-              <tr><th>Position</th><th>Status</th><th>Applicants</th><th>Deadline</th></tr>
+              <tr><th>Position</th><th>Status</th><th>Applicants</th><th>Deadline</th><th></th></tr>
             </thead>
             <tbody>
               {myPostings.length === 0 ? (
-                <tr><td colSpan="4" style={{ textAlign: 'center', padding: 24, color: 'var(--nriva-text-light)' }}>
+                <tr><td colSpan="5" style={{ textAlign: 'center', padding: 24, color: 'var(--nriva-text-light)' }}>
                   No postings yet. <Link to="/employer/new-posting" style={{ color: 'var(--nriva-primary)' }}>Create one →</Link>
                 </td></tr>
-              ) : myPostings.map(job => (
-                <tr key={job.id}>
-                  <td>
-                    <div style={{ fontWeight: 500 }}>{job.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{job.company}</div>
-                  </td>
-                  <td><span className={`badge badge-${job.status === 'pending_approval' ? 'pending' : job.status || 'open'}`}>{job.status === 'pending_approval' ? 'Pending' : job.status}</span></td>
-                  <td>{allApps.filter(a => a.internshipId === job.id).length}</td>
-                  <td>{formatDate(job.deadline)}</td>
-                </tr>
-              ))}
+              ) : myPostings.map(job => {
+                const isActive = activePosting?.id === job.id
+                const appCount = allApps.filter(a => a.internshipId === job.id).length
+                return (
+                  <tr key={job.id}
+                    onClick={() => selectPosting(job.id)}
+                    style={{
+                      cursor: 'pointer',
+                      background: isActive ? '#eef2ff' : undefined,
+                      borderLeft: isActive ? '3px solid var(--nriva-primary)' : '3px solid transparent',
+                    }}>
+                    <td>
+                      <div style={{ fontWeight: isActive ? 600 : 500 }}>{job.title}</div>
+                      <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{job.company}</div>
+                    </td>
+                    <td><span className={`badge badge-${job.status === 'pending_approval' ? 'pending' : job.status || 'open'}`}>{job.status === 'pending_approval' ? 'Pending' : job.status}</span></td>
+                    <td style={{ fontWeight: 600 }}>{appCount}</td>
+                    <td>{formatDate(job.deadline)}</td>
+                    <td>
+                      <button className="btn btn-sm btn-outline" onClick={(e) => { e.stopPropagation(); navigate('/employer/postings') }}
+                        style={{ fontSize: 11, padding: '3px 10px' }}>Edit</button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Top Candidates section */}
+      {/* Candidates section with tabs */}
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600 }}>🏆 Top Candidates</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600 }}>
+            Candidates for: {activePosting?.title || 'Select a posting'}
+          </h2>
           <Link to="/employer/applicants" style={{ color: 'var(--nriva-primary)', fontSize: 14, fontWeight: 500 }}>
-            View All →
+            Full View →
           </Link>
         </div>
+        <p style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginBottom: 16 }}>
+          {appsForPosting.length} applicant{appsForPosting.length === 1 ? '' : 's'}
+          {' · Click a posting above to switch'}
+        </p>
 
-        {myPostings.length > 1 && (
-          <select className="form-control" style={{ marginBottom: 16, maxWidth: 400 }}
-            value={activePosting?.id || ''} onChange={(e) => setSelectedPostingId(e.target.value)}>
-            {myPostings.map(p => (
-              <option key={p.id} value={p.id}>{p.title} ({allApps.filter(a => a.internshipId === p.id).length} applicants)</option>
-            ))}
-          </select>
-        )}
+        <div className="tabs" style={{ marginBottom: 16 }}>
+          <button className={`tab ${candidateTab === 'top' ? 'active' : ''}`} onClick={() => setCandidateTab('top')}>
+            🏆 Top 5
+          </button>
+          <button className={`tab ${candidateTab === 'all' ? 'active' : ''}`} onClick={() => setCandidateTab('all')}>
+            📋 All Candidates ({appsForPosting.length})
+          </button>
+        </div>
 
-        {topCandidates.length === 0 ? (
-          <p style={{ color: 'var(--nriva-text-light)', fontSize: 14, padding: '12px 0' }}>
-            No applicants yet for {activePosting?.title || 'this internship'}.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {topCandidates.map((c, idx) => (
-              <Link key={c.id} to="/employer/applicants" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  padding: '14px 16px', border: '1px solid var(--nriva-border)', borderRadius: 10,
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--nriva-primary)'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--nriva-border)'}>
+        {candidateTab === 'top' ? (
+          topCandidates.length === 0 ? (
+            <p style={{ color: 'var(--nriva-text-light)', fontSize: 14, padding: '20px 0', textAlign: 'center' }}>
+              No applicants yet.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {topCandidates.map((c, idx) => (
+                <Link key={c.id} to="/employer/applicants" style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div style={{
-                    width: 36, height: 36, borderRadius: '50%',
-                    background: idx === 0 ? '#fef3c7' : '#e8eaf6',
-                    color: idx === 0 ? '#92400e' : 'var(--nriva-primary)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: 14, flexShrink: 0,
-                  }}>#{idx + 1}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{c.applicantName}</div>
-                    <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <span>{c.school || c.email || '—'}</span>
-                      {c.gradeLevel && <span>· {c.gradeLevel}</span>}
-                      {c.linkedIn && <span style={{ color: '#0077b5' }}>· LinkedIn</span>}
-                      {c.resumeUrl && <span style={{ color: '#15803d' }}>· Resume</span>}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <span className={`badge badge-${statusBadgeClass(c.status)}`}>
-                      {statusLabel(c.status)}
-                    </span>
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '14px 16px', border: '1px solid var(--nriva-border)', borderRadius: 10,
+                  }}>
                     <div style={{
-                      fontSize: 18, fontWeight: 700,
-                      color: c.match.overall >= 75 ? '#15803d' : c.match.overall >= 50 ? '#ca8a04' : '#dc2626',
-                    }}>
-                      {c.match.overall}%
+                      width: 36, height: 36, borderRadius: '50%',
+                      background: idx === 0 ? '#fef3c7' : '#e8eaf6',
+                      color: idx === 0 ? '#92400e' : 'var(--nriva-primary)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: 700, fontSize: 14, flexShrink: 0,
+                    }}>#{idx + 1}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{c.applicantName}</div>
+                      <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <span>{c.school || c.email || '—'}</span>
+                        {c.gradeLevel && <span>· {c.gradeLevel}</span>}
+                        {c.linkedIn && <span style={{ color: '#0077b5' }}>· LinkedIn</span>}
+                        {c.resumeUrl && <span style={{ color: '#15803d' }}>· Resume</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                      <span className={`badge badge-${statusBadgeClass(c.status)}`}>
+                        {statusLabel(c.status)}
+                      </span>
+                      <div style={{
+                        fontSize: 18, fontWeight: 700,
+                        color: c.match?.overall >= 75 ? '#15803d' : c.match?.overall >= 50 ? '#ca8a04' : '#dc2626',
+                      }}>
+                        {c.match?.overall || 0}%
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))}
+            </div>
+          )
+        ) : (
+          /* All Candidates tab with filters + AI search */
+          <div>
+            {/* Filters row */}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+              <input placeholder="Location / School" value={filters.location}
+                onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--nriva-border)', fontSize: 13, flex: '1 1 140px' }} />
+              <select value={filters.education} onChange={(e) => setFilters({ ...filters, education: e.target.value })}
+                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--nriva-border)', fontSize: 13 }}>
+                <option value="">All Grades</option>
+                <option value="10th">10th Grade</option>
+                <option value="11th">11th Grade</option>
+                <option value="12th">12th Grade</option>
+                <option value="Freshman">College Freshman</option>
+                <option value="Sophomore">College Sophomore</option>
+                <option value="Junior">College Junior</option>
+                <option value="Senior">College Senior</option>
+              </select>
+              <select value={filters.availability} onChange={(e) => setFilters({ ...filters, availability: e.target.value })}
+                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--nriva-border)', fontSize: 13 }}>
+                <option value="">Any Availability</option>
+                <option value="50">≥ 50% available</option>
+                <option value="70">≥ 70% available</option>
+                <option value="90">≥ 90% available</option>
+              </select>
+              <input placeholder="Min GPA (e.g. 3.0)" value={filters.gpa}
+                onChange={(e) => setFilters({ ...filters, gpa: e.target.value })}
+                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--nriva-border)', fontSize: 13, width: 120 }} />
+            </div>
+
+            {/* AI-powered search */}
+            <div style={{
+              display: 'flex', gap: 8, marginBottom: 16,
+              padding: '12px 14px', background: '#f5f3ff', borderRadius: 10, border: '1px solid #ddd6fe',
+            }}>
+              <input placeholder="Describe the ideal candidate... (e.g., 'strong in Python with marketing experience')"
+                value={aiQuery} onChange={(e) => setAiQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAiSearch() }}
+                style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #c4b5fd', fontSize: 13, background: 'white' }} />
+              <button onClick={handleAiSearch} disabled={aiLoading || !aiQuery.trim()}
+                style={{
+                  padding: '8px 16px', borderRadius: 8, border: 'none',
+                  background: '#7c3aed', color: 'white', fontSize: 13, fontWeight: 600,
+                  cursor: aiLoading ? 'wait' : 'pointer', opacity: aiLoading ? 0.6 : 1,
+                }}>
+                {aiLoading ? '...' : '✨ AI Search'}
+              </button>
+            </div>
+
+            {aiResults && (
+              <div style={{
+                background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 10,
+                padding: '14px 18px', marginBottom: 16, fontSize: 13, lineHeight: 1.6,
+                color: '#581c87', whiteSpace: 'pre-wrap',
+              }}>
+                <div style={{ fontWeight: 600, marginBottom: 6, color: '#7c3aed' }}>✨ AI Analysis</div>
+                {aiResults}
+              </div>
+            )}
+
+            {/* Candidates list */}
+            {allFiltered.length === 0 ? (
+              <p style={{ color: 'var(--nriva-text-light)', textAlign: 'center', padding: 20, fontSize: 14 }}>
+                No candidates match the filters.
+              </p>
+            ) : (
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Candidate</th>
+                      <th>Match</th>
+                      <th>School</th>
+                      <th>Grade</th>
+                      <th>Availability</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allFiltered.map(c => (
+                      <tr key={c.id}>
+                        <td>
+                          <div style={{ fontWeight: 500, fontSize: 14 }}>{c.applicantName}</div>
+                          <div style={{ fontSize: 11, color: 'var(--nriva-text-light)', display: 'flex', gap: 6 }}>
+                            {c.email && <span>{c.email}</span>}
+                            {c.linkedIn && <a href={c.linkedIn} target="_blank" rel="noopener noreferrer" style={{ color: '#0077b5', textDecoration: 'none' }}>LinkedIn</a>}
+                            {c.resumeUrl && <a href={c.resumeUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#15803d', textDecoration: 'none' }}>Resume</a>}
+                          </div>
+                        </td>
+                        <td>
+                          <span style={{
+                            fontWeight: 700, fontSize: 16,
+                            color: c.match?.overall >= 75 ? '#15803d' : c.match?.overall >= 50 ? '#ca8a04' : '#dc2626',
+                          }}>{c.match?.overall || 0}%</span>
+                        </td>
+                        <td style={{ fontSize: 13 }}>{c.school || '—'}</td>
+                        <td style={{ fontSize: 13 }}>{c.gradeLevel || '—'}</td>
+                        <td style={{ fontSize: 12 }}>
+                          {c.availableFrom ? `${formatDate(c.availableFrom)} → ${formatDate(c.availableTo)}` : '—'}
+                          <div style={{ color: 'var(--nriva-text-light)', fontSize: 11 }}>{c.hoursPerDay || ''}</div>
+                        </td>
+                        <td>
+                          <span className={`badge badge-${statusBadgeClass(c.status)}`}>
+                            {statusLabel(c.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
