@@ -11,10 +11,15 @@ export default function AdminUsers() {
   const { data: users, loading, error, retry } = useUsers()
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState('all')
+  const [locationFilter, setLocationFilter] = useState('all')
   const [confirmAction, setConfirmAction] = useState(null)
   const [coordinatorModal, setCoordinatorModal] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [coordForm, setCoordForm] = useState({ name: '', email: '', phone: '' })
+
+  // Unique locations from user school/chapter fields
+  const userLocations = [...new Set(users.map(u => u.school || u.chapter).filter(Boolean))].sort()
 
   // Sort: pending users (no roles) first, then by createdAt desc
   const sorted = [...users].sort((a, b) => {
@@ -26,10 +31,17 @@ export default function AdminUsers() {
     return bTime - aTime
   })
 
-  const filtered = sorted.filter(u =>
-    u.email?.toLowerCase().includes(search.toLowerCase()) ||
-    u.displayName?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = sorted.filter(u => {
+    const q = search.toLowerCase()
+    const matchSearch = !q || (u.email || '').toLowerCase().includes(q) ||
+      (u.displayName || '').toLowerCase().includes(q) ||
+      (u.school || '').toLowerCase().includes(q)
+    const matchRole = roleFilter === 'all' ||
+      (roleFilter === 'none' ? !(u.roles || []).length : (u.roles || []).includes(roleFilter))
+    const matchLocation = locationFilter === 'all' ||
+      (u.school || u.chapter || '') === locationFilter
+    return matchSearch && matchRole && matchLocation
+  })
 
   const toggleRole = async (user, role) => {
     if (isSuperAdmin(user.email)) return
@@ -95,8 +107,21 @@ export default function AdminUsers() {
       </div>
 
       <div className="filter-bar">
-        <input className="search-input" placeholder="Search by name or email..."
+        <input className="search-input" placeholder="Search by name, email, or school..."
           value={search} onChange={(e) => setSearch(e.target.value)} />
+        <select className="filter-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+          <option value="all">All Roles</option>
+          <option value="intern">Interns</option>
+          <option value="employer">Employers</option>
+          <option value="admin">Admins</option>
+          <option value="none">No Role</option>
+        </select>
+        {userLocations.length > 0 && (
+          <select className="filter-select" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}>
+            <option value="all">All Locations</option>
+            {userLocations.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+        )}
       </div>
 
       {error && (
