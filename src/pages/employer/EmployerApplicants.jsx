@@ -29,7 +29,7 @@ const statusBadgeClass = {
 }
 
 export default function EmployerApplicants() {
-  const { user } = useAuth()
+  const { user, employerApproved } = useAuth()
   const { data: applications } = useApplications()
   const { data: internships } = useInternships({ employerUid: user?.uid })
   const [selected, setSelected] = useState(null)
@@ -71,6 +71,30 @@ export default function EmployerApplicants() {
     } catch (err) {
       setToast('Error: ' + err.message)
     }
+  }
+
+  if (!employerApproved) {
+    return (
+      <div>
+        <div className="page-header"><h1>Applicants</h1></div>
+        <div style={{
+          background: 'white', borderRadius: 16, padding: '60px 32px',
+          textAlign: 'center', boxShadow: 'var(--nriva-shadow)',
+        }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--nriva-primary)', marginBottom: 12 }}>
+            Pending Admin Approval
+          </h2>
+          <p style={{ color: 'var(--nriva-text-light)', fontSize: 15, lineHeight: 1.6, maxWidth: 460, margin: '0 auto 16px' }}>
+            Your employer account is active — you can post and edit internships.
+            Candidate matching and applicant viewing will be unlocked once an NRIVA administrator approves your account.
+          </p>
+          <p style={{ color: '#94a3b8', fontSize: 13 }}>
+            This usually takes 1-2 business days. Contact admin@nriva.org for questions.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (internships.length === 0) {

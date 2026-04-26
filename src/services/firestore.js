@@ -108,6 +108,10 @@ export async function onboardUser(uid, data) {
   if (requestedRole === 'intern' || requestedRole === 'employer') {
     updates.roles = [requestedRole]
   }
+  // Employers get role but need admin approval to view candidates
+  if (requestedRole === 'employer') {
+    updates.employerApproved = false
+  }
   await updateDoc(doc(db, 'users', uid), updates)
   if (requestedRole === 'intern') {
     try {
@@ -153,6 +157,11 @@ export async function updateUserCoordinator(uid, coordinator) {
 export async function getAllUsers() {
   const snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')))
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+}
+
+export async function approveEmployer(uid) {
+  await updateDoc(doc(db, 'users', uid), { employerApproved: true, updatedAt: serverTimestamp() })
+  logActivity('employer_approved', { userUid: uid })
 }
 
 export async function deleteUser(uid) {

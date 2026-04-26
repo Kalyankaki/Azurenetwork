@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useUsers } from '../../hooks/useFirestore'
-import { updateUserRoles, updateUserCoordinator, deleteUser, isSuperAdmin } from '../../services/firestore'
+import { updateUserRoles, updateUserCoordinator, deleteUser, approveEmployer, isSuperAdmin } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 const ALL_ROLES = ['intern', 'employer', 'admin']
@@ -224,7 +224,17 @@ export default function AdminUsers() {
                         )}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {(user.roles || []).includes('employer') && !user.employerApproved && !isSuper && (
+                            <button className="btn btn-sm btn-success" onClick={async () => {
+                              try {
+                                await approveEmployer(user.id)
+                                setToast(`Employer ${user.displayName || user.email} approved`)
+                              } catch (err) { setToast('Error: ' + err.message) }
+                            }} style={{ fontSize: 11, padding: '3px 10px' }}>
+                              Approve
+                            </button>
+                          )}
                           <button className="btn btn-sm btn-outline" onClick={() => openCoordinatorModal(user)}
                             style={{ fontSize: 11, padding: '3px 10px' }}>
                             {user.coordinator ? 'Edit' : 'Assign'} Coordinator

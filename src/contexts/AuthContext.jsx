@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [userCoordinator, setUserCoordinator] = useState(null)
   const [onboarded, setOnboarded] = useState(false)
+  const [employerApproved, setEmployerApproved] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
@@ -75,6 +76,7 @@ export function AuthProvider({ children }) {
           setAvailableRoles(roles)
           setUserCoordinator(firestoreUser.coordinator || null)
           setOnboarded(firestoreUser.onboarded || false)
+          setEmployerApproved(firestoreUser.employerApproved || false)
 
           const savedRole = localStorage.getItem(`nriva_role_${firebaseUser.uid}`)
           if (savedRole && roles.includes(savedRole)) {
@@ -132,6 +134,7 @@ export function AuthProvider({ children }) {
     setActiveRole(null)
     setUserCoordinator(null)
     setOnboarded(false)
+    setEmployerApproved(false)
   }
 
   return (
@@ -142,6 +145,7 @@ export function AuthProvider({ children }) {
       loading,
       userCoordinator,
       onboarded,
+      employerApproved,
       loginWithGoogle,
       loginWithEmail,
       signUp,

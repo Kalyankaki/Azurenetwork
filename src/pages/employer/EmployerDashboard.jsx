@@ -7,7 +7,7 @@ import { formatDate } from '../../utils/date'
 import { statusLabel, statusBadgeClass } from '../../utils/status'
 
 export default function EmployerDashboard() {
-  const { user } = useAuth()
+  const { user, employerApproved } = useAuth()
   const navigate = useNavigate()
   const { data: myPostings } = useInternships({ employerUid: user?.uid })
   const { data: allApps } = useApplications()
@@ -199,6 +199,17 @@ export default function EmployerDashboard() {
       </div>
 
       {/* Candidates section with tabs */}
+      {!employerApproved ? (
+        <div className="card" style={{ textAlign: 'center', padding: '40px 24px' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--nriva-primary)', marginBottom: 8 }}>
+            Candidate Matching Locked
+          </h3>
+          <p style={{ color: 'var(--nriva-text-light)', fontSize: 14, maxWidth: 400, margin: '0 auto' }}>
+            You can post and edit internships. Candidate viewing will be unlocked once an admin approves your account.
+          </p>
+        </div>
+      ) : (
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>
@@ -387,6 +398,7 @@ export default function EmployerDashboard() {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }
