@@ -130,19 +130,19 @@ export default function EmployerDashboard() {
       </div>
 
       <div className="stats-grid">
-        <div className="stat-card">
+        <div className="stat-card" onClick={() => navigate('/employer/postings')} style={{ cursor: 'pointer' }}>
           <div className="stat-label">Active Postings</div>
           <div className="stat-value">{myPostings.filter(p => p.status === 'open').length}</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card" onClick={() => navigate('/employer/applicants')} style={{ cursor: 'pointer' }}>
           <div className="stat-label">Total Applicants</div>
           <div className="stat-value">{allApps.length}</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card" onClick={() => navigate('/employer/applicants')} style={{ cursor: 'pointer' }}>
           <div className="stat-label">Shortlisted</div>
           <div className="stat-value" style={{ color: 'var(--nriva-success)' }}>{allApps.filter(a => a.status === 'shortlisted').length}</div>
         </div>
-        <div className="stat-card">
+        <div className="stat-card" onClick={() => navigate('/employer/applicants')} style={{ cursor: 'pointer' }}>
           <div className="stat-label">Offers Sent</div>
           <div className="stat-value" style={{ color: 'var(--nriva-accent)' }}>
             {allApps.filter(a => ['offered', 'offer_accepted', 'offer_declined'].includes(a.status)).length}
