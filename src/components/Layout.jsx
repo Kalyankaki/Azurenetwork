@@ -7,6 +7,7 @@ import AIAssistant from './AIAssistant'
 const navItems = {
   intern: [
     { path: '/intern', label: 'Dashboard', icon: '📊' },
+    { path: '/intern/profile', label: 'Profile', icon: '👤' },
     { path: '/intern/browse', label: 'Browse Internships', icon: '🔍' },
     { path: '/intern/applications', label: 'My Applications', icon: '📄' },
   ],
