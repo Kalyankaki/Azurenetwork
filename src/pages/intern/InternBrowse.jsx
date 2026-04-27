@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships } from '../../hooks/useFirestore'
 import { getUser } from '../../services/firestore'
-import { scoreCandidate } from '../../utils/matching'
+import { scoreCandidate, explainMatch, matchBreakdown } from '../../utils/matching'
 import { formatDate } from '../../utils/date'
 
 function scoreInternshipForIntern(internship, profile) {
@@ -164,10 +164,12 @@ export default function InternBrowse() {
                     </div>
                     {hasProfile && (
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: job.match.overall >= 75 ? '#15803d' : job.match.overall >= 50 ? '#ca8a04' : '#64748b' }}>
+                        <div style={{ fontSize: 28, fontWeight: 700, color: job.match.overall >= 75 ? '#15803d' : job.match.overall >= 50 ? '#ca8a04' : '#64748b' }}>
                           {job.match.overall}%
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--nriva-text-light)' }}>match</div>
+                        <div style={{ fontSize: 11, color: 'var(--nriva-text-light)' }}>
+                          {job.match.overall >= 75 ? 'Great match' : job.match.overall >= 50 ? 'Good match' : 'Possible match'}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -178,6 +180,8 @@ export default function InternBrowse() {
                     <span>💼 {job.type}</span>
                     <span>💰 {job.stipend}</span>
                   </div>
+
+                  {hasProfile && <MatchExplanation match={job.match} internship={job} />}
                   {(job.skills || []).length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                       {job.skills.map(s => (
@@ -376,6 +380,69 @@ export default function InternBrowse() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+const KIND_STYLES = {
+  pro:     { bg: '#dcfce7', color: '#15803d', dot: '✓' },
+  neutral: { bg: '#eef2ff', color: '#3949ab', dot: '•' },
+  gap:     { bg: '#fef3c7', color: '#92400e', dot: '!' },
+}
+
+function MatchExplanation({ match, internship }) {
+  const reasons = explainMatch(match, internship)
+  const breakdown = matchBreakdown(match)
+  if (!reasons.length) return null
+
+  return (
+    <div style={{
+      background: '#f8fafc', border: '1px solid var(--nriva-border)',
+      borderRadius: 8, padding: '12px 14px', marginBottom: 12,
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--nriva-text)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span>🎯 Why this is recommended for you</span>
+      </div>
+
+      {/* Score breakdown bars */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 12 }}>
+        {breakdown.map(b => {
+          const color = b.score >= 75 ? '#15803d' : b.score >= 50 ? '#ca8a04' : b.score >= 25 ? '#d97706' : '#dc2626'
+          return (
+            <div key={b.key}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--nriva-text-light)', marginBottom: 3 }}>
+                <span>{b.label} <span style={{ opacity: 0.6 }}>({b.weight}%)</span></span>
+                <span style={{ fontWeight: 600, color }}>{b.score}</span>
+              </div>
+              <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ width: `${b.score}%`, height: '100%', background: color, transition: 'width 0.3s' }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Reasons */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {reasons.map((r, i) => {
+          const s = KIND_STYLES[r.kind] || KIND_STYLES.neutral
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13 }}>
+              <span style={{
+                flexShrink: 0, width: 18, height: 18, borderRadius: '50%',
+                background: s.bg, color: s.color, fontSize: 11, fontWeight: 700,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              }}>{s.dot}</span>
+              <div>
+                <span style={{ fontWeight: 500, color: 'var(--nriva-text)' }}>{r.label}</span>
+                {r.detail && (
+                  <span style={{ color: 'var(--nriva-text-light)', marginLeft: 6 }}>· {r.detail}</span>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
