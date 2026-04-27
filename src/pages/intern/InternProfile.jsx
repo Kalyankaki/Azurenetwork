@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useInternships } from '../../hooks/useFirestore'
 import { getUser, updateInternProfile, GRADE_LEVELS } from '../../services/firestore'
 import { uploadResume, uploadProfilePhoto } from '../../firebase'
 import Toast from '../../components/Toast'
@@ -75,6 +76,7 @@ function profilesDiffer(a, b) {
 
 export default function InternProfile() {
   const { user } = useAuth()
+  const { data: allInternships, loading: internshipsLoading } = useInternships()
   const [profile, setProfile] = useState(EMPTY)
   const [original, setOriginal] = useState(EMPTY)
   const [meta, setMeta] = useState({ email: '', nrivaMembership: '', coordinator: null, updatedAt: null })
@@ -83,6 +85,27 @@ export default function InternProfile() {
   const [photoUploading, setPhotoUploading] = useState(false)
   const [resumeUploading, setResumeUploading] = useState(false)
   const [toast, setToast] = useState(null)
+  const [selectedInternshipId, setSelectedInternshipId] = useState('')
+
+  const openInternships = useMemo(
+    () => (allInternships || []).filter(i => i.status === 'open'),
+    [allInternships]
+  )
+  const selectedInternship = useMemo(
+    () => openInternships.find(i => i.id === selectedInternshipId) || null,
+    [openInternships, selectedInternshipId]
+  )
+  const matchedSkills = selectedInternship?.skills || []
+
+  const addSkillsFromInternship = (mode) => {
+    if (matchedSkills.length === 0) return
+    setProfile(p => {
+      const next = mode === 'replace'
+        ? [...matchedSkills]
+        : Array.from(new Set([...(p.skills || []), ...matchedSkills]))
+      return { ...p, skills: next }
+    })
+  }
 
   useEffect(() => {
     if (!user?.uid) return
@@ -309,6 +332,76 @@ export default function InternProfile() {
         </div>
       </div>
 
+      {/* Match Skills to an Internship */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h2 style={sectionTitle}>🎯 Match Skills to an Internship</h2>
+        <p style={{ fontSize: 13, color: 'var(--nriva-text-light)', marginBottom: 12 }}>
+          Pick an open internship — we&apos;ll show its required skills and let you add them to your profile in one click.
+        </p>
+        <div style={{ marginBottom: selectedInternship ? 14 : 0 }}>
+          <label style={labelStyle}>Choose an internship</label>
+          <select value={selectedInternshipId}
+            onChange={(e) => setSelectedInternshipId(e.target.value)}
+            disabled={internshipsLoading}
+            style={inputStyle}>
+            <option value="">{internshipsLoading ? 'Loading internships…' : '— Select an internship —'}</option>
+            {openInternships.map(i => (
+              <option key={i.id} value={i.id}>
+                {i.title}{i.company ? ` — ${i.company}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {selectedInternship && (
+          <div style={{
+            border: '1px solid var(--nriva-border)', borderRadius: 'var(--nriva-radius)',
+            padding: 14, background: '#f8fafc',
+          }}>
+            <div style={{ marginBottom: 8 }}>
+              <strong style={{ fontSize: 14 }}>{selectedInternship.title}</strong>
+              {selectedInternship.company && (
+                <span style={{ color: 'var(--nriva-text-light)', fontSize: 13 }}> — {selectedInternship.company}</span>
+              )}
+            </div>
+            {matchedSkills.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--nriva-text-light)' }}>
+                This internship has no specific skills listed.
+              </p>
+            ) : (
+              <>
+                <div style={{ fontSize: 12, marginBottom: 8, color: 'var(--nriva-text-light)' }}>
+                  Required skills (✓ = you already have it):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {matchedSkills.map(s => {
+                    const have = (profile.skills || []).some(us => us.toLowerCase() === s.toLowerCase())
+                    return (
+                      <span key={s} style={{
+                        background: have ? '#dcfce7' : '#fef3c7',
+                        color: have ? '#15803d' : '#92400e',
+                        padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 500,
+                      }}>{have ? '✓ ' : ''}{s}</span>
+                    )
+                  })}
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button type="button" onClick={() => addSkillsFromInternship('add')} className="btn btn-sm btn-primary">
+                    Add to my skills
+                  </button>
+                  <button type="button" onClick={() => addSkillsFromInternship('replace')} className="btn btn-sm btn-outline">
+                    Replace my skills with these
+                  </button>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--nriva-text-light)', marginTop: 8 }}>
+                  Don&apos;t forget to click <strong>Save Changes</strong> to keep these updates.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Skills */}
       <div className="card" style={{ marginBottom: 16 }}>
         <h2 style={sectionTitle}>Skills</h2>
@@ -316,7 +409,7 @@ export default function InternProfile() {
           Tap to toggle. Employers use these to match you with the right internships.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {INTERN_SKILLS.map(s => {
+          {Array.from(new Set([...INTERN_SKILLS, ...(profile.skills || [])])).map(s => {
             const active = (profile.skills || []).includes(s)
             return (
               <button key={s} type="button" onClick={() => toggleArrayItem('skills', s)}
