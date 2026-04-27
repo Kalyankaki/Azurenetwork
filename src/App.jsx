@@ -8,6 +8,7 @@ import InternDashboard from './pages/intern/InternDashboard'
 import InternBrowse from './pages/intern/InternBrowse'
 import InternApplications from './pages/intern/InternApplications'
 import InternApply from './pages/intern/InternApply'
+import InternProfile from './pages/intern/InternProfile'
 import EmployerDashboard from './pages/employer/EmployerDashboard'
 import EmployerPostings from './pages/employer/EmployerPostings'
 import EmployerNewPosting from './pages/employer/EmployerNewPosting'
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="browse" element={<InternBrowse />} />
         <Route path="apply/:id" element={<InternApply />} />
         <Route path="applications" element={<InternApplications />} />
+        <Route path="profile" element={<InternProfile />} />
       </Route>
 
       <Route path="/employer" element={
