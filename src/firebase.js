@@ -104,6 +104,24 @@ export async function uploadResume(file, applicantUid) {
   return { url, path, name: file.name }
 }
 
+export async function uploadProfilePhoto(file, uid) {
+  if (!file) throw new Error('No file provided')
+  if (file.size > 2 * 1024 * 1024) throw new Error('Photo must be under 2MB')
+  const allowed = ['image/jpeg', 'image/png', 'image/webp']
+  if (!allowed.includes(file.type)) {
+    throw new Error('Only JPG, PNG, or WebP images are allowed')
+  }
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const path = `profile_photos/${uid}/${Date.now()}_${safeName}`
+  const fileRef = storageRef(storage, path)
+  const snap = await uploadBytes(fileRef, file)
+  const url = await getDownloadURL(snap.ref)
+  if (auth.currentUser && auth.currentUser.uid === uid) {
+    try { await updateProfile(auth.currentUser, { photoURL: url }) } catch { /* non-fatal */ }
+  }
+  return { url, path }
+}
+
 export async function logOut() {
   try {
     await signOut(auth)

@@ -7,6 +7,7 @@ const HomePage = lazy(() => import('./pages/HomePage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RoleSelectPage = lazy(() => import('./pages/RoleSelectPage'))
 const InternDashboard = lazy(() => import('./pages/intern/InternDashboard'))
+const InternProfile = lazy(() => import('./pages/intern/InternProfile'))
 const InternBrowse = lazy(() => import('./pages/intern/InternBrowse'))
 const InternApplications = lazy(() => import('./pages/intern/InternApplications'))
 const InternApply = lazy(() => import('./pages/intern/InternApply'))
@@ -52,6 +53,7 @@ export default function App() {
           <ProtectedRoute allowedRole="intern"><Layout role="intern" /></ProtectedRoute>
         }>
           <Route index element={<InternDashboard />} />
+          <Route path="profile" element={<InternProfile />} />
           <Route path="browse" element={<InternBrowse />} />
           <Route path="apply/:id" element={<InternApply />} />
           <Route path="applications" element={<InternApplications />} />
