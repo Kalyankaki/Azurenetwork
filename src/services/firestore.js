@@ -149,6 +149,28 @@ export async function updateUserRoles(uid, roles, actorEmail = '') {
   logActivity('roles_changed', { userUid: uid, newRoles: roles, actorEmail })
 }
 
+// Allowed self-edit fields for an intern updating their own profile.
+// Anything not in this list is silently dropped to prevent privilege escalation
+// (e.g. roles, coordinator, employerApproved) or tampering with admin-managed data.
+const INTERN_PROFILE_FIELDS = [
+  'displayName', 'photoURL',
+  'gradeLevel', 'school', 'city',
+  'skills', 'interests', 'availability',
+  'linkedIn', 'portfolio',
+  'experienceSummary', 'aboutMe',
+  'resumeUrl', 'resumeName',
+]
+
+export async function updateInternProfile(uid, data) {
+  const clean = {}
+  for (const key of INTERN_PROFILE_FIELDS) {
+    if (data[key] !== undefined) clean[key] = data[key]
+  }
+  clean.updatedAt = serverTimestamp()
+  await updateDoc(doc(db, 'users', uid), clean)
+  logActivity('profile_updated', { userUid: uid, fields: Object.keys(clean).filter(k => k !== 'updatedAt') })
+}
+
 export async function updateUserCoordinator(uid, coordinator) {
   await updateDoc(doc(db, 'users', uid), { coordinator, updatedAt: serverTimestamp() })
   logActivity('coordinator_assigned', { userUid: uid, coordinator })
