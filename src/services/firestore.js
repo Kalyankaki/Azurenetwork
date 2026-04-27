@@ -149,6 +149,13 @@ export async function updateUserRoles(uid, roles, actorEmail = '') {
   logActivity('roles_changed', { userUid: uid, newRoles: roles, actorEmail })
 }
 
+export async function updateUserProfile(uid, data) {
+  // Strip fields the user must not be able to set on themselves
+  const { roles, coordinator, employerApproved, autoApproved, uid: _uid, email, createdAt, ...safe } = data
+  await updateDoc(doc(db, 'users', uid), { ...safe, updatedAt: serverTimestamp() })
+  logActivity('profile_updated', { userUid: uid })
+}
+
 export async function updateUserCoordinator(uid, coordinator) {
   await updateDoc(doc(db, 'users', uid), { coordinator, updatedAt: serverTimestamp() })
   logActivity('coordinator_assigned', { userUid: uid, coordinator })

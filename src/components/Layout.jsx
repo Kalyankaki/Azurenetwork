@@ -9,6 +9,7 @@ const navItems = {
     { path: '/intern', label: 'Dashboard', icon: '📊' },
     { path: '/intern/browse', label: 'Browse Internships', icon: '🔍' },
     { path: '/intern/applications', label: 'My Applications', icon: '📄' },
+    { path: '/intern/profile', label: 'Profile', icon: '👤' },
   ],
   employer: [
     { path: '/employer', label: 'Dashboard', icon: '📊' },
