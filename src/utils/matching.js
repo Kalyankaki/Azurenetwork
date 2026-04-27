@@ -160,3 +160,88 @@ export function rankCandidates(applications, internship) {
     .map(app => ({ ...app, match: scoreCandidate(app, internship) }))
     .sort((a, b) => b.match.overall - a.match.overall)
 }
+
+// Convert a match result into a list of human-readable reasons
+// Each reason: { icon, kind: 'pro' | 'neutral' | 'gap', label, detail? }
+export function explainMatch(match, internship) {
+  if (!match) return []
+  const reasons = []
+  const requiredSkills = internship.skills || []
+
+  // Skills
+  if (requiredSkills.length === 0) {
+    reasons.push({
+      icon: '🛠️', kind: 'neutral',
+      label: 'No specific skills required',
+      detail: 'Open to learners',
+    })
+  } else if (match.matchedSkills?.length) {
+    const total = requiredSkills.length
+    const matched = match.matchedSkills.length
+    const sample = match.matchedSkills.slice(0, 4).map(s => s.replace(/\b\w/g, c => c.toUpperCase())).join(', ')
+    reasons.push({
+      icon: '🛠️',
+      kind: matched / total >= 0.6 ? 'pro' : 'neutral',
+      label: `${matched} of ${total} required skill${total === 1 ? '' : 's'} match`,
+      detail: sample,
+    })
+  } else {
+    reasons.push({
+      icon: '🛠️', kind: 'gap',
+      label: 'Skills gap',
+      detail: `Asks for: ${requiredSkills.slice(0, 3).join(', ')}${requiredSkills.length > 3 ? '…' : ''}`,
+    })
+  }
+
+  // Interest match
+  if (match.interest >= 75) {
+    reasons.push({ icon: '💡', kind: 'pro', label: 'Strong fit with your interests' })
+  } else if (match.interest >= 50) {
+    reasons.push({ icon: '💡', kind: 'neutral', label: 'Some overlap with your interests' })
+  }
+
+  // Grade level
+  if (internship.gradeLevelMin) {
+    const range = `${internship.gradeLevelMin}${internship.gradeLevelMax ? ' – ' + internship.gradeLevelMax : '+'}`
+    if (match.grade === 100) {
+      reasons.push({ icon: '🎓', kind: 'pro', label: 'Grade level fits', detail: range })
+    } else if (match.grade < 50) {
+      reasons.push({ icon: '🎓', kind: 'gap', label: 'Outside grade range', detail: `Looking for ${range}` })
+    }
+  }
+
+  // Hours / availability
+  if (match.hours >= 75 && internship.expectedHoursPerDay) {
+    reasons.push({
+      icon: '🕐', kind: 'pro',
+      label: 'Schedule fits your availability',
+      detail: `${internship.expectedHoursPerDay}/day`,
+    })
+  } else if (match.hours <= 30 && internship.expectedHoursPerDay) {
+    reasons.push({
+      icon: '🕐', kind: 'gap',
+      label: 'Hours may not fit',
+      detail: `Needs ${internship.expectedHoursPerDay}/day`,
+    })
+  }
+
+  // Experience
+  if (match.experience >= 60) {
+    reasons.push({ icon: '⭐', kind: 'pro', label: 'Your experience looks relevant' })
+  }
+
+  return reasons
+}
+
+// Per-component score breakdown for display
+export function matchBreakdown(match) {
+  if (!match) return []
+  return [
+    { key: 'skills', label: 'Skills', score: match.skills, weight: 35 },
+    { key: 'interest', label: 'Interest', score: match.interest, weight: 15 },
+    { key: 'availability', label: 'Availability', score: match.availability, weight: 20 },
+    { key: 'hours', label: 'Hours', score: match.hours, weight: 10 },
+    { key: 'grade', label: 'Grade level', score: match.grade, weight: 10 },
+    { key: 'experience', label: 'Experience', score: match.experience, weight: 10 },
+  ]
+}

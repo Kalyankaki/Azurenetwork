@@ -5,44 +5,20 @@ import { useInternships, useApplications } from '../../hooks/useFirestore'
 import { MAX_INTERN_APPLICATIONS, getUser } from '../../services/firestore'
 import { formatDate } from '../../utils/date'
 import { statusBadgeClass, statusDisplay } from '../../utils/status'
+import { scoreCandidate, explainMatch } from '../../utils/matching'
 
-function scoreMatch(internship, userProfile) {
-  if (!userProfile) return 0
-  let score = 0
-  const userSkills = (userProfile.skills || []).map(s => s.toLowerCase())
-  const userInterests = userProfile.interests || []
-
-  // Skill overlap: each matching skill = 3 points
-  const internSkills = (internship.skills || []).map(s => s.toLowerCase())
-  userSkills.forEach(s => {
-    if (internSkills.some(is => is.includes(s) || s.includes(is))) score += 3
-  })
-
-  // Interest category match: map internship to categories
-  const titleLower = (internship.title || '').toLowerCase()
-  const descLower = (internship.description || '').toLowerCase()
-  const combined = titleLower + ' ' + descLower
-
-  const categoryKeywords = {
-    software: ['software', 'developer', 'programming', 'code', 'web', 'app'],
-    data: ['data', 'analytics', 'sql', 'python', 'statistics'],
-    marketing: ['marketing', 'social media', 'content', 'brand', 'campaign'],
-    design: ['design', 'graphic', 'ui', 'ux', 'figma', 'creative'],
-    finance: ['finance', 'accounting', 'budget', 'financial', 'bookkeeping'],
-    ai: ['ai', 'machine learning', 'artificial intelligence', 'automation'],
-    healthcare: ['health', 'medical', 'clinical', 'patient', 'care'],
-    sales: ['sales', 'business development', 'revenue', 'client'],
-    engineering: ['cloud', 'devops', 'infrastructure', 'engineer', 'aws', 'azure'],
-    media: ['journalism', 'writing', 'editor', 'media', 'news', 'blog'],
-    nonprofit: ['non-profit', 'nonprofit', 'volunteer', 'community', 'nriva'],
+function scoreInternshipForIntern(internship, profile) {
+  if (!profile) return null
+  const fakeApp = {
+    profileSkills: profile.skills || [],
+    profileInterests: profile.interests || [],
+    gradeLevel: profile.gradeLevel || '',
+    relevantSkills: '',
+    priorExperience: profile.experienceSummary || '',
+    hoursPerDay: profile.availability === 'flexible' ? 'Flexible' : '',
+    availableFrom: '', availableTo: '',
   }
-
-  userInterests.forEach(interest => {
-    const keywords = categoryKeywords[interest] || []
-    if (keywords.some(kw => combined.includes(kw))) score += 5
-  })
-
-  return score
+  return scoreCandidate(fakeApp, internship)
 }
 
 export default function InternDashboard() {
@@ -59,13 +35,16 @@ export default function InternDashboard() {
     }
   }, [user?.uid])
 
+  const hasProfile = userProfile?.skills?.length > 0 || userProfile?.interests?.length > 0
+
   // Smart matching: score and sort internships
   const openInternships = allInternships.filter(i => i.status === 'open')
-  const recommended = userProfile?.skills?.length || userProfile?.interests?.length
-    ? [...openInternships].sort((a, b) => scoreMatch(b, userProfile) - scoreMatch(a, userProfile)).slice(0, 6)
-    : openInternships.slice(0, 3)
-
-  const hasProfile = userProfile?.skills?.length > 0
+  const scored = hasProfile
+    ? openInternships.map(i => ({ ...i, match: scoreInternshipForIntern(i, userProfile) }))
+    : openInternships.map(i => ({ ...i, match: null }))
+  const recommended = hasProfile
+    ? [...scored].sort((a, b) => (b.match?.overall || 0) - (a.match?.overall || 0)).slice(0, 6)
+    : scored.slice(0, 3)
 
   return (
     <div>
@@ -145,7 +124,10 @@ export default function InternDashboard() {
             </h2>
             {hasProfile && (
               <p style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 4 }}>
-                Based on your skills: {(userProfile.skills || []).slice(0, 3).join(', ')}{userProfile.skills?.length > 3 ? ` +${userProfile.skills.length - 3} more` : ''}
+                {userProfile.skills?.length
+                  ? <>Based on your skills: {(userProfile.skills || []).slice(0, 3).join(', ')}{userProfile.skills.length > 3 ? ` +${userProfile.skills.length - 3} more` : ''}</>
+                  : 'Based on your interests'}
+                {' · '}<Link to="/intern/profile" style={{ color: 'var(--nriva-primary)' }}>Edit profile</Link>
               </p>
             )}
           </div>
@@ -155,23 +137,26 @@ export default function InternDashboard() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
           {recommended.map(job => {
-            const matchScore = hasProfile ? scoreMatch(job, userProfile) : 0
+            const overall = job.match?.overall || 0
+            const reasons = job.match ? explainMatch(job.match, job).slice(0, 3) : []
+            const badgeColor = overall >= 75 ? '#15803d' : overall >= 50 ? '#ca8a04' : '#64748b'
+            const badgeBg = overall >= 75 ? '#dcfce7' : overall >= 50 ? '#fef3c7' : '#f1f5f9'
+            const badgeLabel = overall >= 75 ? 'Great match' : overall >= 50 ? 'Good match' : 'Possible match'
             return (
               <div key={job.id} style={{
                 border: '1px solid var(--nriva-border)', borderRadius: 'var(--nriva-radius)', padding: 16,
-                position: 'relative',
+                position: 'relative', display: 'flex', flexDirection: 'column',
               }}>
-                {matchScore > 0 && (
+                {hasProfile && job.match && (
                   <div style={{
                     position: 'absolute', top: 12, right: 12,
-                    background: matchScore >= 10 ? '#dcfce7' : '#fef3c7',
-                    color: matchScore >= 10 ? '#15803d' : '#92400e',
-                    padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                    background: badgeBg, color: badgeColor,
+                    padding: '3px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700,
                   }}>
-                    {matchScore >= 10 ? 'Great match' : 'Good match'}
+                    {overall}% · {badgeLabel}
                   </div>
                 )}
-                <div>
+                <div style={{ paddingRight: hasProfile ? 100 : 0 }}>
                   <h3 style={{ fontSize: 15, fontWeight: 600 }}>{job.title}</h3>
                   <p style={{ fontSize: 13, color: 'var(--nriva-text-light)' }}>{job.company}</p>
                 </div>
@@ -190,7 +175,17 @@ export default function InternDashboard() {
                     }}>{s}</span>
                   ))}
                 </div>
-                <Link to={`/intern/apply/${job.id}`} className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
+                {reasons.length > 0 && (
+                  <div style={{ background: '#f8fafc', borderRadius: 6, padding: '8px 10px', marginBottom: 12, fontSize: 12, lineHeight: 1.5 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--nriva-text)', marginBottom: 4, fontSize: 11 }}>Why we picked this</div>
+                    {reasons.map((r, i) => (
+                      <div key={i} style={{ color: r.kind === 'gap' ? '#92400e' : 'var(--nriva-text-light)' }}>
+                        {r.icon} {r.label}{r.detail ? ` · ${r.detail}` : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Link to={`/intern/apply/${job.id}`} className="btn btn-primary btn-sm" style={{ width: '100%', justifyContent: 'center', marginTop: 'auto' }}>
                   Apply Now
                 </Link>
               </div>
