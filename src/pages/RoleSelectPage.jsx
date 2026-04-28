@@ -65,24 +65,24 @@ export default function RoleSelectPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ textAlign: 'center', marginBottom: 32, color: 'white' }}>
-        <img src="/NRIVAYouthLogo.jpg" alt="NRIVA" style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 16, borderRadius: '50%' }} onError={(e) => { e.target.style.display = 'none' }} />
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Welcome, {user?.displayName || 'User'}!</h1>
-        <p style={{ opacity: 0.7, fontSize: 15 }}>Select your role to continue</p>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 20px 20px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 20, color: 'white' }}>
+        <img src="/NRIVAYouthLogo.jpg" alt="NRIVA" style={{ width: 56, height: 56, objectFit: 'contain', marginBottom: 10, borderRadius: '50%' }} onError={(e) => { e.target.style.display = 'none' }} />
+        <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Welcome, {user?.displayName || 'User'}!</h1>
+        <p style={{ opacity: 0.7, fontSize: 13 }}>Select your role to continue</p>
       </div>
-      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 800 }}>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 800 }}>
         {visibleRoles.map((role) => (
           <button key={role.id} onClick={() => { selectRole(role.id); navigate(`/${role.id}`) }}
-            style={{ background: 'white', borderRadius: 16, padding: '32px 28px', width: 220, border: '2px solid transparent', cursor: 'pointer', textAlign: 'center', transition: 'all 0.3s' }}
+            style={{ background: 'white', borderRadius: 14, padding: '20px 22px', width: 200, border: '2px solid transparent', cursor: 'pointer', textAlign: 'center', transition: 'all 0.3s' }}
             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = role.color }}
             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'transparent' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>{role.icon}</div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: role.color, marginBottom: 8 }}>{role.title}</h3>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>{role.icon}</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: role.color, marginBottom: 4 }}>{role.title}</h3>
           </button>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 16, marginTop: 24 }}>
+      <div style={{ display: 'flex', gap: 16, marginTop: 20 }}>
         {activeRole && (
           <button onClick={() => navigate(-1)}
             style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -458,7 +458,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   )
 }
 
-const pageStyle = { minHeight: '100vh', background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }
+const pageStyle = { minHeight: '100vh', background: 'linear-gradient(135deg, #0d1642 0%, #1a237e 50%, #283593 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 20px 20px' }
 const inputStyle = { width: '100%', padding: '11px 14px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 14, boxSizing: 'border-box' }
 const labelStyle = { display: 'block', fontWeight: 500, fontSize: 14, marginBottom: 6 }
 const fieldStyle = { marginBottom: 16 }
