@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships } from '../../hooks/useFirestore'
-import { getUser, updateUserProfile, GRADE_LEVELS } from '../../services/firestore'
-import { uploadResume } from '../../firebase'
+import { useNavigate } from 'react-router-dom'
+import { getUser, updateUserProfile, exportUserData, selfDeleteUser, GRADE_LEVELS } from '../../services/firestore'
+import { uploadResume, deleteAllResumes, deleteCurrentAuthUser, logOut } from '../../firebase'
 
 const INTERN_SKILLS = [
   'Python', 'JavaScript', 'React', 'Java', 'HTML/CSS',
@@ -69,6 +70,7 @@ export default function InternProfile() {
   const [resumeUrl, setResumeUrl] = useState(null)
   const [resumeName, setResumeName] = useState(null)
   const [resumeFile, setResumeFile] = useState(null)
+  const [resumeQuarantined, setResumeQuarantined] = useState(false)
 
   // Skill-match selector
   const [matchInternshipId, setMatchInternshipId] = useState('')
@@ -91,6 +93,7 @@ export default function InternProfile() {
         setExperienceSummary(profile.experienceSummary || '')
         setResumeUrl(profile.resumeUrl || null)
         setResumeName(profile.resumeName || null)
+        setResumeQuarantined(!!profile.resumeQuarantined)
       })
       .catch(err => setError(err.message || 'Failed to load profile'))
       .finally(() => setLoading(false))
@@ -185,8 +188,10 @@ export default function InternProfile() {
       if (resumeData) {
         updates.resumeUrl = resumeData.url
         updates.resumeName = resumeData.name
+        updates.resumeQuarantined = false
         setResumeUrl(resumeData.url)
         setResumeName(resumeData.name)
+        setResumeQuarantined(false)
         setResumeFile(null)
       }
       await updateUserProfile(user.uid, updates)
@@ -377,6 +382,11 @@ export default function InternProfile() {
 
         <div style={fieldStyle}>
           <label style={labelStyle}>Resume / CV (PDF, DOC, DOCX - max 5MB)</label>
+          {resumeQuarantined && (
+            <div style={{ marginBottom: 8, fontSize: 12, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 10px' }}>
+              ⚠ Your previous upload was flagged by our virus scanner and was removed. Please upload a different file.
+            </div>
+          )}
           {resumeUrl && !resumeFile && (
             <div style={{ marginBottom: 8, fontSize: 13 }}>
               Current: <a href={resumeUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--nriva-primary)' }}>{resumeName || 'View resume'}</a>
@@ -410,6 +420,108 @@ export default function InternProfile() {
             {saving ? 'Saving…' : 'Save Profile'}
           </button>
         </div>
+      </div>
+
+      <PrivacySection user={user} />
+    </div>
+  )
+}
+
+function PrivacySection({ user }) {
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState(null) // 'export' | 'delete' | null
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleteError, setDeleteError] = useState(null)
+
+  const handleExport = async () => {
+    setBusy('export')
+    try {
+      const bundle = await exportUserData(user.uid)
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `nriva-data-export-${user.uid.slice(0, 8)}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert('Export failed: ' + (err?.message || 'unknown error'))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const handleDelete = async () => {
+    setDeleteError(null)
+    setBusy('delete')
+    try {
+      await selfDeleteUser(user.uid)
+      try { await deleteAllResumes(user.uid) } catch { /* best-effort */ }
+      try {
+        await deleteCurrentAuthUser()
+      } catch (err) {
+        if (err?.code === 'auth/requires-recent-login') {
+          await logOut()
+          navigate('/')
+          alert('Your account data was removed. Please sign in once more to fully delete your sign-in record, then we will finish removing it.')
+          return
+        }
+        throw err
+      }
+      navigate('/')
+      alert('Your account has been deleted. Take care!')
+    } catch (err) {
+      setDeleteError(err?.message || 'Account deletion failed')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 24, borderLeft: '4px solid #b91c1c' }}>
+      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>Privacy</h2>
+      <p style={{ fontSize: 13, color: 'var(--nriva-text-light)', marginBottom: 16 }}>
+        You can download a copy of everything we hold about you, or delete your account entirely.
+      </p>
+
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
+        <button type="button" onClick={handleExport}
+          disabled={busy !== null}
+          className="btn btn-outline btn-sm"
+          style={{ opacity: busy === 'export' ? 0.6 : 1 }}>
+          {busy === 'export' ? 'Preparing…' : 'Download my data (JSON)'}
+        </button>
+      </div>
+
+      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 14px' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#b91c1c', marginBottom: 6 }}>
+          Delete my account
+        </div>
+        <p style={{ fontSize: 12, color: '#7f1d1d', lineHeight: 1.5, marginBottom: 10 }}>
+          This removes your profile, applications, messages, and resume file. Audit-log entries
+          may be kept for up to 12 months. This cannot be undone. Type <code>DELETE</code> below
+          to confirm.
+        </p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input type="text" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)}
+            placeholder="Type DELETE"
+            style={{ flex: '1 1 180px', padding: '8px 12px', borderRadius: 6, border: '1px solid #fca5a5', fontSize: 13 }} />
+          <button type="button" onClick={handleDelete}
+            disabled={deleteConfirm !== 'DELETE' || busy !== null}
+            style={{
+              padding: '8px 14px', borderRadius: 6, border: 'none',
+              background: '#b91c1c', color: 'white', fontSize: 13, fontWeight: 600,
+              cursor: deleteConfirm === 'DELETE' && busy === null ? 'pointer' : 'not-allowed',
+              opacity: (deleteConfirm === 'DELETE' && busy === null) ? 1 : 0.5,
+            }}>
+            {busy === 'delete' ? 'Deleting…' : 'Delete account permanently'}
+          </button>
+        </div>
+        {deleteError && (
+          <div style={{ marginTop: 8, fontSize: 12, color: '#b91c1c' }}>{deleteError}</div>
+        )}
       </div>
     </div>
   )

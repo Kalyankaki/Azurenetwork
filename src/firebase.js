@@ -9,9 +9,10 @@ import {
   updateProfile,
   signOut,
   onAuthStateChanged,
+  deleteUser as deleteAuthUser,
 } from 'firebase/auth'
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, clearIndexedDbPersistence } from 'firebase/firestore'
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "REPLACE_WITH_YOUR_API_KEY",
@@ -117,6 +118,22 @@ export async function logOut() {
 
 export function onAuthChange(callback) {
   return onAuthStateChanged(auth, callback)
+}
+
+export async function deleteAllResumes(uid) {
+  const folderRef = storageRef(storage, `resumes/${uid}`)
+  try {
+    const list = await listAll(folderRef)
+    await Promise.all(list.items.map(item => deleteObject(item).catch(() => null)))
+  } catch { /* folder may not exist */ }
+}
+
+// Deletes the currently-signed-in Firebase Auth account. Throws
+// `auth/requires-recent-login` if the credential is too old, in which case
+// the caller should sign the user out and ask them to sign back in to retry.
+export async function deleteCurrentAuthUser() {
+  if (!auth.currentUser) throw new Error('Not signed in')
+  await deleteAuthUser(auth.currentUser)
 }
 
 export { auth, db, storage }
