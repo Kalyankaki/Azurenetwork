@@ -5,6 +5,8 @@ import { useInternships, useApplications, useUsers } from '../../hooks/useFirest
 import { rankCandidates, scoreCandidate } from '../../utils/matching'
 import { formatDate } from '../../utils/date'
 import { statusLabel, statusBadgeClass } from '../../utils/status'
+import { useAIConsent } from '../../hooks/useAIConsent'
+import AIConsentModal from '../../components/AIConsentModal'
 
 export default function EmployerDashboard() {
   const { user, employerApproved } = useAuth()
@@ -18,6 +20,7 @@ export default function EmployerDashboard() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResults, setAiResults] = useState(null)
   const [filters, setFilters] = useState({ location: '', availability: '', education: '', gpa: '' })
+  const aiConsent = useAIConsent()
 
   const activePosting = selectedPostingId
     ? myPostings.find(p => p.id === selectedPostingId)
@@ -91,6 +94,8 @@ export default function EmployerDashboard() {
 
   const handleAiSearch = async () => {
     if (!aiQuery.trim() || !activePosting) return
+    const ok = await aiConsent.ensureConsent()
+    if (!ok) return
     setAiLoading(true)
     try {
       const res = await fetch('/api/ai-assistant', {
@@ -399,6 +404,8 @@ export default function EmployerDashboard() {
         )}
       </div>
       )}
+
+      <AIConsentModal open={aiConsent.promptOpen} onAccept={aiConsent.accept} onDecline={aiConsent.decline} />
     </div>
   )
 }

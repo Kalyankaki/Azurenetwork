@@ -4,7 +4,15 @@ import {
   addDoc, query, where, orderBy, onSnapshot, serverTimestamp, increment, limit,
 } from 'firebase/firestore'
 
-const SUPER_ADMIN_EMAIL = 'kalyank.123@gmail.com'
+// Bootstrap super-admin allowlist. Configure via VITE_SUPER_ADMIN_EMAILS
+// (comma-separated). Long-term: rely on the `roles` array on each user doc
+// and shrink this list to a single break-glass account.
+const SUPER_ADMIN_EMAILS = (
+  import.meta.env.VITE_SUPER_ADMIN_EMAILS || 'kalyank.123@gmail.com'
+).split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+
+// Notifications are sent to the first email in the allowlist.
+const SUPER_ADMIN_EMAIL = SUPER_ADMIN_EMAILS[0]
 
 export const GRADE_LEVELS = [
   '10th Grade',
@@ -177,12 +185,12 @@ export async function deleteUser(uid) {
 }
 
 export function getUserRoles(email, firestoreRoles = []) {
-  if (email === SUPER_ADMIN_EMAIL) return ['intern', 'employer', 'admin']
+  if (isSuperAdmin(email)) return ['intern', 'employer', 'admin']
   return firestoreRoles
 }
 
 export function isSuperAdmin(email) {
-  return email === SUPER_ADMIN_EMAIL
+  return !!email && SUPER_ADMIN_EMAILS.includes(email.toLowerCase())
 }
 
 // ============ INTERNSHIPS ============

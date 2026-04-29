@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useAIConsent } from '../hooks/useAIConsent'
+import AIConsentModal from './AIConsentModal'
 
 const SUGGESTIONS = {
   intern: [
@@ -27,6 +29,7 @@ const SUGGESTIONS = {
 
 export default function AIAssistant({ portalContext }) {
   const { activeRole } = useAuth()
+  const consent = useAIConsent()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -40,6 +43,11 @@ export default function AIAssistant({ portalContext }) {
   const send = async (text) => {
     const userMsg = text || input.trim()
     if (!userMsg) return
+    const ok = await consent.ensureConsent()
+    if (!ok) {
+      setMessages(prev => [...prev, { role: 'assistant', text: 'No problem — AI is optional. Ask again any time and you can review the disclosure first.' }])
+      return
+    }
     setInput('')
     setMessages(prev => [...prev, { role: 'user', text: userMsg }])
     setLoading(true)
@@ -193,6 +201,8 @@ export default function AIAssistant({ portalContext }) {
           </div>
         </div>
       )}
+
+      <AIConsentModal open={consent.promptOpen} onAccept={consent.accept} onDecline={consent.decline} />
     </>
   )
 }

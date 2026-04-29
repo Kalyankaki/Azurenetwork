@@ -4,9 +4,18 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Bootstrap admin emails. Edit this list (and re-deploy rules) to add or
+    // rotate super admins. Long-term: rely on the `roles` array instead and
+    // shrink this list to a break-glass account only.
+    function bootstrapAdminEmails() {
+      return [
+        'kalyank.123@gmail.com'
+      ];
+    }
+
     function isAdmin() {
       return request.auth != null && (
-        request.auth.token.email == 'kalyank.123@gmail.com' ||
+        request.auth.token.email in bootstrapAdminEmails() ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin'])
       );
     }
@@ -16,12 +25,21 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['employer']);
     }
 
+    // Fields a user is NOT allowed to modify on their own user doc.
+    // Anything else (skills, school, city, etc.) is fine for self-update.
+    function selfUpdateAllowed() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'roles', 'coordinator', 'employerApproved', 'autoApproved',
+        'uid', 'email', 'createdAt', 'requestedRole', 'nrivaMembership'
+      ]);
+    }
+
     match /users/{userId} {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow create: if request.auth != null && request.auth.uid == userId;
-      // Users can update their own profile (onboarding), admins can update anyone (roles, coordinator)
+      // Self-update may not touch privileged fields; admins can update anything.
       allow update: if request.auth != null && (
-        request.auth.uid == userId ||
+        (request.auth.uid == userId && selfUpdateAllowed()) ||
         isAdmin()
       );
       allow delete: if isAdmin();

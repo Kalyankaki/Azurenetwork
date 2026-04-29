@@ -5,6 +5,8 @@ import { createInternship, GRADE_LEVELS } from '../../services/firestore'
 import { generateJobDescription } from '../../services/ai'
 import { isPastDate } from '../../utils/date'
 import Toast from '../../components/Toast'
+import { useAIConsent } from '../../hooks/useAIConsent'
+import AIConsentModal from '../../components/AIConsentModal'
 
 export default function EmployerNewPosting() {
   const navigate = useNavigate()
@@ -12,6 +14,7 @@ export default function EmployerNewPosting() {
   const [toast, setToast] = useState(null)
   const [submitted, setSubmitted] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
+  const aiConsent = useAIConsent()
   const today = new Date().toISOString().split('T')[0]
 
   const [form, setForm] = useState({
@@ -54,6 +57,8 @@ export default function EmployerNewPosting() {
       setToast('Please enter an internship title first')
       return
     }
+    const ok = await aiConsent.ensureConsent()
+    if (!ok) return
     setAiLoading(true)
     try {
       const result = await generateJobDescription({
@@ -442,6 +447,7 @@ export default function EmployerNewPosting() {
       </form>
 
       {toast && <Toast message={toast} type="success" onClose={() => setToast(null)} />}
+      <AIConsentModal open={aiConsent.promptOpen} onAccept={aiConsent.accept} onDecline={aiConsent.decline} />
     </div>
   )
 }

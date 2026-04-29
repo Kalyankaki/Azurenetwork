@@ -1,0 +1,57 @@
+// Firebase Storage Security Rules for NRIVA Internship Portal
+// Deploy via: Firebase Console > Storage > Rules
+//
+// Layout:
+//   resumes/{uid}/{filename}   <- intern's own resume(s)
+// Anything outside that path is denied by default.
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function hasAdminRole() {
+      return isSignedIn() &&
+        firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid))
+          .data.roles.hasAny(['admin']);
+    }
+
+    function isAllowedResumeType() {
+      return request.resource.contentType in [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+    }
+
+    function isUnderSizeLimit() {
+      // 5 MB
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Resumes: owners can read/write their own; admins can read.
+    // Employers see resumes via the tokenised download URL stored in the
+    // application doc, not by direct path access — so storage stays locked
+    // down even though employers need to read the file.
+    match /resumes/{uid}/{filename=**} {
+      allow read: if isOwner(uid) || hasAdminRole();
+      allow create, update: if isOwner(uid)
+        && isAllowedResumeType()
+        && isUnderSizeLimit();
+      allow delete: if isOwner(uid) || hasAdminRole();
+    }
+
+    // Default deny for everything else.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
