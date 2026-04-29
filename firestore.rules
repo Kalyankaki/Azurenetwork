@@ -25,13 +25,39 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['employer']);
     }
 
-    // Fields a user is NOT allowed to modify on their own user doc.
-    // Anything else (skills, school, city, etc.) is fine for self-update.
+    // Fields a user is NEVER allowed to set on their own user doc.
+    function neverChangeable() {
+      return ['uid', 'email', 'createdAt', 'coordinator', 'autoApproved'];
+    }
+
+    // Fields that can ONLY be set during the one-time onboarding transition
+    // (onboarded flips false -> true). After onboarding, only an admin can
+    // change them.
+    function onboardingOnly() {
+      return ['requestedRole', 'nrivaMembership', 'employerApproved'];
+    }
+
+    function isOnboardingTransition() {
+      return resource.data.get('onboarded', false) == false &&
+        request.resource.data.get('onboarded', false) == true;
+    }
+
+    // Self-update validator. Allows everyday profile edits AND the legitimate
+    // role-bearing writes that happen during onboarding / employer auto-migrate,
+    // while preventing privilege escalation to admin or self-approval.
     function selfUpdateAllowed() {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'roles', 'coordinator', 'employerApproved', 'autoApproved',
-        'uid', 'email', 'createdAt', 'requestedRole', 'nrivaMembership'
-      ]);
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+
+      // Always-forbidden fields cannot be touched by self at all.
+      // 'roles' may change but never to include 'admin'.
+      // Onboarding-only fields are gated by isOnboardingTransition().
+      return !changed.hasAny(neverChangeable())
+        && (!('roles' in changed) || !('admin' in request.resource.data.roles))
+        && (!changed.hasAny(onboardingOnly()) || (
+          isOnboardingTransition()
+          // Self may NEVER set employerApproved to true; admin does that.
+          && (!('employerApproved' in changed) || request.resource.data.employerApproved == false)
+        ));
     }
 
     match /users/{userId} {
