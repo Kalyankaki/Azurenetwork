@@ -68,7 +68,8 @@ service cloud.firestore {
         (request.auth.uid == userId && selfUpdateAllowed()) ||
         isAdmin()
       );
-      allow delete: if isAdmin();
+      // Self-delete (R11) and admin delete.
+      allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
 
     match /internships/{docId} {
@@ -99,7 +100,10 @@ service cloud.firestore {
         (request.auth != null && resource.data.applicantUid == request.auth.uid &&
           request.resource.data.status in ['offer_accepted', 'offer_declined']) ||
         (request.auth != null && resource.data.employerUid == request.auth.uid);
-      allow delete: if false;
+      // Applicant can delete their own application as part of account deletion (R11).
+      allow delete: if request.auth != null && (
+        resource.data.applicantUid == request.auth.uid || isAdmin()
+      );
     }
 
     match /messages/{docId} {
@@ -109,7 +113,10 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         request.resource.data.senderUid == request.auth.uid;
       allow update: if isAdmin();
-      allow delete: if false;
+      // Sender can delete their own messages as part of account deletion (R11).
+      allow delete: if request.auth != null && (
+        resource.data.senderUid == request.auth.uid || isAdmin()
+      );
     }
 
     match /activity/{docId} {

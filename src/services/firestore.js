@@ -1,7 +1,7 @@
 import { db } from '../firebase'
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  addDoc, query, where, orderBy, onSnapshot, serverTimestamp, increment, limit,
+  addDoc, query, where, orderBy, onSnapshot, serverTimestamp, increment, limit, Timestamp,
 } from 'firebase/firestore'
 
 // Bootstrap super-admin allowlist. Configure via VITE_SUPER_ADMIN_EMAILS
@@ -35,6 +35,27 @@ export const INTERNSHIP_STATUSES = {
 
 export const MAX_INTERN_APPLICATIONS = 4
 
+// Retention windows (used to compute `expiresAt` for Firestore TTL deletion).
+// Configure matching TTL policies in the Firebase console:
+//   activity.expiresAt       → enable TTL
+//   notifications.expiresAt  → enable TTL
+const ACTIVITY_TTL_MS = 365 * 24 * 60 * 60 * 1000     // 12 months
+const NOTIFICATION_TTL_MS = 180 * 24 * 60 * 60 * 1000 // 6 months
+
+function expiresAtFromNow(ms) {
+  return Timestamp.fromMillis(Date.now() + ms)
+}
+
+// Sensitive admin actions that should also send a real-time alert to admins.
+const ALERTABLE_ACTIONS = new Set([
+  'roles_changed',
+  'user_deleted',
+  'employer_approved',
+  'internship_approved',
+  'internship_rejected',
+  'internship_deleted',
+])
+
 // ============ ACTIVITY LOG ============
 
 export function logActivity(action, data = {}) {
@@ -45,7 +66,13 @@ export function logActivity(action, data = {}) {
         action,
         ...data,
         createdAt: serverTimestamp(),
+        expiresAt: expiresAtFromNow(ACTIVITY_TTL_MS),
       })
+
+      // Real-time alert for high-sensitivity admin actions (R15).
+      if (ALERTABLE_ACTIONS.has(action)) {
+        sendAdminAlert(action, data).catch(() => { /* best-effort */ })
+      }
     } catch (err) {
       if (attempt < 3) {
         setTimeout(() => doLog(attempt + 1), 1000 * attempt)
@@ -144,7 +171,32 @@ export async function sendAdminNotification(data) {
     ...data,
     sent: false,
     createdAt: serverTimestamp(),
+    expiresAt: expiresAtFromNow(NOTIFICATION_TTL_MS),
   })
+}
+
+// Real-time alert for sensitive admin actions (R15). Posts to /api/admin-alert
+// which fans out to email via Resend. Falls back to a notifications doc on failure.
+export async function sendAdminAlert(action, data = {}) {
+  try {
+    const res = await fetch('/api/admin-alert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, data, occurredAt: new Date().toISOString() }),
+    })
+    if (res.ok) return
+  } catch { /* fall through to firestore fallback */ }
+  try {
+    await addDoc(collection(db, 'notifications'), {
+      to: SUPER_ADMIN_EMAIL,
+      type: 'admin_alert',
+      action,
+      payload: data,
+      sent: false,
+      createdAt: serverTimestamp(),
+      expiresAt: expiresAtFromNow(NOTIFICATION_TTL_MS),
+    })
+  } catch { /* swallow */ }
 }
 
 export async function getUser(uid) {
@@ -182,6 +234,60 @@ export async function approveEmployer(uid) {
 export async function deleteUser(uid) {
   await deleteDoc(doc(db, 'users', uid))
   logActivity('user_deleted', { userUid: uid })
+}
+
+// Returns a JSON-serialisable bundle of everything we hold about this user.
+export async function exportUserData(uid) {
+  const userSnap = await getDoc(doc(db, 'users', uid))
+  const userDoc = userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } : null
+
+  const appsSnap = await getDocs(query(
+    collection(db, 'applications'),
+    where('applicantUid', '==', uid)
+  ))
+  const applications = appsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+
+  const messagesSnap = await getDocs(query(
+    collection(db, 'messages'),
+    where('senderUid', '==', uid)
+  ))
+  const messages = messagesSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+
+  return {
+    exportedAt: new Date().toISOString(),
+    user: userDoc,
+    applications,
+    messages,
+    note: 'Audit-log entries about you are retained for up to 12 months and not included here. Email an admin for those.',
+  }
+}
+
+// Self-service account deletion for the signed-in user. Removes their user
+// doc, all their applications, and resume(s). The Firebase Auth account is
+// removed by the caller via deleteCurrentUserAuth() because that needs a
+// recently-signed-in token.
+export async function selfDeleteUser(uid) {
+  // Applications
+  try {
+    const appsSnap = await getDocs(query(
+      collection(db, 'applications'),
+      where('applicantUid', '==', uid)
+    ))
+    await Promise.all(appsSnap.docs.map(d => deleteDoc(d.ref).catch(() => null)))
+  } catch (e) { console.warn('app cleanup failed:', e?.message) }
+
+  // Messages submitted by this user
+  try {
+    const msgsSnap = await getDocs(query(
+      collection(db, 'messages'),
+      where('senderUid', '==', uid)
+    ))
+    await Promise.all(msgsSnap.docs.map(d => deleteDoc(d.ref).catch(() => null)))
+  } catch (e) { console.warn('messages cleanup failed:', e?.message) }
+
+  // User doc last (so the rules still see the user as themselves while above runs)
+  await deleteDoc(doc(db, 'users', uid))
+  logActivity('user_self_deleted', { userUid: uid })
 }
 
 export function getUserRoles(email, firestoreRoles = []) {

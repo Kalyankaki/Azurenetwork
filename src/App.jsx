@@ -2,10 +2,13 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import CookieNotice from './components/CookieNotice'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RoleSelectPage = lazy(() => import('./pages/RoleSelectPage'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
+const Terms = lazy(() => import('./pages/Terms'))
 const InternDashboard = lazy(() => import('./pages/intern/InternDashboard'))
 const InternBrowse = lazy(() => import('./pages/intern/InternBrowse'))
 const InternApplications = lazy(() => import('./pages/intern/InternApplications'))
@@ -44,10 +47,13 @@ function PageLoader() {
 export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
+      <CookieNotice />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/select-role" element={<RoleSelectPage />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<Terms />} />
 
         <Route path="/intern" element={
           <ProtectedRoute allowedRole="intern"><Layout role="intern" /></ProtectedRoute>
