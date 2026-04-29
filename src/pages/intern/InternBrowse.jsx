@@ -5,6 +5,8 @@ import { useInternships } from '../../hooks/useFirestore'
 import { getUser } from '../../services/firestore'
 import { scoreCandidate, explainMatch, matchBreakdown } from '../../utils/matching'
 import { formatDate } from '../../utils/date'
+import { useAIConsent } from '../../hooks/useAIConsent'
+import AIConsentModal from '../../components/AIConsentModal'
 
 function scoreInternshipForIntern(internship, profile) {
   if (!profile) return { overall: 0 }
@@ -34,6 +36,7 @@ export default function InternBrowse() {
   const [aiQuery, setAiQuery] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResults, setAiResults] = useState(null)
+  const aiConsent = useAIConsent()
 
   useEffect(() => {
     if (user?.uid) getUser(user.uid).then(p => setProfile(p)).catch(() => {})
@@ -93,6 +96,8 @@ export default function InternBrowse() {
 
   const handleAiSearch = async () => {
     if (!aiQuery.trim()) return
+    const ok = await aiConsent.ensureConsent()
+    if (!ok) return
     setAiLoading(true)
     try {
       const res = await fetch('/api/ai-assistant', {
@@ -380,6 +385,8 @@ export default function InternBrowse() {
           </div>
         </div>
       )}
+
+      <AIConsentModal open={aiConsent.promptOpen} onAccept={aiConsent.accept} onDecline={aiConsent.decline} />
     </div>
   )
 }

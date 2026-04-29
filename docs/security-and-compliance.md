@@ -192,16 +192,18 @@ The user base is largely 14–17-year-olds. Below is how the major regimes apply
 
 ## 8. Residual risks (prioritized)
 
+> **Status legend:** ✅ implemented in this branch · 🟨 partial · ⬜ not yet started.
+
 | # | Risk | Likelihood | Impact | Notes / where it lives |
 |---|---|---|---|---|
-| **R1** | **No age gate or parental notice for under-18 users.** Regulatory exposure under California AADC and similar state laws. | High | High | Frontend onboarding (`src/pages/RoleSelectPage.jsx`) |
-| **R2** | **Single super-admin account with hardcoded personal Gmail and no MFA.** Full data exfiltration from one credential compromise. | Medium | Critical | `firestore.rules`, `src/services/firestore.js` |
-| **R3** | **No published Privacy Policy / ToS / cookie notice.** Inability to demonstrate lawful basis under most state-privacy frameworks. | High | Medium | App-wide; no `/privacy` page exists |
-| **R4** | **Firestore user-doc update rule is permissive — does not restrict mutable fields.** Client-side `updateUserProfile` strips privileged fields, but a hostile user with the SDK can write them directly. | Low | High | `firestore.rules` lines 22–26 |
-| **R5** | **Firebase Storage rules not in repo.** If the bucket is in default-permissive state, resumes could be world-readable by anyone with a URL guess. | Unknown | High | **Verify in Firebase console** |
-| **R6** | **Resume uploads have no virus / malware scanning.** Compromised file could be served via tokenised URL to admins or employers who download it. | Low | Medium | `src/firebase.js` `uploadResume` |
-| **R7** | **No security headers** (`Content-Security-Policy`, `frame-ancestors`, `Strict-Transport-Security`, etc.). Any third-party site can iframe the portal — clickjacking surface, especially around role-switch and delete buttons. | Medium | Medium | `vercel.json`, `staticwebapp.config.json` |
-| **R8** | **AI features send minor's data to Anthropic without explicit per-user consent.** Includes school, grade, free-text the user wrote. | High | Medium | `api/ai-assistant.js`, `api/ai-generate.js` |
+| **R1** ✅ | **Age gate + parental notice for under-18 users.** Date of birth required at intern onboarding; under-13 blocked; under-18 must provide a guardian name/email and acknowledge a notice; flags persisted on the user doc (`isMinor`, `guardianName`, `guardianEmail`, `parentNoticeAcknowledgedAt`). | — | — | `src/pages/RoleSelectPage.jsx` |
+| **R2** 🟨 | **Super-admin allowlist now driven by `VITE_SUPER_ADMIN_EMAILS`** (comma-separated, multi-admin ready); `firestore.rules` accepts an array of bootstrap emails. **Still open:** enforce MFA on the admin account(s); long-term, drop bootstrap emails entirely and rely on the `roles` array. | Medium | Critical | `src/services/firestore.js`, `firestore.rules` |
+| **R3** ⬜ | **No published Privacy Policy / ToS / cookie notice.** Inability to demonstrate lawful basis under most state-privacy frameworks. | High | Medium | App-wide; no `/privacy` page exists |
+| **R4** ✅ | **Firestore user-doc update rule now whitelists safe fields.** Self-update may not modify `roles`, `coordinator`, `employerApproved`, `autoApproved`, `uid`, `email`, `createdAt`, `requestedRole`, `nrivaMembership`. | — | — | `firestore.rules` `selfUpdateAllowed()` |
+| **R5** ✅ | **`storage.rules` authored.** Resumes accessible only to the owner (via Firebase Auth) and to admins; everything else denied. **Action required:** deploy via `firebase deploy --only storage`. | — | — | `storage.rules` |
+| **R6** ⬜ | **Resume uploads have no virus / malware scanning.** Compromised file could be served via tokenised URL to admins or employers who download it. | Low | Medium | `src/firebase.js` `uploadResume` |
+| **R7** ✅ | **CSP `frame-ancestors` + security headers added** to `vercel.json` and `staticwebapp.config.json`. Iframing restricted to `nriva.org` and subdomains. Includes HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`. | — | — | `vercel.json`, `staticwebapp.config.json` |
+| **R8** ✅ | **AI features now require explicit per-user consent.** First call to AI assistant, AI search, or "Write with AI" shows a disclosure modal; consent persists on the user doc as `aiConsent.granted` + `aiConsent.grantedAt`. | — | — | `src/hooks/useAIConsent.js`, `src/components/AIConsentModal.jsx` |
 | **R9** | **Activity log retains PII (email, displayName) indefinitely, admin-only readable.** No retention policy. | High | Low | `src/services/firestore.js` `logActivity` |
 | **R10** | **Email/password signup uses default 6-char passwords with no CAPTCHA.** Brute-force and bulk-signup surface. | Medium | Medium | `src/firebase.js` |
 | **R11** | **No data-export or self-service deletion flow.** Failing a "right to access / delete" request requires manual admin work and is not on a SLA. | High | Medium | None implemented |

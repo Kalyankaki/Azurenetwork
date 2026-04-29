@@ -39,6 +39,17 @@ const roleConfig = [
   { id: 'admin', title: 'Administrator', icon: '⚙️', color: '#b71c1c', autoApproved: false },
 ]
 
+function computeAge(dob) {
+  if (!dob) return null
+  const d = new Date(dob)
+  if (isNaN(d.getTime())) return null
+  const now = new Date()
+  let age = now.getFullYear() - d.getFullYear()
+  const m = now.getMonth() - d.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--
+  return age
+}
+
 export default function RoleSelectPage() {
   const { user, availableRoles, activeRole, selectRole, logout, refreshRoles } = useAuth()
   const navigate = useNavigate()
@@ -117,6 +128,11 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   const [portfolio, setPortfolio] = useState('')
   const [resumeFile, setResumeFile] = useState(null)
   const [experienceSummary, setExperienceSummary] = useState('')
+  // Age gate / parental notice (R1)
+  const [dateOfBirth, setDateOfBirth] = useState('')
+  const [guardianEmail, setGuardianEmail] = useState('')
+  const [guardianName, setGuardianName] = useState('')
+  const [parentNoticeAck, setParentNoticeAck] = useState(false)
 
   // Employer-specific
   const [companyName, setCompanyName] = useState('')
@@ -152,6 +168,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
             return
           }
         }
+        const age = computeAge(dateOfBirth)
         Object.assign(profileData, {
           gradeLevel, school: school.trim(), city: city.trim(), skills, interests,
           availability, aboutMe: aboutMe.trim(),
@@ -159,6 +176,13 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
           experienceSummary: experienceSummary.trim(),
           resumeUrl: resumeData?.url || null,
           resumeName: resumeData?.name || null,
+          dateOfBirth,
+          age,
+          isMinor: age !== null && age < 18,
+          guardianName: age !== null && age < 18 ? guardianName.trim() : '',
+          guardianEmail: age !== null && age < 18 ? guardianEmail.trim() : '',
+          parentNoticeAcknowledgedAt: age !== null && age < 18 && parentNoticeAck
+            ? new Date().toISOString() : null,
         })
       } else if (selectedRole === 'employer') {
         Object.assign(profileData, {
@@ -281,6 +305,47 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
           <>
             <h3 style={sectionTitle}>Tell us about yourself</h3>
             <div style={fieldStyle}>
+              <label style={labelStyle}>Date of Birth <span style={{ color: '#c62828' }}>*</span></label>
+              <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+                style={inputStyle} />
+              <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                We use this to confirm program eligibility (13+) and to know when a guardian notice is required.
+              </p>
+              {dateOfBirth && computeAge(dateOfBirth) < 13 && (
+                <div style={{ ...errorStyle, marginTop: 8 }}>
+                  This program is open to students 13 and older. Please ask a parent or guardian to contact us.
+                </div>
+              )}
+            </div>
+            {dateOfBirth && computeAge(dateOfBirth) >= 13 && computeAge(dateOfBirth) < 18 && (
+              <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#1a237e', marginBottom: 6 }}>
+                  Parent / Guardian Notice
+                </div>
+                <p style={{ fontSize: 12, color: '#3730a3', lineHeight: 1.5, marginBottom: 10 }}>
+                  Because you&apos;re under 18, we ask for a parent or guardian&apos;s name and email so they can be informed
+                  about your participation. They will not be required to log in. Their email will only be used by NRIVA
+                  staff to share program updates and any concerns. Read our <a href="/privacy" style={{ color: '#1a237e', fontWeight: 600 }}>Privacy Notice for Minors</a>.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                  <input type="text" placeholder="Guardian name" value={guardianName}
+                    onChange={(e) => setGuardianName(e.target.value)} style={inputStyle} />
+                  <input type="email" placeholder="Guardian email" value={guardianEmail}
+                    onChange={(e) => setGuardianEmail(e.target.value)} autoComplete="email" style={inputStyle} />
+                </div>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: '#3730a3', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={parentNoticeAck}
+                    onChange={(e) => setParentNoticeAck(e.target.checked)}
+                    style={{ marginTop: 3 }} />
+                  <span>
+                    I confirm a parent or guardian is aware I&apos;m signing up and consents to NRIVA contacting them about
+                    my participation.
+                  </span>
+                </label>
+              </div>
+            )}
+            <div style={fieldStyle}>
               <label style={labelStyle}>Current Grade Level <span style={{ color: '#c62828' }}>*</span></label>
               <select value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)} style={inputStyle}>
                 <option value="">Select...</option>
@@ -330,7 +395,25 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
             {error && <div style={errorStyle}>{error}</div>}
             <div style={{ display: 'flex', gap: 12 }}>
               <button type="button" onClick={() => setStep(1)} style={{ ...btnOutline, flex: 1 }}>Back</button>
-              <button type="button" onClick={() => { if (!gradeLevel) { setError('Please select your grade level'); return } if (!school.trim()) { setError('Please enter your school'); return } setError(null); setStep(3) }}
+              <button type="button" onClick={() => {
+                  const age = computeAge(dateOfBirth)
+                  if (!dateOfBirth || age === null) { setError('Please enter your date of birth'); return }
+                  if (age < 13) { setError('This program is open to students 13 and older.'); return }
+                  if (age < 18) {
+                    if (!guardianName.trim() || !guardianEmail.trim()) {
+                      setError('Please add a guardian name and email so we can keep them in the loop.')
+                      return
+                    }
+                    if (!parentNoticeAck) {
+                      setError('Please confirm a parent or guardian is aware of your sign-up.')
+                      return
+                    }
+                  }
+                  if (!gradeLevel) { setError('Please select your grade level'); return }
+                  if (!school.trim()) { setError('Please enter your school'); return }
+                  if (!city.trim()) { setError('Please enter your city'); return }
+                  setError(null); setStep(3)
+                }}
                 style={{ ...btnPrimary, flex: 2 }}>Continue</button>
             </div>
           </>
