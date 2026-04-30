@@ -358,5 +358,6 @@ functions/
 firestore.rules     storage.rules     firebase.json
 vercel.json         staticwebapp.config.json
 .github/dependabot.yml
-docs/{security-and-compliance,operations,e2e-test-plan,architecture}.md
+docs/{security-and-compliance,operations,e2e-test-plan,architecture,
+     admin-roadmap,contributing,changelog}.md
 ```
