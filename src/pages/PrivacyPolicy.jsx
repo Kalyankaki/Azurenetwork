@@ -71,7 +71,7 @@ export default function PrivacyPolicy() {
         </p>
         <p style={p}>
           To request a copy of your child&apos;s data, ask us to correct it, or delete the account,
-          email <a href="mailto:kalyank.123@gmail.com">kalyank.123@gmail.com</a>.
+          email <a href="mailto:youth@nriva.org">youth@nriva.org</a>.
         </p>
 
         <h2 style={h2}>7. Your rights</h2>
@@ -116,7 +116,7 @@ export default function PrivacyPolicy() {
         <h2 style={h2}>12. Contact</h2>
         <p style={p}>
           Questions, requests, or concerns:{' '}
-          <a href="mailto:kalyank.123@gmail.com">kalyank.123@gmail.com</a>.
+          <a href="mailto:youth@nriva.org">youth@nriva.org</a>.
         </p>
       </article>
       <DisclaimerFooter />

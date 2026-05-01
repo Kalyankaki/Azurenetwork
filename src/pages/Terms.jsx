@@ -70,7 +70,7 @@ export default function Terms() {
           NRIVA does not employ you and is not party to any internship contract. Offers, schedules,
           stipends, and any payment are between you and the employer. NRIVA is not responsible for
           the conduct of employers or interns; report concerns to{' '}
-          <a href="mailto:kalyank.123@gmail.com">kalyank.123@gmail.com</a>.
+          <a href="mailto:youth@nriva.org">youth@nriva.org</a>.
         </p>
 
         <h2 style={h2}>5. AI features</h2>
@@ -100,7 +100,7 @@ export default function Terms() {
 
         <h2 style={h2}>9. Contact</h2>
         <p style={p}>
-          <a href="mailto:kalyank.123@gmail.com">kalyank.123@gmail.com</a>
+          <a href="mailto:youth@nriva.org">youth@nriva.org</a>
         </p>
       </article>
       <DisclaimerFooter />
