@@ -169,6 +169,11 @@ export async function getInternshipCount(employerUid) {
   return snap.size
 }
 
+export async function getInternship(id) {
+  const snap = await getDoc(doc(db, 'internships', id))
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null
+}
+
 export async function sendAdminNotification(data) {
   // Store as a notification doc - can be picked up by a Cloud Function to send email
   await addDoc(collection(db, 'notifications'), {

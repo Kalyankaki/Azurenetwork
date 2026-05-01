@@ -304,6 +304,32 @@ export default function AdminInternships() {
                   </button>
                 ))}
               </div>
+
+              {selected.status === 'open' && (() => {
+                const url = `${window.location.origin}/internships/${selected.id}`
+                const onCopy = async () => {
+                  try {
+                    if (navigator.clipboard?.writeText) {
+                      await navigator.clipboard.writeText(url)
+                      setToast('Public link copied')
+                      return
+                    }
+                  } catch { /* fall through */ }
+                  window.prompt('Copy this public link:', url)
+                }
+                return (
+                  <>
+                    <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Public share link</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                      <input className="form-control" readOnly value={url}
+                        onFocus={(e) => e.target.select()}
+                        style={{ flex: 1, minWidth: 240, fontSize: 12 }} />
+                      <button type="button" className="btn btn-sm btn-outline" onClick={onCopy}>Copy</button>
+                      <a className="btn btn-sm btn-outline" href={url} target="_blank" rel="noopener noreferrer">Open ↗</a>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
             <div className="modal-footer">
               {selected.status === INTERNSHIP_STATUSES.PENDING_APPROVAL && (

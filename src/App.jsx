@@ -9,6 +9,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RoleSelectPage = lazy(() => import('./pages/RoleSelectPage'))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
 const Terms = lazy(() => import('./pages/Terms'))
+const PublicInternship = lazy(() => import('./pages/PublicInternship'))
 const InternDashboard = lazy(() => import('./pages/intern/InternDashboard'))
 const InternBrowse = lazy(() => import('./pages/intern/InternBrowse'))
 const InternApplications = lazy(() => import('./pages/intern/InternApplications'))
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/select-role" element={<RoleSelectPage />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/internships/:id" element={<PublicInternship />} />
 
         <Route path="/intern" element={
           <ProtectedRoute allowedRole="intern"><Layout role="intern" /></ProtectedRoute>
