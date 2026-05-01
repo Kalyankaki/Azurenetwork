@@ -59,6 +59,8 @@ export default function AdminUsers() {
     const isSuper = isSuperAdmin(u.email)
     const roles = u.roles || []
     acc.all += 1
+    if (u.onboarded === true) acc.registered += 1
+    else acc.incomplete += 1
     if (roles.length === 0 && !isSuper) acc.pending += 1
     if (roles.includes('intern')) acc.intern += 1
     if (roles.includes('employer')) {
@@ -67,7 +69,7 @@ export default function AdminUsers() {
     }
     if (roles.includes('admin') || isSuper) acc.admin += 1
     return acc
-  }, { all: 0, pending: 0, intern: 0, employer: 0, admin: 0, awaiting_approval: 0 })
+  }, { all: 0, registered: 0, incomplete: 0, pending: 0, intern: 0, employer: 0, admin: 0, awaiting_approval: 0 })
 
   // Sort: pending users (no roles) first, then by createdAt desc
   const sorted = [...users].sort((a, b) => {
@@ -84,6 +86,8 @@ export default function AdminUsers() {
     const roles = u.roles || []
     switch (categoryFilter) {
       case 'all': return true
+      case 'registered': return u.onboarded === true
+      case 'incomplete': return u.onboarded !== true
       case 'pending': return roles.length === 0 && !isSuper
       case 'intern': return roles.includes('intern')
       case 'employer': return roles.includes('employer')
@@ -170,6 +174,10 @@ export default function AdminUsers() {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
         <CategoryChip label="All" count={counts.all}
           active={categoryFilter === 'all'} onClick={() => setCategoryFilter('all')} />
+        <CategoryChip label="Registered" count={counts.registered}
+          active={categoryFilter === 'registered'} onClick={() => setCategoryFilter('registered')} />
+        <CategoryChip label="Incomplete" count={counts.incomplete} tone="warning"
+          active={categoryFilter === 'incomplete'} onClick={() => setCategoryFilter('incomplete')} />
         <CategoryChip label="Pending" count={counts.pending} tone="warning"
           active={categoryFilter === 'pending'} onClick={() => setCategoryFilter('pending')} />
         <CategoryChip label="Interns" count={counts.intern} tone="intern"
