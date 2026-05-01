@@ -23,6 +23,7 @@ Add new entries here as PRs merge. Format:
 ### Security & Privacy
 - platform: facilitator-only liability protection. Every page now carries a short disclaimer footer; the public internship page shows a prominent "NRIVA does not vet, endorse, or guarantee" block above Apply; onboarding, application submission, and posting submission each gate behind an explicit Terms acknowledgement that's stored on the user/application/internship doc with a versioned timestamp; Terms now lead with a plain-language facilitator-only section (subject to legal review); a "Report this posting" flow on the public page captures concerns into the admin messages queue. Closes [#49](https://github.com/Kalyankaki/Azurenetwork/issues/49).
 - platform: user-facing contact on `/privacy` and `/terms` switched from a personal email to `youth@nriva.org`. Closes [#51](https://github.com/Kalyankaki/Azurenetwork/issues/51).
+- security: Firestore super-admin allowlist now accepts both `kalyank.123@gmail.com` and `youth@nriva.org` so the foundation mailbox can be established before the personal email is dropped. **Requires `firebase deploy --only firestore:rules`** to take effect. Closes [#53](https://github.com/Kalyankaki/Azurenetwork/issues/53).
 
 ---
 
