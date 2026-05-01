@@ -1,8 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useUsers } from '../../hooks/useFirestore'
-import { updateUserRoles, updateUserCoordinator, deleteUser, approveEmployer, isSuperAdmin } from '../../services/firestore'
+import { updateUserRoles, updateUserCoordinator, deleteUser, approveEmployer, isSuperAdmin, getApplicationCount, getInternshipCount } from '../../services/firestore'
 import Toast from '../../components/Toast'
+
+// Renders a Firestore Timestamp / ISO string / millis as e.g. "Apr 28, 2026"
+function formatDate(value) {
+  if (!value) return null
+  let d
+  if (typeof value === 'string') d = new Date(value)
+  else if (value?.seconds) d = new Date(value.seconds * 1000)
+  else if (value?.toDate) d = value.toDate()
+  else if (typeof value === 'number') d = new Date(value)
+  else return null
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
 
 const ALL_ROLES = ['intern', 'employer', 'admin']
 
@@ -17,7 +30,26 @@ export default function AdminUsers() {
   const [coordinatorModal, setCoordinatorModal] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [profileModal, setProfileModal] = useState(null)
+  const [profileStats, setProfileStats] = useState({ apps: null, postings: null })
   const [coordForm, setCoordForm] = useState({ name: '', email: '', phone: '' })
+
+  useEffect(() => {
+    if (!profileModal) { setProfileStats({ apps: null, postings: null }); return }
+    let cancelled = false
+    const roles = profileModal.roles || []
+    const tasks = []
+    if (roles.includes('intern')) {
+      tasks.push(getApplicationCount(profileModal.id).then(n => ({ apps: n })).catch(() => ({ apps: 'error' })))
+    }
+    if (roles.includes('employer')) {
+      tasks.push(getInternshipCount(profileModal.id).then(n => ({ postings: n })).catch(() => ({ postings: 'error' })))
+    }
+    Promise.all(tasks).then(results => {
+      if (cancelled) return
+      setProfileStats(prev => results.reduce((acc, r) => ({ ...acc, ...r }), prev))
+    })
+    return () => { cancelled = true }
+  }, [profileModal])
 
   // Unique locations from user school/chapter fields
   const userLocations = [...new Set(users.map(u => u.chapter || u.location || u.city).filter(Boolean))].sort()
@@ -175,7 +207,14 @@ export default function AdminUsers() {
                           )}
                           <div>
                             <div style={{ fontWeight: 500, fontSize: 14 }}>
-                              {user.displayName || user.email?.split('@')[0] || user.email || '—'}
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setProfileModal(user) }}
+                                className="user-name-link"
+                                title="View profile"
+                              >
+                                {user.displayName || user.email?.split('@')[0] || user.email || '—'}
+                              </button>
                               {isSuper && (
                                 <span style={{
                                   marginLeft: 8, fontSize: 10, background: '#ff6f00', color: 'white',
@@ -379,7 +418,7 @@ export default function AdminUsers() {
             </div>
             <div className="modal-body">
               {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
                 {profileModal.photoURL ? (
                   <img src={profileModal.photoURL} alt="" style={{ width: 56, height: 56, borderRadius: '50%' }} />
                 ) : (
@@ -391,23 +430,82 @@ export default function AdminUsers() {
                     {(profileModal.displayName || profileModal.email || '?')[0].toUpperCase()}
                   </div>
                 )}
-                <div>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <h3 style={{ fontSize: 20, fontWeight: 600 }}>
                     {profileModal.displayName || profileModal.email?.split('@')[0] || '—'}
+                    {profileModal.isMinor && (
+                      <span style={{ marginLeft: 8, fontSize: 10, background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
+                        MINOR
+                      </span>
+                    )}
                   </h3>
                   <p style={{ fontSize: 14, color: 'var(--nriva-text-light)' }}>{profileModal.email}</p>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                     {(profileModal.roles || []).map(r => (
                       <span key={r} className={`badge badge-${r === 'admin' ? 'closed' : r === 'employer' ? 'open' : 'filled'}`}>
                         {r}
                       </span>
                     ))}
+                    {(profileModal.roles || []).length === 0 && (
+                      <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                        Pending role
+                      </span>
+                    )}
                     {isSuperAdmin(profileModal.email) && (
                       <span style={{ fontSize: 10, background: '#ff6f00', color: 'white', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>SUPER ADMIN</span>
                     )}
                   </div>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 11, color: 'var(--nriva-text-light)', flexWrap: 'wrap' }}>
+                    {formatDate(profileModal.createdAt) && <span>Joined {formatDate(profileModal.createdAt)}</span>}
+                    <span>{profileModal.onboarded ? 'Onboarded' : 'Onboarding incomplete'}</span>
+                    <span style={{ fontFamily: 'monospace' }} title={profileModal.id}>ID {(profileModal.id || '').slice(0, 8)}…</span>
+                  </div>
                 </div>
               </div>
+
+              {/* Approval checklist (only for users that need an admin decision) */}
+              {(() => {
+                const roles = profileModal.roles || []
+                const needsRoleDecision = roles.length === 0 && !isSuperAdmin(profileModal.email)
+                const needsEmployerApproval = roles.includes('employer') && profileModal.employerApproved !== true && !isSuperAdmin(profileModal.email)
+                if (!needsRoleDecision && !needsEmployerApproval) return null
+
+                const items = []
+                items.push({ ok: !!profileModal.email, label: 'Email captured', detail: profileModal.email })
+                items.push({ ok: profileModal.onboarded === true, label: 'Onboarding completed', detail: profileModal.onboarded ? 'yes' : 'no' })
+
+                const requested = profileModal.requestedRole
+                if (requested === 'intern' || roles.includes('intern')) {
+                  const age = profileModal.age
+                  items.push({ ok: typeof age === 'number', label: 'Date of birth on file', detail: age != null ? `age ${age}` : 'missing' })
+                  if (profileModal.isMinor) {
+                    items.push({ ok: !!profileModal.guardianName && !!profileModal.guardianEmail, label: 'Guardian on file (minor)', detail: profileModal.guardianName ? `${profileModal.guardianName} · ${profileModal.guardianEmail || '—'}` : 'missing' })
+                    items.push({ ok: !!profileModal.parentNoticeAcknowledgedAt, label: 'Parental notice acknowledged', detail: profileModal.parentNoticeAcknowledgedAt ? formatDate(profileModal.parentNoticeAcknowledgedAt) || 'yes' : 'not acknowledged' })
+                  }
+                }
+                if (requested === 'employer' || roles.includes('employer')) {
+                  items.push({ ok: !!profileModal.companyName, label: 'Company name on file', detail: profileModal.companyName || 'missing' })
+                  items.push({ ok: !!profileModal.companyWebsite, label: 'Company website on file', detail: profileModal.companyWebsite || 'missing' })
+                }
+                items.push({ ok: profileModal?.aiConsent?.granted === true, label: 'AI processing consent', detail: profileModal?.aiConsent?.granted ? (formatDate(profileModal.aiConsent.grantedAt) || 'granted') : 'not granted' })
+
+                return (
+                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                      Approval checklist
+                    </div>
+                    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
+                      {items.map((it, i) => (
+                        <li key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 13 }}>
+                          <span aria-hidden="true">{it.ok ? '✅' : '⚠️'}</span>
+                          <span style={{ fontWeight: 500 }}>{it.label}:</span>
+                          <span style={{ color: 'var(--nriva-text-light)' }}>{it.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })()}
 
               {/* Details grid */}
               <div style={{
@@ -454,7 +552,58 @@ export default function AdminUsers() {
                     {profileModal.employerApproved ? '✅ Approved' : '⏳ Pending approval'}
                   </div></div>
                 )}
+                {profileModal.dateOfBirth && (
+                  <div><div style={profLabel}>Date of Birth</div><div style={profValue}>
+                    {formatDate(profileModal.dateOfBirth) || profileModal.dateOfBirth}
+                    {typeof profileModal.age === 'number' && (
+                      <span style={{ color: 'var(--nriva-text-light)', fontWeight: 400 }}> · age {profileModal.age}</span>
+                    )}
+                  </div></div>
+                )}
+                {profileModal.isMinor && profileModal.guardianName && (
+                  <div><div style={profLabel}>Guardian</div><div style={profValue}>
+                    {profileModal.guardianName}
+                    {profileModal.guardianEmail && (
+                      <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', fontWeight: 400 }}>{profileModal.guardianEmail}</div>
+                    )}
+                  </div></div>
+                )}
+                {profileModal.isMinor && (
+                  <div><div style={profLabel}>Parental Notice</div><div style={profValue}>
+                    {profileModal.parentNoticeAcknowledgedAt
+                      ? `✅ ${formatDate(profileModal.parentNoticeAcknowledgedAt) || 'acknowledged'}`
+                      : <span style={{ color: 'var(--nriva-danger)' }}>⚠️ Not acknowledged</span>}
+                  </div></div>
+                )}
+                {profileModal.aiConsent && (
+                  <div><div style={profLabel}>AI Consent</div><div style={profValue}>
+                    {profileModal.aiConsent.granted
+                      ? `✅ ${formatDate(profileModal.aiConsent.grantedAt) || 'granted'}`
+                      : 'Not granted'}
+                  </div></div>
+                )}
+                {(profileModal.roles || []).includes('intern') && (
+                  <div><div style={profLabel}>Applications</div><div style={profValue}>
+                    {profileStats.apps === null ? '…' : profileStats.apps === 'error' ? '—' : profileStats.apps}
+                  </div></div>
+                )}
+                {(profileModal.roles || []).includes('employer') && (
+                  <div><div style={profLabel}>Postings</div><div style={profValue}>
+                    {profileStats.postings === null ? '…' : profileStats.postings === 'error' ? '—' : profileStats.postings}
+                  </div></div>
+                )}
               </div>
+
+              {(profileModal.internshipTypes || []).length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={profLabel}>Internship Types Offered</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                    {profileModal.internshipTypes.map(t => (
+                      <span key={t} style={{ background: '#fff7ed', color: '#9a3412', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500 }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Skills & Interests */}
               {(profileModal.skills || []).length > 0 && (
@@ -488,7 +637,10 @@ export default function AdminUsers() {
                     <a href={profileModal.portfolio} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline">Portfolio ↗</a>
                   )}
                   {profileModal.resumeUrl && (
-                    <a href={profileModal.resumeUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-primary">📎 Resume</a>
+                    <a href={profileModal.resumeUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-primary"
+                      title={profileModal.resumeName || 'Resume'}>
+                      📎 {profileModal.resumeName ? 'Resume' : 'Resume'}
+                    </a>
                   )}
                 </div>
               )}
