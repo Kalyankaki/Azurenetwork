@@ -97,7 +97,7 @@ This document is a snapshot of the application as of this commit. It is grounded
 - No email verification gate — accounts can be created and used before the address is verified. **Verify in Firebase console** whether "email verified" is enforced; the code does not require it.
 
 ### Authorization (`firestore.rules`)
-- Super admin email `kalyank.123@gmail.com` is hardcoded into the rules and grants full bypass.
+- Super admin emails `kalyank.123@gmail.com` and `youth@nriva.org` are hardcoded into the rules and grant full bypass. The personal email is in place for a transition window only and will be dropped once the foundation mailbox is fully established.
 - Users can read and update **their own** user doc only (admins can read/update any).
 - Internship listings are **publicly readable** (so the marketing iframe can show counts to anonymous visitors).
 - Applications are readable by the applicant, the employer that posted the role, and admins.

@@ -9,7 +9,8 @@ service cloud.firestore {
     // shrink this list to a break-glass account only.
     function bootstrapAdminEmails() {
       return [
-        'kalyank.123@gmail.com'
+        'kalyank.123@gmail.com',
+        'youth@nriva.org'
       ];
     }
 
