@@ -24,7 +24,7 @@ export default function AdminUsers() {
   const { data: users, loading, error, retry } = useUsers()
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
   const [confirmAction, setConfirmAction] = useState(null)
   const [coordinatorModal, setCoordinatorModal] = useState(null)
@@ -54,6 +54,21 @@ export default function AdminUsers() {
   // Unique locations from user school/chapter fields
   const userLocations = [...new Set(users.map(u => u.chapter || u.location || u.city).filter(Boolean))].sort()
 
+  // Category counts (drives the dashboard chips at the top of the page).
+  const counts = users.reduce((acc, u) => {
+    const isSuper = isSuperAdmin(u.email)
+    const roles = u.roles || []
+    acc.all += 1
+    if (roles.length === 0 && !isSuper) acc.pending += 1
+    if (roles.includes('intern')) acc.intern += 1
+    if (roles.includes('employer')) {
+      acc.employer += 1
+      if (u.employerApproved !== true && !isSuper) acc.awaiting_approval += 1
+    }
+    if (roles.includes('admin') || isSuper) acc.admin += 1
+    return acc
+  }, { all: 0, pending: 0, intern: 0, employer: 0, admin: 0, awaiting_approval: 0 })
+
   // Sort: pending users (no roles) first, then by createdAt desc
   const sorted = [...users].sort((a, b) => {
     const aHasRoles = (a.roles || []).length > 0 || isSuperAdmin(a.email)
@@ -64,16 +79,29 @@ export default function AdminUsers() {
     return bTime - aTime
   })
 
+  const matchCategory = (u) => {
+    const isSuper = isSuperAdmin(u.email)
+    const roles = u.roles || []
+    switch (categoryFilter) {
+      case 'all': return true
+      case 'pending': return roles.length === 0 && !isSuper
+      case 'intern': return roles.includes('intern')
+      case 'employer': return roles.includes('employer')
+      case 'admin': return roles.includes('admin') || isSuper
+      case 'awaiting_approval':
+        return roles.includes('employer') && u.employerApproved !== true && !isSuper
+      default: return true
+    }
+  }
+
   const filtered = sorted.filter(u => {
     const q = search.toLowerCase()
     const matchSearch = !q || (u.email || '').toLowerCase().includes(q) ||
       (u.displayName || '').toLowerCase().includes(q) ||
       (u.city || u.chapter || u.school || '').toLowerCase().includes(q)
-    const matchRole = roleFilter === 'all' ||
-      (roleFilter === 'none' ? !(u.roles || []).length : (u.roles || []).includes(roleFilter))
     const matchLocation = locationFilter === 'all' ||
       (u.chapter || u.location || u.city || '') === locationFilter
-    return matchSearch && matchRole && matchLocation
+    return matchSearch && matchCategory(u) && matchLocation
   })
 
   const toggleRole = async (user, role) => {
@@ -139,16 +167,26 @@ export default function AdminUsers() {
         </span>
       </div>
 
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        <CategoryChip label="All" count={counts.all}
+          active={categoryFilter === 'all'} onClick={() => setCategoryFilter('all')} />
+        <CategoryChip label="Pending" count={counts.pending} tone="warning"
+          active={categoryFilter === 'pending'} onClick={() => setCategoryFilter('pending')} />
+        <CategoryChip label="Interns" count={counts.intern} tone="intern"
+          active={categoryFilter === 'intern'} onClick={() => setCategoryFilter('intern')} />
+        <CategoryChip label="Employers" count={counts.employer} tone="employer"
+          active={categoryFilter === 'employer'} onClick={() => setCategoryFilter('employer')} />
+        <CategoryChip label="Admins" count={counts.admin} tone="admin"
+          active={categoryFilter === 'admin'} onClick={() => setCategoryFilter('admin')} />
+        {counts.awaiting_approval > 0 && (
+          <CategoryChip label="⚠ Awaiting employer approval" count={counts.awaiting_approval} tone="alert"
+            active={categoryFilter === 'awaiting_approval'} onClick={() => setCategoryFilter('awaiting_approval')} />
+        )}
+      </div>
+
       <div className="filter-bar">
         <input className="search-input" placeholder="Search by name, email, or location..."
           value={search} onChange={(e) => setSearch(e.target.value)} />
-        <select className="filter-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-          <option value="all">All Roles</option>
-          <option value="intern">Interns</option>
-          <option value="employer">Employers</option>
-          <option value="admin">Admins</option>
-          <option value="none">No Role</option>
-        </select>
         {userLocations.length > 0 && (
           <select className="filter-select" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}>
             <option value="all">All Locations</option>
@@ -240,7 +278,14 @@ export default function AdminUsers() {
                         </div>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {!isSuper && (user.roles || []).length === 0 && (
+                            <span style={{
+                              background: '#fef3c7', color: '#92400e',
+                              fontSize: 11, fontWeight: 700,
+                              padding: '3px 8px', borderRadius: 999,
+                            }}>Pending</span>
+                          )}
                           {ALL_ROLES.map(role => {
                             const hasRole = isSuper || (user.roles || []).includes(role)
                             return (
@@ -695,3 +740,36 @@ export default function AdminUsers() {
 
 const profLabel = { fontSize: 11, color: 'var(--nriva-text-light)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }
 const profValue = { fontSize: 14, fontWeight: 500, marginTop: 2 }
+
+const CHIP_TONES = {
+  default: { bg: 'white', border: '#e2e8f0', text: '#334155', activeBg: '#1a237e', activeText: 'white' },
+  intern:   { bg: 'white', border: '#c7d2fe', text: '#1a237e', activeBg: '#1a237e', activeText: 'white' },
+  employer: { bg: 'white', border: '#bbf7d0', text: '#166534', activeBg: '#1b5e20', activeText: 'white' },
+  admin:    { bg: 'white', border: '#fecaca', text: '#991b1b', activeBg: '#b71c1c', activeText: 'white' },
+  warning:  { bg: '#fffbeb', border: '#fde68a', text: '#92400e', activeBg: '#d97706', activeText: 'white' },
+  alert:    { bg: '#fef2f2', border: '#fecaca', text: '#991b1b', activeBg: '#dc2626', activeText: 'white' },
+}
+
+function CategoryChip({ label, count, tone = 'default', active, onClick }) {
+  const palette = CHIP_TONES[tone] || CHIP_TONES.default
+  return (
+    <button type="button" onClick={onClick}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        padding: '6px 12px', borderRadius: 999,
+        border: `1px solid ${active ? palette.activeBg : palette.border}`,
+        background: active ? palette.activeBg : palette.bg,
+        color: active ? palette.activeText : palette.text,
+        fontSize: 13, fontWeight: 500, cursor: 'pointer',
+        transition: 'all 0.15s',
+      }}>
+      <span>{label}</span>
+      <span style={{
+        fontSize: 12, fontWeight: 700,
+        background: active ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+        color: active ? palette.activeText : palette.text,
+        padding: '1px 8px', borderRadius: 999, minWidth: 22, textAlign: 'center',
+      }}>{count}</span>
+    </button>
+  )
+}
