@@ -20,6 +20,9 @@ Add new entries here as PRs merge. Format:
 - admin: Manage Users table — each intern row now shows Grade · School · City · age inline under the email, so admins can scan without opening the profile modal. Closes [#45](https://github.com/Kalyankaki/Azurenetwork/issues/45).
 - platform: every open internship now has a public, shareable URL at `/internships/:id`. Employers see a "Copy share link" button on each open posting in `/employer/postings`; admins see the same link in the manage modal. Closes [#47](https://github.com/Kalyankaki/Azurenetwork/issues/47).
 
+### Security & Privacy
+- platform: facilitator-only liability protection. Every page now carries a short disclaimer footer; the public internship page shows a prominent "NRIVA does not vet, endorse, or guarantee" block above Apply; onboarding, application submission, and posting submission each gate behind an explicit Terms acknowledgement that's stored on the user/application/internship doc with a versioned timestamp; Terms now lead with a plain-language facilitator-only section (subject to legal review); a "Report this posting" flow on the public page captures concerns into the admin messages queue. Closes [#49](https://github.com/Kalyankaki/Azurenetwork/issues/49).
+
 ---
 
 ## 2026-04-30

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import DisclaimerFooter from '../components/DisclaimerFooter'
 
 export default function PrivacyPolicy() {
   return (
@@ -118,6 +119,7 @@ export default function PrivacyPolicy() {
           <a href="mailto:kalyank.123@gmail.com">kalyank.123@gmail.com</a>.
         </p>
       </article>
+      <DisclaimerFooter />
     </div>
   )
 }

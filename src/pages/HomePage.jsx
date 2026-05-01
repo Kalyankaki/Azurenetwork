@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { db } from '../firebase'
 import { collection, getDocs } from 'firebase/firestore'
+import DisclaimerFooter from '../components/DisclaimerFooter'
 
 export default function HomePage() {
   const { isAuthenticated, activeRole, availableRoles, loginWithGoogle, loginWithEmail, signUp, requestPasswordReset, loading } = useAuth()
@@ -244,11 +245,7 @@ export default function HomePage() {
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 32, color: 'rgba(255,255,255,0.5)', fontSize: 12, textAlign: 'center' }}>
-        <a href="/privacy" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', margin: '0 8px' }}>Privacy</a>
-        <span aria-hidden="true">·</span>
-        <a href="/terms" style={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', margin: '0 8px' }}>Terms</a>
-      </div>
+      <DisclaimerFooter variant="dark" />
     </div>
   )
 }

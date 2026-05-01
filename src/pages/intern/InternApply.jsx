@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useInternships } from '../../hooks/useFirestore'
 import { createApplication, getApplicationCount, getUser, MAX_INTERN_APPLICATIONS } from '../../services/firestore'
+import { buildAcknowledgement } from '../../utils/legal'
 import Toast from '../../components/Toast'
 
 export default function InternApply() {
@@ -14,6 +15,7 @@ export default function InternApply() {
   const [toast, setToast] = useState(null)
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [ack, setAck] = useState(false)
 
   const [form, setForm] = useState({
     relevantSkills: '',
@@ -75,6 +77,7 @@ export default function InternApply() {
         availableTo: form.availableTo,
         hoursPerDay: form.hoursPerDay,
         notesToEmployer: form.notesToEmployer,
+        acknowledgement: buildAcknowledgement(),
       })
       setSubmitted(true)
       setToast('Application submitted!')
@@ -203,9 +206,24 @@ export default function InternApply() {
           </div>
         </div>
 
+        <div className="card" style={{ marginBottom: 24, background: '#f8fafc' }}>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+            <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)}
+              style={{ marginTop: 4, flexShrink: 0 }} required />
+            <span style={{ fontSize: 13, color: 'var(--nriva-text-light)', lineHeight: 1.55 }}>
+              I understand NRIVA Foundation only facilitates introductions and is not a party to this internship.
+              Any internship offered through this portal is a direct arrangement between me (and my parent or
+              guardian if I am a minor) and the employer. NRIVA does not vet or endorse the employer and is not
+              responsible for the conduct, supervision, safety, compensation, or outcomes of any internship.{' '}
+              <Link to="/terms" target="_blank" rel="noopener noreferrer"
+                style={{ color: 'var(--nriva-primary)', fontWeight: 600 }}>Read the Terms ↗</Link>
+            </span>
+          </label>
+        </div>
+
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <button type="button" className="btn btn-outline" onClick={() => navigate('/intern/browse')}>Cancel</button>
-          <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
+          <button type="submit" className="btn btn-primary btn-lg" disabled={submitting || !ack}>
             {submitting ? 'Submitting...' : 'Submit Application'}
           </button>
         </div>

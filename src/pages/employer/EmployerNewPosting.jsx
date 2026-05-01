@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { createInternship, GRADE_LEVELS } from '../../services/firestore'
 import { generateJobDescription } from '../../services/ai'
 import { isPastDate } from '../../utils/date'
+import { buildAcknowledgement } from '../../utils/legal'
 import Toast from '../../components/Toast'
 import { useAIConsent } from '../../hooks/useAIConsent'
 import AIConsentModal from '../../components/AIConsentModal'
@@ -14,6 +15,7 @@ export default function EmployerNewPosting() {
   const [toast, setToast] = useState(null)
   const [submitted, setSubmitted] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
+  const [ack, setAck] = useState(false)
   const aiConsent = useAIConsent()
   const today = new Date().toISOString().split('T')[0]
 
@@ -137,6 +139,7 @@ export default function EmployerNewPosting() {
         mentorshipDetails: form.mentorshipDetails,
         contactEmail: form.contactEmail,
         contactPhone: form.contactPhone,
+        acknowledgement: buildAcknowledgement(),
       })
       setSubmitted(true)
       setToast('Internship posting submitted!')
@@ -436,11 +439,28 @@ export default function EmployerNewPosting() {
           </div>
         </div>
 
+        <div className="card" style={{ marginBottom: 24, background: '#f8fafc' }}>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+            <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)}
+              style={{ marginTop: 4, flexShrink: 0 }} required />
+            <span style={{ fontSize: 13, color: 'var(--nriva-text-light)', lineHeight: 1.55 }}>
+              I confirm I am authorised to post this internship and that all information provided is accurate.
+              I am solely responsible for compliance with applicable employment, child-labor, tax, and immigration
+              laws, and for the supervision and safety of any intern. NRIVA Foundation is a facilitator only,
+              not a party to any internship arrangement; I indemnify NRIVA Foundation against any claims arising
+              from this posting.{' '}
+              <Link to="/terms" target="_blank" rel="noopener noreferrer"
+                style={{ color: 'var(--nriva-primary)', fontWeight: 600 }}>Read the Terms ↗</Link>
+            </span>
+          </label>
+        </div>
+
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <button type="button" className="btn btn-outline" onClick={() => navigate('/employer/postings')}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary btn-lg">
+          <button type="submit" className="btn btn-primary btn-lg" disabled={!ack}
+            style={{ opacity: ack ? 1 : 0.6 }}>
             Submit for Review
           </button>
         </div>

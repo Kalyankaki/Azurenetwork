@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { getInternship } from '../services/firestore'
+import ReportPostingButton from '../components/ReportPostingButton'
+import DisclaimerFooter from '../components/DisclaimerFooter'
 
 const STIPEND_LABELS = { paid: 'Paid', unpaid: 'Volunteer / Unpaid' }
 const TYPE_LABELS = { remote: 'Remote', 'in-person': 'In-person', hybrid: 'Hybrid' }
@@ -107,11 +109,7 @@ export default function PublicInternship() {
         )}
       </main>
 
-      <footer style={footerStyle}>
-        <Link to="/privacy" style={footerLinkStyle}>Privacy</Link>
-        <Link to="/terms" style={footerLinkStyle}>Terms</Link>
-        <span style={{ color: 'rgba(255,255,255,0.4)' }}>© NRIVA Internship Program</span>
-      </footer>
+      <DisclaimerFooter variant="dark" />
     </div>
   )
 }
@@ -171,6 +169,14 @@ function Internship({ i, onApply, isAuthenticated, availableRoles }) {
         </section>
       )}
 
+      <div style={liabilityBlockStyle}>
+        <strong>Posted by {i.company || 'an employer'}.</strong>{' '}
+        NRIVA Foundation does not vet, endorse, or guarantee any internship listed here. Any
+        arrangement is solely between the intern (and their parent or guardian if a minor) and the
+        employer. Read the{' '}
+        <Link to="/terms" style={{ color: '#1a237e', fontWeight: 600 }}>Terms</Link>.
+      </div>
+
       <div style={ctaRowStyle}>
         <button type="button" onClick={onApply} style={primaryBtnStyle}>
           {isAuthenticated && availableRoles.includes('intern') ? 'Apply now' : 'Sign in to apply'}
@@ -185,6 +191,15 @@ function Internship({ i, onApply, isAuthenticated, availableRoles }) {
             New here? You&apos;ll be able to sign up after the next screen.
           </p>
         )}
+        <div style={{ marginTop: 4, fontSize: 12, color: '#64748b' }}>
+          Spot a problem with this posting?{' '}
+          <ReportPostingButton
+            internshipId={i.id}
+            internshipTitle={i.title}
+            company={i.company}
+            style={{ color: '#1a237e', fontWeight: 600 }}
+          />
+        </div>
       </div>
     </article>
   )
@@ -344,13 +359,13 @@ const badgeOpenStyle = {
   letterSpacing: 0.5,
 }
 
-const footerStyle = {
-  display: 'flex',
-  justifyContent: 'center',
-  gap: 18,
-  padding: '20px 16px',
+const liabilityBlockStyle = {
+  marginTop: 18,
+  background: '#f1f5f9',
+  border: '1px solid #cbd5e1',
+  borderRadius: 10,
+  padding: '12px 16px',
   fontSize: 12,
-  color: 'rgba(255,255,255,0.7)',
+  color: '#334155',
+  lineHeight: 1.5,
 }
-
-const footerLinkStyle = { color: 'rgba(255,255,255,0.85)', textDecoration: 'none' }

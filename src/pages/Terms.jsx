@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom'
+import DisclaimerFooter from '../components/DisclaimerFooter'
+import { TERMS_VERSION } from '../utils/legal'
 
 export default function Terms() {
   return (
@@ -6,7 +8,35 @@ export default function Terms() {
       <article style={articleStyle}>
         <Link to="/" style={backStyle}>← Home</Link>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: '#1a237e', marginBottom: 4 }}>Terms of Use</h1>
-        <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>Last updated: April 2026</p>
+        <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>
+          Version {TERMS_VERSION}
+        </p>
+
+        <div style={{
+          background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10,
+          padding: '14px 18px', marginBottom: 24, fontSize: 13, color: '#78350f',
+        }}>
+          <strong>Plain-language summary &mdash; subject to legal review.</strong> The text below is a
+          good-faith summary of how NRIVA Foundation operates this portal. It is not legal advice and
+          will be replaced by counsel-drafted Terms of Service. Until then, the points below are the
+          rules of the road.
+        </div>
+
+        <h2 style={h2}>0. NRIVA is a facilitator, not a party to your internship</h2>
+        <p style={p}>
+          NRIVA Foundation is a non-profit that introduces students to internship opportunities. We
+          are <strong>not</strong> an employer, employment agency, or party to any internship arrangement
+          listed on this portal. We do <strong>not</strong> background-check participants or employers,
+          and we do <strong>not</strong> guarantee or endorse any internship.
+        </p>
+        <p style={p}>
+          Any agreement, supervision, schedule, compensation, workplace safety, intellectual property,
+          confidentiality, tax classification, immigration compliance, and child-labor compliance is
+          solely between the intern (and their parent or guardian, where the intern is a minor) and
+          the employer. By using this portal you <strong>release and indemnify</strong> NRIVA Foundation,
+          its directors, officers, volunteers, and contractors from any and all claims arising out of
+          an internship arranged through it.
+        </p>
 
         <p style={p}>
           By using the NRIVA Internship Portal you agree to these terms. If you don&apos;t agree, please
@@ -73,6 +103,7 @@ export default function Terms() {
           <a href="mailto:kalyank.123@gmail.com">kalyank.123@gmail.com</a>
         </p>
       </article>
+      <DisclaimerFooter />
     </div>
   )
 }
