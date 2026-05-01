@@ -223,6 +223,19 @@ export default function AdminUsers() {
                               )}
                             </div>
                             <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{user.email}</div>
+                            {(() => {
+                              const parts = []
+                              if (user.gradeLevel) parts.push(`Grade ${user.gradeLevel}`)
+                              if (user.school) parts.push(user.school)
+                              if (user.city) parts.push(user.city)
+                              if (typeof user.age === 'number') parts.push(`age ${user.age}${user.isMinor ? ' (minor)' : ''}`)
+                              if (parts.length === 0) return null
+                              return (
+                                <div style={{ fontSize: 11, color: 'var(--nriva-text-light)', marginTop: 2 }}>
+                                  {parts.join(' · ')}
+                                </div>
+                              )
+                            })()}
                           </div>
                         </div>
                       </td>
