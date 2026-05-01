@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { onboardUser, sendAdminNotification, GRADE_LEVELS } from '../services/firestore'
 import { uploadResume } from '../firebase'
+import { buildAcknowledgement } from '../utils/legal'
+import DisclaimerFooter from '../components/DisclaimerFooter'
 
 const INTERN_SKILLS = [
   'Python', 'JavaScript', 'React', 'Java', 'HTML/CSS',
@@ -142,6 +144,9 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
   const [internshipTypes, setInternshipTypes] = useState([])
   const [companyWebsite, setCompanyWebsite] = useState('')
 
+  // Liability acknowledgement (R-facilitator)
+  const [termsAck, setTermsAck] = useState(false)
+
   const toggleItem = (arr, setArr, item) => {
     setArr(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])
   }
@@ -154,6 +159,7 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
         requestedRole: selectedRole,
         nrivaMembership: membership.trim(),
         displayName: displayName.trim(),
+        termsAcknowledged: buildAcknowledgement(),
       }
 
       if (selectedRole === 'intern') {
@@ -503,11 +509,12 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
               <label style={labelStyle}>Anything else you&apos;d like us to know?</label>
               <textarea value={aboutMe} onChange={(e) => setAboutMe(e.target.value)} placeholder="Goals, career aspirations, fun facts..." style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }} />
             </div>
+            <TermsAck role="intern" checked={termsAck} onChange={setTermsAck} />
             {error && <div style={errorStyle}>{error}</div>}
             <div style={{ display: 'flex', gap: 12 }}>
               <button type="button" onClick={() => setStep(2)} style={{ ...btnOutline, flex: 1 }}>Back</button>
-              <button type="button" disabled={submitting} onClick={handleSubmit}
-                style={{ ...btnPrimary, flex: 2, opacity: submitting ? 0.6 : 1 }}>
+              <button type="button" disabled={submitting || !termsAck} onClick={handleSubmit}
+                style={{ ...btnPrimary, flex: 2, opacity: (submitting || !termsAck) ? 0.6 : 1 }}>
                 {submitting ? 'Setting up...' : 'Get Started'}
               </button>
             </div>
@@ -526,18 +533,38 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
                 </button>
               ))}
             </div>
+            <TermsAck role="employer" checked={termsAck} onChange={setTermsAck} />
             {error && <div style={errorStyle}>{error}</div>}
             <div style={{ display: 'flex', gap: 12 }}>
               <button type="button" onClick={() => setStep(2)} style={{ ...btnOutline, flex: 1 }}>Back</button>
-              <button type="button" disabled={submitting} onClick={handleSubmit}
-                style={{ ...btnPrimary, flex: 2, background: '#1b5e20', opacity: submitting ? 0.6 : 1 }}>
+              <button type="button" disabled={submitting || !termsAck} onClick={handleSubmit}
+                style={{ ...btnPrimary, flex: 2, background: '#1b5e20', opacity: (submitting || !termsAck) ? 0.6 : 1 }}>
                 {submitting ? 'Setting up...' : 'Get Started'}
               </button>
             </div>
           </>
         )}
       </div>
+      <DisclaimerFooter variant="dark" />
     </div>
+  )
+}
+
+function TermsAck({ role, checked, onChange }) {
+  const internCopy = 'I understand NRIVA Foundation only facilitates introductions and is not a party to any internship. NRIVA does not vet or endorse employers, and any internship arrangement, including supervision, schedule, compensation, and safety, is between me (and my parent/guardian if I am a minor) and the employer.'
+  const employerCopy = 'I confirm I am authorised to represent this organisation. I am solely responsible for compliance with applicable employment, child-labor, tax, and immigration laws, and for the supervision, safety, and treatment of any intern. I indemnify NRIVA Foundation against claims arising from internships I post.'
+  const copy = role === 'employer' ? employerCopy : internCopy
+  return (
+    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 8, marginBottom: 16, padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, cursor: 'pointer' }}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)}
+        style={{ marginTop: 3, flexShrink: 0 }} />
+      <span style={{ fontSize: 12, color: '#334155', lineHeight: 1.5 }}>
+        {copy}{' '}
+        <Link to="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#1a237e', fontWeight: 600 }}>
+          Read the Terms ↗
+        </Link>
+      </span>
+    </label>
   )
 }
 

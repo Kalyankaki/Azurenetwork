@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import ContactAdmin from './ContactAdmin'
 import AIAssistant from './AIAssistant'
+import DisclaimerFooter from './DisclaimerFooter'
 
 const navItems = {
   intern: [
@@ -198,6 +199,7 @@ export default function Layout({ role }) {
         <div style={{ padding: isMobile ? 16 : 24 }}>
           <Outlet />
         </div>
+        <DisclaimerFooter />
       </main>
 
       {/* Contact Admin button for non-admin roles */}
