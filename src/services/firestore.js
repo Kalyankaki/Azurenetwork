@@ -163,6 +163,12 @@ export async function getApplicationCount(applicantUid) {
   return snap.size
 }
 
+export async function getInternshipCount(employerUid) {
+  const q = query(collection(db, 'internships'), where('employerUid', '==', employerUid))
+  const snap = await getDocs(q)
+  return snap.size
+}
+
 export async function sendAdminNotification(data) {
   // Store as a notification doc - can be picked up by a Cloud Function to send email
   await addDoc(collection(db, 'notifications'), {

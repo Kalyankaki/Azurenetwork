@@ -16,6 +16,7 @@ Add new entries here as PRs merge. Format:
 ### Added
 - platform: roadmap and contribution workflow — `docs/admin-roadmap.md`, `docs/contributing.md`, this changelog.
 - platform: seeded the GitHub issue tracker with the admin-experience backlog ([#32](https://github.com/Kalyankaki/Azurenetwork/issues/32) – [#41](https://github.com/Kalyankaki/Azurenetwork/issues/41)).
+- admin: Manage Users — user name is now a hyperlink, and the profile modal shows signup date, onboarding state, DOB/age/minor badge, guardian info, parental & AI consent status, application/posting counts, and an "Approval checklist" panel for pending users. Closes [#43](https://github.com/Kalyankaki/Azurenetwork/issues/43).
 
 ---
 
