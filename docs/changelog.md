@@ -18,6 +18,7 @@ Add new entries here as PRs merge. Format:
 - platform: seeded the GitHub issue tracker with the admin-experience backlog ([#32](https://github.com/Kalyankaki/Azurenetwork/issues/32) – [#41](https://github.com/Kalyankaki/Azurenetwork/issues/41)).
 - admin: Manage Users — user name is now a hyperlink, and the profile modal shows signup date, onboarding state, DOB/age/minor badge, guardian info, parental & AI consent status, application/posting counts, and an "Approval checklist" panel for pending users. Closes [#43](https://github.com/Kalyankaki/Azurenetwork/issues/43).
 - admin: Manage Users table — each intern row now shows Grade · School · City · age inline under the email, so admins can scan without opening the profile modal. Closes [#45](https://github.com/Kalyankaki/Azurenetwork/issues/45).
+- platform: every open internship now has a public, shareable URL at `/internships/:id`. Employers see a "Copy share link" button on each open posting in `/employer/postings`; admins see the same link in the manage modal. Closes [#47](https://github.com/Kalyankaki/Azurenetwork/issues/47).
 
 ---
 

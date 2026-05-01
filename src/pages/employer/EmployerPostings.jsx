@@ -33,6 +33,18 @@ export default function EmployerPostings() {
     }
   }, [editingId, postings])
 
+  const copyShareLink = async (id) => {
+    const url = `${window.location.origin}/internships/${id}`
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+        setToast('Share link copied to clipboard')
+        return
+      }
+    } catch { /* fall through to prompt */ }
+    window.prompt('Copy this share link:', url)
+  }
+
   const toggleStatus = async (id) => {
     const posting = postings.find(p => p.id === id)
     if (!posting) return
@@ -121,13 +133,22 @@ export default function EmployerPostings() {
                     <td><span className={`badge badge-${job.status || 'open'}`}>{job.status || 'open'}</span></td>
                     <td style={{ fontSize: 13 }}>{formatDate(job.deadline)}</td>
                     <td>
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button
                           className="btn btn-sm btn-outline"
                           onClick={() => setEditingId(editingId === job.id ? null : job.id)}
                         >
                           Edit
                         </button>
+                        {job.status === 'open' && (
+                          <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => copyShareLink(job.id)}
+                            title="Copy public link to share in WhatsApp / LinkedIn"
+                          >
+                            Copy share link
+                          </button>
+                        )}
                         <button
                           className={`btn btn-sm ${job.status === 'open' ? 'btn-danger' : 'btn-success'}`}
                           onClick={() => toggleStatus(job.id)}
