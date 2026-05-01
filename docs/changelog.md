@@ -25,6 +25,7 @@ Add new entries here as PRs merge. Format:
 - platform: user-facing contact on `/privacy` and `/terms` switched from a personal email to `youth@nriva.org`. Closes [#51](https://github.com/Kalyankaki/Azurenetwork/issues/51).
 - security: Firestore super-admin allowlist now accepts both `kalyank.123@gmail.com` and `youth@nriva.org` so the foundation mailbox can be established before the personal email is dropped. **Requires `firebase deploy --only firestore:rules`** to take effect. Closes [#53](https://github.com/Kalyankaki/Azurenetwork/issues/53).
 - admin: Manage Users — added a category-count chip dashboard at the top of the page (All / Pending / Interns / Employers / Admins, plus an `⚠ Awaiting employer approval` chip when relevant) for one-click filtering, and a yellow `Pending` badge on rows with no roles so admins don't miss them. Replaces the role dropdown. Closes [#55](https://github.com/Kalyankaki/Azurenetwork/issues/55).
+- admin: Manage Users — added `Registered` and `Incomplete` chips next to `All` to separate users who finished onboarding from those who signed in but never completed `/select-role`. Closes [#57](https://github.com/Kalyankaki/Azurenetwork/issues/57).
 
 ---
 
