@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useApplications } from '../../hooks/useFirestore'
-import { updateApplicationStatus } from '../../services/firestore'
+import { acceptOffer, getUser, updateApplicationStatus } from '../../services/firestore'
 import { formatDate, addDays } from '../../utils/date'
 
 const statusLabels = {
@@ -19,6 +19,15 @@ export default function InternApplications() {
   const { user } = useAuth()
   const { data: sampleApplications } = useApplications({ applicantUid: user?.uid })
   const [selected, setSelected] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [acceptError, setAcceptError] = useState(null)
+
+  useEffect(() => {
+    if (user?.uid) getUser(user.uid).then(setProfile).catch(() => {})
+  }, [user?.uid])
+
+  const isPlaced = !!profile?.placedInternshipId
+  const placedAt = profile?.placedCompany || profile?.placedInternshipTitle
 
   return (
     <div>
@@ -28,6 +37,17 @@ export default function InternApplications() {
           {sampleApplications.length} total applications
         </span>
       </div>
+
+      {isPlaced && (
+        <div style={{
+          background: '#dcfce7', border: '1px solid #86efac', borderRadius: 10,
+          padding: '14px 18px', marginBottom: 16, fontSize: 14, color: '#166534',
+        }}>
+          🎉 <strong>You&apos;re placed at {placedAt || 'an internship'}.</strong>{' '}
+          You&apos;ve already accepted an offer; an intern can only accept one. Other open offers
+          have been auto-declined.
+        </div>
+      )}
 
       <div className="card">
         <div className="table-wrapper">
@@ -154,13 +174,41 @@ export default function InternApplications() {
                   <h4 style={{ fontSize: 16, fontWeight: 600, color: '#15803d', marginBottom: 8 }}>
                     You&apos;ve received an offer!
                   </h4>
-                  <p style={{ fontSize: 13, color: '#166534', marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, color: '#166534', marginBottom: 8 }}>
                     {selected.company} has offered you the {selected.internshipTitle} position. Would you like to accept?
                   </p>
+                  {isPlaced ? (
+                    <p style={{ fontSize: 12, color: '#92400e', marginBottom: 12 }}>
+                      You&apos;ve already accepted an offer at <strong>{placedAt}</strong>. An intern can only accept one offer.
+                      Decline this if you no longer want it.
+                    </p>
+                  ) : (
+                    <p style={{ fontSize: 11, color: '#166534', marginBottom: 12, fontStyle: 'italic' }}>
+                      Reminder: you can only accept one offer. Accepting will auto-decline your other open offers.
+                    </p>
+                  )}
+                  {acceptError && (
+                    <p style={{ fontSize: 12, color: '#dc2626', marginBottom: 12 }}>{acceptError}</p>
+                  )}
                   <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-                    <button className="btn btn-success" onClick={async () => {
-                      await updateApplicationStatus(selected.id, 'offer_accepted')
-                      setSelected({ ...selected, status: 'offer_accepted' })
+                    <button className="btn btn-success" disabled={isPlaced} onClick={async () => {
+                      setAcceptError(null)
+                      try {
+                        await acceptOffer({
+                          applicationId: selected.id,
+                          applicantUid: user.uid,
+                          internshipId: selected.internshipId,
+                          internshipTitle: selected.internshipTitle,
+                          company: selected.company,
+                        })
+                        setSelected({ ...selected, status: 'offer_accepted' })
+                        const fresh = await getUser(user.uid)
+                        if (fresh) setProfile(fresh)
+                      } catch (err) {
+                        setAcceptError(err?.code === 'permission-denied'
+                          ? "You've already accepted an offer; only one acceptance is allowed."
+                          : (err?.message || 'Could not accept offer.'))
+                      }
                     }}>
                       Accept Offer
                     </button>

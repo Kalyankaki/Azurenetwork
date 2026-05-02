@@ -60,6 +60,16 @@ export default function InternDashboard() {
         </Link>
       </div>
 
+      {userProfile?.placedInternshipId && (
+        <div style={{
+          background: '#dcfce7', border: '1px solid #86efac', borderRadius: 10,
+          padding: '14px 18px', marginBottom: 16, fontSize: 14, color: '#166534',
+        }}>
+          🎉 <strong>You&apos;re placed at {userProfile.placedCompany || userProfile.placedInternshipTitle || 'an internship'}.</strong>{' '}
+          Other open offers were auto-declined.
+        </div>
+      )}
+
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Applications</div>

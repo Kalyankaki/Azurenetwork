@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { onboardUser, sendAdminNotification, GRADE_LEVELS } from '../services/firestore'
+import { onboardUser, sendAdminNotification, GRADE_LEVELS, MAX_INTERN_APPLICATIONS } from '../services/firestore'
 import { uploadResume } from '../firebase'
 import { buildAcknowledgement } from '../utils/legal'
 import DisclaimerFooter from '../components/DisclaimerFooter'
@@ -472,6 +472,14 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
         {/* Step 3: Preferences */}
         {step === 3 && selectedRole === 'intern' && (
           <>
+            <div style={{
+              background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10,
+              padding: '12px 14px', marginBottom: 16, fontSize: 12, color: '#1e3a8a', lineHeight: 1.55,
+            }}>
+              <strong>Heads up:</strong> you can apply to up to {MAX_INTERN_APPLICATIONS} internships,
+              but you can only accept <strong>one</strong> offer. Once you accept, your other open offers will be
+              auto-declined — choose carefully.
+            </div>
             <h3 style={sectionTitle}>What kind of internships interest you?</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
               {INTERNSHIP_CATEGORIES.map(cat => (
