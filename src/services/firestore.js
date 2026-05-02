@@ -416,6 +416,54 @@ export async function deleteApplication(id, actorEmail = '') {
   logActivity('application_deleted', { applicationId: id, actorEmail })
 }
 
+// Rewrite every internship doc whose `company` field equals `sourceName` so it
+// reads `targetName`. Optionally also rewrite each employer user's
+// `companyName`. Used by the admin "merge company" affordance to reconcile
+// variant spellings (e.g. "ACME Inc" vs "Acme, Inc.").
+//
+// Writes are chunked to stay under the 500-doc Firestore writeBatch cap.
+// Returns counts so the caller can confirm what changed.
+export async function mergeCompany({ sourceName, targetName, alsoUpdateUsers = true, actorEmail = '' }) {
+  const src = (sourceName || '').trim()
+  const tgt = (targetName || '').trim()
+  if (!src || !tgt) throw new Error('Both source and target company names are required.')
+  if (src === tgt) return { internshipsUpdated: 0, usersUpdated: 0 }
+
+  // Internships
+  const intSnap = await getDocs(query(collection(db, 'internships'), where('company', '==', src)))
+  const intDocs = intSnap.docs
+
+  // Users (optional)
+  let userDocs = []
+  if (alsoUpdateUsers) {
+    const userSnap = await getDocs(query(collection(db, 'users'), where('companyName', '==', src)))
+    userDocs = userSnap.docs
+  }
+
+  const allWrites = [
+    ...intDocs.map(d => ({ ref: d.ref, payload: { company: tgt, updatedAt: serverTimestamp() } })),
+    ...userDocs.map(d => ({ ref: d.ref, payload: { companyName: tgt, updatedAt: serverTimestamp() } })),
+  ]
+
+  // Chunk under the 500-write batch cap.
+  for (let i = 0; i < allWrites.length; i += 450) {
+    const slice = allWrites.slice(i, i + 450)
+    const batch = writeBatch(db)
+    for (const w of slice) batch.update(w.ref, w.payload)
+    await batch.commit()
+  }
+
+  logActivity('companies_merged', {
+    sourceName: src,
+    targetName: tgt,
+    internshipsUpdated: intDocs.length,
+    usersUpdated: userDocs.length,
+    actorEmail,
+  })
+
+  return { internshipsUpdated: intDocs.length, usersUpdated: userDocs.length }
+}
+
 // Atomic single-offer acceptance.
 // 1) Batches: write users/{uid}.placedInternshipId... + applications/{id}.status = 'offer_accepted'.
 //    Server-side rules require these to land together for a first-time acceptance.
