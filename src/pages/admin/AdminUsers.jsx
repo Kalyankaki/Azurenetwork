@@ -526,7 +526,7 @@ export default function AdminUsers() {
                     )}
                   </h3>
                   <p style={{ fontSize: 14, color: 'var(--nriva-text-light)' }}>{profileModal.email}</p>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     {(profileModal.roles || []).map(r => (
                       <span key={r} className={`badge badge-${r === 'admin' ? 'closed' : r === 'employer' ? 'open' : 'filled'}`}>
                         {r}
@@ -535,6 +535,17 @@ export default function AdminUsers() {
                     {(profileModal.roles || []).length === 0 && (
                       <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
                         Pending role
+                      </span>
+                    )}
+                    {profileModal.requestedRole && (
+                      <span style={{
+                        fontSize: 11, fontWeight: 600,
+                        background: '#e0f2fe', color: '#075985',
+                        padding: '2px 10px', borderRadius: 999,
+                        textTransform: 'uppercase', letterSpacing: 0.4,
+                      }}
+                      title="Role this user requested during onboarding">
+                        Applied for: {profileModal.requestedRole}
                       </span>
                     )}
                     {isSuperAdmin(profileModal.email) && (
@@ -598,9 +609,6 @@ export default function AdminUsers() {
                 display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14,
                 padding: '16px 0', borderTop: '1px solid var(--nriva-border)',
               }}>
-                {profileModal.requestedRole && (
-                  <div><div style={profLabel}>Requested Role</div><div style={profValue}>{profileModal.requestedRole}</div></div>
-                )}
                 {profileModal.nrivaMembership && (
                   <div><div style={profLabel}>NRIVA Membership</div><div style={profValue}>{profileModal.nrivaMembership}</div></div>
                 )}
@@ -676,6 +684,43 @@ export default function AdminUsers() {
                 {(profileModal.roles || []).includes('employer') && (
                   <div><div style={profLabel}>Postings</div><div style={profValue}>
                     {profileStats.postings === null ? '…' : profileStats.postings === 'error' ? '—' : profileStats.postings}
+                  </div></div>
+                )}
+                {profileModal.placedInternshipId && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <div style={profLabel}>Placed at</div>
+                    <div style={profValue}>
+                      <span style={{
+                        display: 'inline-block',
+                        background: '#dcfce7', color: '#166534',
+                        padding: '4px 12px', borderRadius: 999,
+                        fontSize: 13, fontWeight: 600,
+                      }}>
+                        🎉 {profileModal.placedCompany || 'Company'}
+                        {profileModal.placedInternshipTitle ? ` · ${profileModal.placedInternshipTitle}` : ''}
+                        {formatDate(profileModal.placedAt) ? ` · ${formatDate(profileModal.placedAt)}` : ''}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {profileModal.termsAcknowledged?.acceptedAt && (
+                  <div><div style={profLabel}>Terms Accepted</div><div style={profValue}>
+                    {formatDate(profileModal.termsAcknowledged.acceptedAt) || 'yes'}
+                    {profileModal.termsAcknowledged.version && (
+                      <span style={{ color: 'var(--nriva-text-light)', fontSize: 12, fontWeight: 400 }}>
+                        {' '}· v{profileModal.termsAcknowledged.version}
+                      </span>
+                    )}
+                  </div></div>
+                )}
+                {profileModal.onboardedAt && (
+                  <div><div style={profLabel}>Onboarded At</div><div style={profValue}>
+                    {formatDate(profileModal.onboardedAt) || '—'}
+                  </div></div>
+                )}
+                {profileModal.updatedAt && (
+                  <div><div style={profLabel}>Last Updated</div><div style={profValue}>
+                    {formatDate(profileModal.updatedAt) || '—'}
                   </div></div>
                 )}
               </div>
