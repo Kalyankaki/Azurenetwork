@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useInternships, useApplications } from '../../hooks/useFirestore'
 import { useAuth } from '../../contexts/AuthContext'
 import {
@@ -18,6 +19,25 @@ export default function AdminInternships() {
   const [selected, setSelected] = useState(null)
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const idParam = searchParams.get('id')
+
+  // Deep link: open the manage modal when ?id=<internshipId> is in the URL.
+  useEffect(() => {
+    if (!idParam || !internships.length) return
+    if (selected?.id === idParam) return
+    const found = internships.find(i => i.id === idParam)
+    if (found) setSelected(found)
+  }, [idParam, internships, selected?.id])
+
+  const closeSelected = () => {
+    setSelected(null)
+    if (searchParams.has('id')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('id')
+      setSearchParams(next, { replace: true })
+    }
+  }
   const [statusFilter, setStatusFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -99,14 +119,14 @@ export default function AdminInternships() {
       setToast('Internship rejected')
       setRejectingId(null)
       setRejectReason('')
-      setSelected(null)
+      closeSelected()
     } catch (err) { setToast('Error: ' + err.message) }
   }
 
   const deletePosting = async (id) => {
     try {
       await deleteInternshipDB(id)
-      setSelected(null)
+      closeSelected()
       setConfirmDelete(null)
       setToast('Internship posting removed')
     } catch (err) { setToast('Error: ' + err.message) }
@@ -239,11 +259,11 @@ export default function AdminInternships() {
       </div>
 
       {selected && (
-        <div className="modal-overlay" onClick={() => setSelected(null)}>
+        <div className="modal-overlay" onClick={closeSelected}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650 }}>
             <div className="modal-header">
               <h2>Manage Internship</h2>
-              <button onClick={() => setSelected(null)} aria-label="Close"
+              <button onClick={closeSelected} aria-label="Close"
                 style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>✕</button>
             </div>
             <div className="modal-body">
@@ -345,7 +365,7 @@ export default function AdminInternships() {
               <button className="btn btn-danger btn-sm" onClick={() => setConfirmDelete(selected.id)}>
                 Remove Posting
               </button>
-              <button className="btn btn-outline" onClick={() => setSelected(null)}>Close</button>
+              <button className="btn btn-outline" onClick={closeSelected}>Close</button>
             </div>
           </div>
         </div>

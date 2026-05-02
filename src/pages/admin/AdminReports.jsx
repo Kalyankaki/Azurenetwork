@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { useInternships, useApplications, useUsers } from '../../hooks/useFirestore'
 import { formatDate } from '../../utils/date'
 import { statusBadgeClass, statusDisplay, statusLabel, APPLICATION_STATUS_LABELS } from '../../utils/status'
 import { exportCSV } from '../../utils/csv'
 import { INTERNSHIP_STATUSES, isSuperAdmin } from '../../services/firestore'
+
+const linkCellStyle = { color: 'var(--nriva-primary)', cursor: 'pointer', textDecoration: 'none' }
 
 function safeDiv(a, b) {
   if (!b || b === 0) return 0
@@ -184,7 +187,7 @@ export default function AdminReports() {
                 return (
                   <div key={job.id} style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-                      <span style={{ fontWeight: 500 }}>{job.title}</span>
+                      <Link to={`/admin/internships?id=${job.id}`} style={{ ...linkCellStyle, fontWeight: 500 }}>{job.title}</Link>
                       <span style={{ color: 'var(--nriva-text-light)' }}>{jobAppCount} applicants</span>
                     </div>
                     <div style={{ height: 24, background: '#e2e8f0', borderRadius: 6, overflow: 'hidden' }}>
@@ -296,7 +299,9 @@ export default function AdminReports() {
                   <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--nriva-text-light)' }}>No internships match the filters.</td></tr>
                 ) : filteredInternships.map(job => (
                   <tr key={job.id}>
-                    <td style={{ fontWeight: 500, fontSize: 13 }}>{job.title}</td>
+                    <td style={{ fontWeight: 500, fontSize: 13 }}>
+                      <Link to={`/admin/internships?id=${job.id}`} style={linkCellStyle}>{job.title}</Link>
+                    </td>
                     <td style={{ fontSize: 13 }}>{job.company}</td>
                     <td style={{ fontSize: 13 }}>{job.location}</td>
                     <td style={{ fontSize: 13 }}>{job.type}</td>
@@ -352,10 +357,18 @@ export default function AdminReports() {
                 ) : filteredApplications.map(app => (
                   <tr key={app.id}>
                     <td>
-                      <div style={{ fontWeight: 500, fontSize: 13 }}>{app.applicantName}</div>
+                      <div style={{ fontWeight: 500, fontSize: 13 }}>
+                        {app.applicantUid ? (
+                          <Link to={`/admin/users?uid=${app.applicantUid}`} style={linkCellStyle}>{app.applicantName}</Link>
+                        ) : app.applicantName}
+                      </div>
                       <div style={{ fontSize: 11, color: 'var(--nriva-text-light)' }}>{app.email}</div>
                     </td>
-                    <td style={{ fontSize: 13 }}>{app.internshipTitle}</td>
+                    <td style={{ fontSize: 13 }}>
+                      {app.internshipId ? (
+                        <Link to={`/admin/internships?id=${app.internshipId}`} style={linkCellStyle}>{app.internshipTitle}</Link>
+                      ) : app.internshipTitle}
+                    </td>
                     <td style={{ fontSize: 13 }}>{app.school || app.university || '—'}</td>
                     <td style={{ fontSize: 13 }}>{app.gradeLevel || app.graduationYear || '—'}</td>
                     <td style={{ fontSize: 13 }}>{formatDate(app.appliedDate)}</td>
@@ -417,7 +430,9 @@ export default function AdminReports() {
                   return (
                     <tr key={u.id}>
                       <td>
-                        <div style={{ fontWeight: 500, fontSize: 13 }}>{u.displayName || '—'}</div>
+                        <div style={{ fontWeight: 500, fontSize: 13 }}>
+                          <Link to={`/admin/users?uid=${u.id}`} style={linkCellStyle}>{u.displayName || u.email || '—'}</Link>
+                        </div>
                         {!u.onboarded && (
                           <div style={{ fontSize: 11, color: '#b45309' }}>Not onboarded</div>
                         )}
@@ -453,14 +468,19 @@ export default function AdminReports() {
       {activeTab === 'employers' && (() => {
         const empData = {}
         internships.forEach(i => {
-          const key = i.employerName || i.employer || 'Unknown'
-          if (!empData[key]) empData[key] = { name: key, company: i.company, postings: 0, openPos: 0, totalApps: 0, reviewed: 0, offered: 0, accepted: 0 }
+          const key = i.employerUid || i.employerName || i.employer || 'Unknown'
+          if (!empData[key]) empData[key] = {
+            uid: i.employerUid || null,
+            name: i.employerName || i.employer || 'Unknown',
+            company: i.company,
+            postings: 0, openPos: 0, totalApps: 0, reviewed: 0, offered: 0, accepted: 0,
+          }
           empData[key].postings++
           if (i.status === 'open') empData[key].openPos += (i.positions || 0)
         })
         applications.forEach(a => {
           const intern = internships.find(i => i.id === a.internshipId)
-          const key = intern?.employerName || intern?.employer || 'Unknown'
+          const key = intern?.employerUid || intern?.employerName || intern?.employer || 'Unknown'
           if (empData[key]) {
             empData[key].totalApps++
             if (['under_review', 'shortlisted', 'offered', 'offer_accepted', 'rejected'].includes(a.status)) empData[key].reviewed++
@@ -524,8 +544,12 @@ export default function AdminReports() {
                 ) : filteredEmpList.map(e => {
                   const reviewRate = e.totalApps > 0 ? Math.round((e.reviewed / e.totalApps) * 100) : 0
                   return (
-                    <tr key={e.name}>
-                      <td style={{ fontWeight: 500, fontSize: 13 }}>{e.name}</td>
+                    <tr key={e.uid || e.name}>
+                      <td style={{ fontWeight: 500, fontSize: 13 }}>
+                        {e.uid ? (
+                          <Link to={`/admin/users?uid=${e.uid}`} style={linkCellStyle}>{e.name}</Link>
+                        ) : e.name}
+                      </td>
                       <td style={{ fontSize: 13 }}>{e.company || '—'}</td>
                       <td style={{ fontSize: 13, fontWeight: 600 }}>{e.postings}</td>
                       <td style={{ fontSize: 13 }}>{e.totalApps}</td>
