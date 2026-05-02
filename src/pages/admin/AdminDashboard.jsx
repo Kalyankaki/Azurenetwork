@@ -63,13 +63,15 @@ export default function AdminDashboard() {
     if (!employerMap[key]) employerMap[key] = {
       company: company || (i.employerName ? '' : ''),
       reps: new Map(), // uid -> name
-      postings: 0, apps: 0, reviewed: 0, offered: 0, accepted: 0,
+      postings: 0, totalPositions: 0,
+      apps: 0, reviewed: 0, offered: 0, accepted: 0,
       internshipIds: new Set(),
     }
     if (i.employerUid) employerMap[key].reps.set(i.employerUid, i.employerName || i.employer || '')
     else if (i.employerName) employerMap[key].reps.set('name:' + i.employerName, i.employerName)
     employerMap[key].internshipIds.add(i.id)
     employerMap[key].postings++
+    employerMap[key].totalPositions += parseInt(i.positions, 10) || 1
   })
   applications.forEach(a => {
     const intern = internships.find(i => i.id === a.internshipId)
@@ -92,6 +94,7 @@ export default function AdminDashboard() {
         company: e.company || key,
         reps: repList,
         postings: e.postings,
+        totalPositions: e.totalPositions,
         apps: e.apps,
         reviewed: e.reviewed,
         offered: e.offered,
@@ -220,7 +223,7 @@ export default function AdminDashboard() {
           ) : (
             <div className="table-wrapper">
               <table>
-                <thead><tr><th>Company</th><th>Reps</th><th>Postings</th><th>Apps</th><th>Reviewed</th><th>Offers</th></tr></thead>
+                <thead><tr><th>Company</th><th>Reps</th><th>Postings</th><th>Positions</th><th>Apps</th><th>Reviewed</th><th>Offers</th></tr></thead>
                 <tbody>
                   {employers.slice(0, 8).map((e, idx) => {
                     const reviewRate = e.apps > 0 ? Math.round((e.reviewed / e.apps) * 100) : 0
@@ -242,6 +245,7 @@ export default function AdminDashboard() {
                         </td>
                         <td style={{ fontSize: 13 }}>{e.reps.length}</td>
                         <td style={{ fontSize: 13 }}>{e.postings}</td>
+                        <td style={{ fontSize: 13 }}>{e.totalPositions}</td>
                         <td style={{ fontSize: 13 }}>{e.apps}</td>
                         <td>
                           <span style={{ fontWeight: 600, color: reviewRate >= 80 ? '#15803d' : reviewRate >= 50 ? '#ca8a04' : '#dc2626', fontSize: 13 }}>

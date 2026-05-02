@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useInternships, useApplications, useUsers } from '../../hooks/useFirestore'
+import { useAuth } from '../../contexts/AuthContext'
 import { formatDate } from '../../utils/date'
 import { statusBadgeClass, statusDisplay, statusLabel, APPLICATION_STATUS_LABELS } from '../../utils/status'
 import { exportCSV } from '../../utils/csv'
-import { INTERNSHIP_STATUSES, isSuperAdmin } from '../../services/firestore'
+import { INTERNSHIP_STATUSES, isSuperAdmin, mergeCompany } from '../../services/firestore'
+import Toast from '../../components/Toast'
 
 const linkCellStyle = { color: 'var(--nriva-primary)', cursor: 'pointer', textDecoration: 'none' }
 
@@ -57,10 +59,16 @@ const selectInput = { padding: '8px 12px', borderRadius: 8, border: '1px solid v
 const resultCount = { fontSize: 12, color: 'var(--nriva-text-light)', marginLeft: 'auto' }
 
 export default function AdminReports() {
+  const { user } = useAuth()
   const { data: internships } = useInternships()
   const { data: applications } = useApplications()
   const { data: users } = useUsers()
   const [activeTab, setActiveTab] = useState('overview')
+  const [mergeSource, setMergeSource] = useState(null)
+  const [mergeTarget, setMergeTarget] = useState('')
+  const [mergeAlsoUsers, setMergeAlsoUsers] = useState(true)
+  const [mergeBusy, setMergeBusy] = useState(false)
+  const [toast, setToast] = useState(null)
 
   // Per-tab filter state
   const [internFilter, setInternFilter] = useState({ q: '', status: 'all' })
@@ -474,11 +482,12 @@ export default function AdminReports() {
           if (!empData[key]) empData[key] = {
             company: company || (i.employerName || i.employer || 'Unknown'),
             reps: new Map(),
-            postings: 0, openPos: 0, totalApps: 0, reviewed: 0, offered: 0, accepted: 0,
+            postings: 0, totalPos: 0, openPos: 0, totalApps: 0, reviewed: 0, offered: 0, accepted: 0,
           }
           if (i.employerUid) empData[key].reps.set(i.employerUid, i.employerName || i.employer || '')
           else if (i.employerName) empData[key].reps.set('name:' + i.employerName, i.employerName)
           empData[key].postings++
+          empData[key].totalPos += parseInt(i.positions, 10) || 1
           if (i.status === 'open') empData[key].openPos += (i.positions || 0)
         })
         applications.forEach(a => {
@@ -502,6 +511,7 @@ export default function AdminReports() {
               company: e.company,
               reps: repList,
               postings: e.postings,
+              totalPos: e.totalPos,
               openPos: e.openPos,
               totalApps: e.totalApps,
               reviewed: e.reviewed,
@@ -524,7 +534,7 @@ export default function AdminReports() {
               company: e.company,
               reps: e.reps.length,
               rep_names: e.reps.map(r => r.name).filter(Boolean).join('; '),
-              postings: e.postings, open_positions: e.openPos,
+              postings: e.postings, total_positions: e.totalPos, open_positions: e.openPos,
               applications: e.totalApps, reviewed: e.reviewed,
               review_rate: e.totalApps > 0 ? Math.round((e.reviewed / e.totalApps) * 100) + '%' : 'N/A',
               offers_sent: e.offered, offers_accepted: e.accepted,
@@ -558,16 +568,18 @@ export default function AdminReports() {
                   <th>Company</th>
                   <th>Reps</th>
                   <th>Postings</th>
+                  <th>Total Positions</th>
                   <th>Open Positions</th>
                   <th>Applications</th>
                   <th>Review Rate</th>
                   <th>Offers</th>
                   <th>Accepted</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredEmpList.length === 0 ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--nriva-text-light)' }}>No companies match the filters.</td></tr>
+                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--nriva-text-light)' }}>No companies match the filters.</td></tr>
                 ) : filteredEmpList.map(e => {
                   const reviewRate = e.totalApps > 0 ? Math.round((e.reviewed / e.totalApps) * 100) : 0
                   const singleRepUid = e.reps.length === 1 ? e.reps[0].uid : null
@@ -584,6 +596,7 @@ export default function AdminReports() {
                       </td>
                       <td style={{ fontSize: 13 }}>{e.reps.length}</td>
                       <td style={{ fontSize: 13, fontWeight: 600 }}>{e.postings}</td>
+                      <td style={{ fontSize: 13 }}>{e.totalPos}</td>
                       <td style={{ fontSize: 13 }}>{e.openPos}</td>
                       <td style={{ fontSize: 13 }}>{e.totalApps}</td>
                       <td>
@@ -593,6 +606,14 @@ export default function AdminReports() {
                       </td>
                       <td style={{ fontSize: 13 }}>{e.offered}</td>
                       <td style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>{e.accepted}</td>
+                      <td>
+                        <button className="btn btn-sm btn-outline" onClick={() => setMergeSource(e)}
+                          style={{ fontSize: 11, padding: '3px 10px' }}
+                          disabled={empList.length < 2}
+                          title={empList.length < 2 ? 'No other companies to merge into' : 'Merge into another company name'}>
+                          Merge…
+                        </button>
+                      </td>
                     </tr>
                   )
                 })}
@@ -602,6 +623,78 @@ export default function AdminReports() {
         </div>
         )
       })()}
+
+      {mergeSource && (() => {
+        const allCompanies = Array.from(new Set(
+          internships.map(i => (i.company || '').trim()).filter(Boolean)
+        )).sort()
+        const targets = allCompanies.filter(c => c !== (mergeSource.company || '').trim())
+        const handleMerge = async () => {
+          if (!mergeTarget) return
+          setMergeBusy(true)
+          try {
+            const { internshipsUpdated, usersUpdated } = await mergeCompany({
+              sourceName: mergeSource.company,
+              targetName: mergeTarget,
+              alsoUpdateUsers: mergeAlsoUsers,
+              actorEmail: user?.email || '',
+            })
+            setToast(`Merged ${internshipsUpdated} posting${internshipsUpdated === 1 ? '' : 's'}` +
+              (mergeAlsoUsers ? ` and ${usersUpdated} user profile${usersUpdated === 1 ? '' : 's'}` : '') +
+              ` into "${mergeTarget}"`)
+            setMergeSource(null)
+            setMergeTarget('')
+            setMergeAlsoUsers(true)
+          } catch (err) {
+            setToast('Error: ' + (err?.message || 'Merge failed'))
+          } finally {
+            setMergeBusy(false)
+          }
+        }
+        return (
+          <div className="modal-overlay" onClick={() => !mergeBusy && setMergeSource(null)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
+              <div className="modal-header"><h2>Merge company</h2></div>
+              <div className="modal-body">
+                <p style={{ fontSize: 13, color: 'var(--nriva-text-light)', marginBottom: 14 }}>
+                  Re-write every internship posting (and optionally every employer user) currently
+                  using <strong>{mergeSource.company}</strong> to use the canonical name you select below.
+                  This is useful for consolidating variant spellings.
+                </p>
+                <div className="form-group">
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>From</label>
+                  <input className="form-control" readOnly value={mergeSource.company || ''} style={{ background: '#f8fafc' }} />
+                </div>
+                <div className="form-group">
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Into</label>
+                  <select className="form-control" value={mergeTarget} onChange={(e) => setMergeTarget(e.target.value)}>
+                    <option value="">Select target company…</option>
+                    {targets.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 8 }}>
+                  <input type="checkbox" checked={mergeAlsoUsers}
+                    onChange={(e) => setMergeAlsoUsers(e.target.checked)} />
+                  Also update the <code style={{ fontSize: 11 }}>companyName</code> on each rep&apos;s user profile.
+                </label>
+                <p style={{ fontSize: 11, color: 'var(--nriva-text-light)', marginTop: 12, lineHeight: 1.5 }}>
+                  This is a bulk write; counts will be logged to the activity log as <code>companies_merged</code>.
+                  It can be reversed by merging in the opposite direction, but only if the source name has
+                  no other documents using it after the merge.
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-outline" onClick={() => setMergeSource(null)} disabled={mergeBusy}>Cancel</button>
+                <button className="btn btn-primary" onClick={handleMerge} disabled={mergeBusy || !mergeTarget}>
+                  {mergeBusy ? 'Merging…' : 'Merge'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {toast && <Toast message={toast} type="success" onClose={() => setToast(null)} />}
     </div>
   )
 }
