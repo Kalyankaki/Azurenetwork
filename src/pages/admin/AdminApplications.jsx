@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApplications } from '../../hooks/useFirestore'
-import { updateApplicationStatus } from '../../services/firestore'
+import { useAuth } from '../../contexts/AuthContext'
+import { updateApplicationStatus, deleteApplication } from '../../services/firestore'
 import { formatDate } from '../../utils/date'
 import { statusLabel, statusBadgeClass, APPLICATION_STATUS_LABELS } from '../../utils/status'
+import Toast from '../../components/Toast'
 
 const linkCellStyle = { color: 'var(--nriva-primary)', cursor: 'pointer', textDecoration: 'none' }
-import Toast from '../../components/Toast'
 
 const STALE_DAYS = 7
 
@@ -17,12 +18,15 @@ function daysSince(ts) {
 }
 
 export default function AdminApplications() {
+  const { user } = useAuth()
   const { data: applications, loading } = useApplications()
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   const filtered = applications.filter(app => {
     const name = (app.applicantName || '').toLowerCase()
@@ -72,6 +76,20 @@ export default function AdminApplications() {
   const toggleAll = () => {
     if (selectedIds.size === filtered.length) setSelectedIds(new Set())
     else setSelectedIds(new Set(filtered.map(a => a.id)))
+  }
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return
+    setDeleting(true)
+    try {
+      await deleteApplication(deleteConfirm.id, user?.email || '')
+      setToast(`Deleted application: ${deleteConfirm.applicantName || deleteConfirm.email || deleteConfirm.id}`)
+      setDeleteConfirm(null)
+    } catch (err) {
+      setToast('Error: ' + (err?.message || 'Could not delete application'))
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const staleCount = applications.filter(a =>
@@ -204,20 +222,49 @@ export default function AdminApplications() {
                         </span>
                       </td>
                       <td>
-                        <select className="form-control" aria-label="Change status"
-                          style={{ padding: '4px 8px', fontSize: 11, minWidth: 110 }}
-                          value={app.status || 'pending'}
-                          onChange={(e) => updateStatus(app.id, e.target.value)}>
-                          {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
-                            <option key={key} value={key}>{label}</option>
-                          ))}
-                        </select>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <select className="form-control" aria-label="Change status"
+                            style={{ padding: '4px 8px', fontSize: 11, minWidth: 110 }}
+                            value={app.status || 'pending'}
+                            onChange={(e) => updateStatus(app.id, e.target.value)}>
+                            {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => (
+                              <option key={key} value={key}>{label}</option>
+                            ))}
+                          </select>
+                          <button className="btn btn-sm btn-outline" onClick={() => setDeleteConfirm(app)}
+                            style={{ fontSize: 11, padding: '3px 10px', color: 'var(--nriva-danger)', borderColor: 'var(--nriva-danger)' }}>
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="modal-overlay" onClick={() => !deleting && setDeleteConfirm(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440 }}>
+            <div className="modal-header"><h2>Delete Application</h2></div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, lineHeight: 1.5 }}>
+                Permanently delete <strong>{deleteConfirm.applicantName || deleteConfirm.email || 'this applicant'}</strong>&apos;s
+                application for <strong>{deleteConfirm.internshipTitle || 'this internship'}</strong>?
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 8 }}>
+                This removes the application doc and is logged as <code>application_deleted</code> in the activity log. It cannot be undone.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setDeleteConfirm(null)} disabled={deleting}>Cancel</button>
+              <button className="btn btn-danger" onClick={handleDelete} disabled={deleting}>
+                {deleting ? 'Deleting…' : 'Delete Application'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -466,21 +466,26 @@ export default function AdminReports() {
       )}
 
       {activeTab === 'employers' && (() => {
+        // Pivoted to company. Each row aggregates across all reps.
         const empData = {}
         internships.forEach(i => {
-          const key = i.employerUid || i.employerName || i.employer || 'Unknown'
+          const company = (i.company || '').trim()
+          const key = company || i.employerName || i.employer || 'Unknown'
           if (!empData[key]) empData[key] = {
-            uid: i.employerUid || null,
-            name: i.employerName || i.employer || 'Unknown',
-            company: i.company,
+            company: company || (i.employerName || i.employer || 'Unknown'),
+            reps: new Map(),
             postings: 0, openPos: 0, totalApps: 0, reviewed: 0, offered: 0, accepted: 0,
           }
+          if (i.employerUid) empData[key].reps.set(i.employerUid, i.employerName || i.employer || '')
+          else if (i.employerName) empData[key].reps.set('name:' + i.employerName, i.employerName)
           empData[key].postings++
           if (i.status === 'open') empData[key].openPos += (i.positions || 0)
         })
         applications.forEach(a => {
           const intern = internships.find(i => i.id === a.internshipId)
-          const key = intern?.employerUid || intern?.employerName || intern?.employer || 'Unknown'
+          if (!intern) return
+          const company = (intern.company || '').trim()
+          const key = company || intern.employerName || intern.employer || 'Unknown'
           if (empData[key]) {
             empData[key].totalApps++
             if (['under_review', 'shortlisted', 'offered', 'offer_accepted', 'rejected'].includes(a.status)) empData[key].reviewed++
@@ -488,19 +493,40 @@ export default function AdminReports() {
             if (a.status === 'offer_accepted') empData[key].accepted++
           }
         })
-        const empList = Object.values(empData).sort((a, b) => b.totalApps - a.totalApps)
+        const empList = Object.entries(empData)
+          .map(([key, e]) => {
+            const repList = Array.from(e.reps.entries())
+              .map(([id, name]) => ({ uid: id.startsWith('name:') ? null : id, name }))
+            return {
+              key,
+              company: e.company,
+              reps: repList,
+              postings: e.postings,
+              openPos: e.openPos,
+              totalApps: e.totalApps,
+              reviewed: e.reviewed,
+              offered: e.offered,
+              accepted: e.accepted,
+            }
+          })
+          .sort((a, b) => b.totalApps - a.totalApps)
         const filteredEmpList = empList.filter(e => {
           if (employerFilter.status === 'active' && e.postings === 0) return false
           if (employerFilter.status === 'inactive' && e.postings > 0) return false
-          return matchesText([e.name, e.company], employerFilter.q)
+          const repNames = e.reps.map(r => r.name).join(' ')
+          return matchesText([e.company, repNames], employerFilter.q)
         })
         return (
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600 }}>Employer Performance Report</h3>
             <button className="btn btn-sm btn-outline" onClick={() => exportCSV(empList.map(e => ({
-              employer: e.name, company: e.company, postings: e.postings, open_positions: e.openPos,
-              applications: e.totalApps, reviewed: e.reviewed, review_rate: e.totalApps > 0 ? Math.round((e.reviewed / e.totalApps) * 100) + '%' : 'N/A',
+              company: e.company,
+              reps: e.reps.length,
+              rep_names: e.reps.map(r => r.name).filter(Boolean).join('; '),
+              postings: e.postings, open_positions: e.openPos,
+              applications: e.totalApps, reviewed: e.reviewed,
+              review_rate: e.totalApps > 0 ? Math.round((e.reviewed / e.totalApps) * 100) + '%' : 'N/A',
               offers_sent: e.offered, offers_accepted: e.accepted,
             })), 'nriva_employer_performance')}>
               Export CSV
@@ -529,9 +555,10 @@ export default function AdminReports() {
             <table>
               <thead>
                 <tr>
-                  <th>Employer</th>
                   <th>Company</th>
+                  <th>Reps</th>
                   <th>Postings</th>
+                  <th>Open Positions</th>
                   <th>Applications</th>
                   <th>Review Rate</th>
                   <th>Offers</th>
@@ -540,18 +567,24 @@ export default function AdminReports() {
               </thead>
               <tbody>
                 {filteredEmpList.length === 0 ? (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--nriva-text-light)' }}>No employers match the filters.</td></tr>
+                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--nriva-text-light)' }}>No companies match the filters.</td></tr>
                 ) : filteredEmpList.map(e => {
                   const reviewRate = e.totalApps > 0 ? Math.round((e.reviewed / e.totalApps) * 100) : 0
+                  const singleRepUid = e.reps.length === 1 ? e.reps[0].uid : null
+                  const repNames = e.reps.map(r => r.name).filter(Boolean).join(', ')
                   return (
-                    <tr key={e.uid || e.name}>
+                    <tr key={e.key}>
                       <td style={{ fontWeight: 500, fontSize: 13 }}>
-                        {e.uid ? (
-                          <Link to={`/admin/users?uid=${e.uid}`} style={linkCellStyle}>{e.name}</Link>
-                        ) : e.name}
+                        {singleRepUid ? (
+                          <Link to={`/admin/users?uid=${singleRepUid}`} style={linkCellStyle}>{e.company || '—'}</Link>
+                        ) : (e.company || '—')}
+                        {repNames && (
+                          <div style={{ fontSize: 11, color: 'var(--nriva-text-light)', fontWeight: 400, marginTop: 2 }}>{repNames}</div>
+                        )}
                       </td>
-                      <td style={{ fontSize: 13 }}>{e.company || '—'}</td>
+                      <td style={{ fontSize: 13 }}>{e.reps.length}</td>
                       <td style={{ fontSize: 13, fontWeight: 600 }}>{e.postings}</td>
+                      <td style={{ fontSize: 13 }}>{e.openPos}</td>
                       <td style={{ fontSize: 13 }}>{e.totalApps}</td>
                       <td>
                         <span style={{ fontWeight: 600, fontSize: 13, color: reviewRate >= 80 ? '#15803d' : reviewRate >= 50 ? '#ca8a04' : '#dc2626' }}>
