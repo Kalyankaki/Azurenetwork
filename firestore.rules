@@ -43,6 +43,18 @@ service cloud.firestore {
         request.resource.data.get('onboarded', false) == true;
     }
 
+    // Placement fields. Write-once for self: settable when empty; cannot be
+    // changed once set. Admin can override via the isAdmin() branch.
+    function placementFields() {
+      return ['placedInternshipId', 'placedInternshipTitle', 'placedCompany', 'placedAt'];
+    }
+
+    function placementWriteOk() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return !changed.hasAny(placementFields())
+        || resource.data.get('placedInternshipId', '') == '';
+    }
+
     // Self-update validator. Allows everyday profile edits AND the legitimate
     // role-bearing writes that happen during onboarding / employer auto-migrate,
     // while preventing privilege escalation to admin or self-approval.
@@ -52,13 +64,15 @@ service cloud.firestore {
       // Always-forbidden fields cannot be touched by self at all.
       // 'roles' may change but never to include 'admin'.
       // Onboarding-only fields are gated by isOnboardingTransition().
+      // Placement fields are write-once (placementWriteOk).
       return !changed.hasAny(neverChangeable())
         && (!('roles' in changed) || !('admin' in request.resource.data.roles))
         && (!changed.hasAny(onboardingOnly()) || (
           isOnboardingTransition()
           // Self may NEVER set employerApproved to true; admin does that.
           && (!('employerApproved' in changed) || request.resource.data.employerApproved == false)
-        ));
+        ))
+        && placementWriteOk();
     }
 
     match /users/{userId} {
@@ -96,10 +110,21 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         request.resource.data.applicantUid == request.auth.uid &&
         request.resource.data.status == 'pending';
-      // Applicant can accept/decline offers; employer can update their apps; admin can do anything
+      // Applicant can accept/decline offers; employer can update their apps; admin can do anything.
+      // Acceptance is locked to one offer per intern: when status moves to
+      // offer_accepted, users/{uid}.placedInternshipId must be empty or already
+      // point at this internship (idempotent retry). The companion write
+      // setting that user field is allowed by placementWriteOk() — once it's
+      // set, future acceptances are rejected here.
       allow update: if isAdmin() ||
         (request.auth != null && resource.data.applicantUid == request.auth.uid &&
-          request.resource.data.status in ['offer_accepted', 'offer_declined']) ||
+          request.resource.data.status == 'offer_declined') ||
+        (request.auth != null && resource.data.applicantUid == request.auth.uid &&
+          request.resource.data.status == 'offer_accepted' &&
+          (
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('placedInternshipId', '') == '' ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('placedInternshipId', '') == resource.data.internshipId
+          )) ||
         (request.auth != null && resource.data.employerUid == request.auth.uid);
       // Applicant can delete their own application as part of account deletion (R11).
       allow delete: if request.auth != null && (

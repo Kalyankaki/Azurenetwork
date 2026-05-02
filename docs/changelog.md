@@ -30,6 +30,9 @@ Add new entries here as PRs merge. Format:
 ### Fixed
 - platform: dashboard math. Admin + intern dashboards now sum the `positions` field for "Open Positions" instead of counting postings; admin shows postings count as a subtitle. Employer dashboard's Total Applicants / Shortlisted / Offers Sent now scope to *that* employer's postings instead of leaking platform-wide totals. Admin Reports overview's "Avg Applicants/Position" divides by total positions, not posting count. Closes [#59](https://github.com/Kalyankaki/Azurenetwork/issues/59).
 
+### Changed
+- platform: an intern can only accept one offer. New `acceptOffer()` helper writes `users/{uid}.placedInternshipId` and the application's `offer_accepted` status atomically (writeBatch), then auto-declines any other applications still in `offered` state. Firestore rules enforce the single-acceptance rule server-side: placement fields are write-once for the user, and a second `offer_accepted` is rejected. The intern onboarding step 3 now carries a clear callout explaining the rule, and a green "You're placed at X" banner appears on the intern dashboard and applications page once accepted. **Requires `firebase deploy --only firestore:rules`** to take effect server-side. Closes [#61](https://github.com/Kalyankaki/Azurenetwork/issues/61).
+
 ---
 
 ## 2026-04-30

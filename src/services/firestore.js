@@ -2,6 +2,7 @@ import { db } from '../firebase'
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
   addDoc, query, where, orderBy, onSnapshot, serverTimestamp, increment, limit, Timestamp,
+  writeBatch,
 } from 'firebase/firestore'
 
 // Bootstrap super-admin allowlist. Configure via VITE_SUPER_ADMIN_EMAILS
@@ -408,6 +409,53 @@ export async function createApplication(data) {
 export async function updateApplicationStatus(id, status, actorEmail = '') {
   await updateDoc(doc(db, 'applications', id), { status, updatedAt: serverTimestamp() })
   logActivity('application_status_changed', { applicationId: id, newStatus: status, actorEmail })
+}
+
+// Atomic single-offer acceptance.
+// 1) Batches: write users/{uid}.placedInternshipId... + applications/{id}.status = 'offer_accepted'.
+//    Server-side rules require these to land together for a first-time acceptance.
+// 2) Best-effort: auto-decline all other applications by this applicant whose status is 'offered'.
+//    A failure here does not roll back the acceptance — the user is placed.
+export async function acceptOffer({ applicationId, applicantUid, internshipId, internshipTitle = '', company = '' }) {
+  if (!applicationId || !applicantUid || !internshipId) {
+    throw new Error('acceptOffer: missing required ids')
+  }
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'users', applicantUid), {
+    placedInternshipId: internshipId,
+    placedInternshipTitle: internshipTitle || '',
+    placedCompany: company || '',
+    placedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  batch.update(doc(db, 'applications', applicationId), {
+    status: 'offer_accepted',
+    acceptedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  await batch.commit()
+  logActivity('offer_accepted', { applicationId, applicantUid, internshipId })
+
+  // Auto-decline other open offers. Best-effort.
+  try {
+    const others = await getDocs(query(
+      collection(db, 'applications'),
+      where('applicantUid', '==', applicantUid),
+      where('status', '==', 'offered'),
+    ))
+    for (const d of others.docs) {
+      if (d.id === applicationId) continue
+      try {
+        await updateDoc(d.ref, {
+          status: 'offer_declined',
+          autoDeclined: true,
+          autoDeclinedReason: 'Accepted another offer',
+          updatedAt: serverTimestamp(),
+        })
+        logActivity('offer_auto_declined', { applicationId: d.id, applicantUid })
+      } catch { /* ignore individual failures */ }
+    }
+  } catch { /* swallow — acceptance already committed */ }
 }
 
 export function subscribeApplications(onData, filters = {}, onError) {
