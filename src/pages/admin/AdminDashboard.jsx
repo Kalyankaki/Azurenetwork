@@ -51,30 +51,54 @@ export default function AdminDashboard() {
   // Offers pending response
   const pendingOffers = applications.filter(a => a.status === 'offered')
 
-  // Employer performance
+  // Employer performance — pivoted to company.
+  // Group by company name (trimmed). When a company is missing, fall back to
+  // the individual employerName. Track distinct reps so we can show how many
+  // people post under each company and link the row to a single rep when
+  // unambiguous.
   const employerMap = {}
   internships.forEach(i => {
-    const key = i.employerUid || i.employerName || 'unknown'
+    const company = (i.company || '').trim()
+    const key = company || i.employerName || 'unknown'
     if (!employerMap[key]) employerMap[key] = {
-      uid: i.employerUid || null,
-      name: i.employerName || 'Unknown',
-      company: i.company || '',
+      company: company || (i.employerName ? '' : ''),
+      reps: new Map(), // uid -> name
       postings: 0, apps: 0, reviewed: 0, offered: 0, accepted: 0,
+      internshipIds: new Set(),
     }
-    if (!employerMap[key].company && i.company) employerMap[key].company = i.company
+    if (i.employerUid) employerMap[key].reps.set(i.employerUid, i.employerName || i.employer || '')
+    else if (i.employerName) employerMap[key].reps.set('name:' + i.employerName, i.employerName)
+    employerMap[key].internshipIds.add(i.id)
     employerMap[key].postings++
   })
   applications.forEach(a => {
     const intern = internships.find(i => i.id === a.internshipId)
-    const key = intern?.employerUid || intern?.employerName || 'unknown'
-    if (employerMap[key]) {
-      employerMap[key].apps++
-      if (['under_review', 'shortlisted', 'offered', 'offer_accepted', 'rejected'].includes(a.status)) employerMap[key].reviewed++
-      if (['offered', 'offer_accepted', 'offer_declined'].includes(a.status)) employerMap[key].offered++
-      if (a.status === 'offer_accepted') employerMap[key].accepted++
-    }
+    if (!intern) return
+    const company = (intern.company || '').trim()
+    const key = company || intern.employerName || 'unknown'
+    const bucket = employerMap[key]
+    if (!bucket) return
+    bucket.apps++
+    if (['under_review', 'shortlisted', 'offered', 'offer_accepted', 'rejected'].includes(a.status)) bucket.reviewed++
+    if (['offered', 'offer_accepted', 'offer_declined'].includes(a.status)) bucket.offered++
+    if (a.status === 'offer_accepted') bucket.accepted++
   })
-  const employers = Object.values(employerMap).sort((a, b) => b.postings - a.postings)
+  const employers = Object.entries(employerMap)
+    .map(([key, e]) => {
+      const repList = Array.from(e.reps.entries())
+        .map(([id, name]) => ({ uid: id.startsWith('name:') ? null : id, name }))
+      return {
+        key,
+        company: e.company || key,
+        reps: repList,
+        postings: e.postings,
+        apps: e.apps,
+        reviewed: e.reviewed,
+        offered: e.offered,
+        accepted: e.accepted,
+      }
+    })
+    .sort((a, b) => b.postings - a.postings)
 
   // Intern placement tracker
   const placed = applications.filter(a => a.status === 'offer_accepted').length
@@ -196,22 +220,28 @@ export default function AdminDashboard() {
           ) : (
             <div className="table-wrapper">
               <table>
-                <thead><tr><th>Employer</th><th>Company</th><th>Apps</th><th>Reviewed</th><th>Offers</th></tr></thead>
+                <thead><tr><th>Company</th><th>Reps</th><th>Postings</th><th>Apps</th><th>Reviewed</th><th>Offers</th></tr></thead>
                 <tbody>
-                  {employers.slice(0, 8).map((e, i) => {
+                  {employers.slice(0, 8).map((e, idx) => {
                     const reviewRate = e.apps > 0 ? Math.round((e.reviewed / e.apps) * 100) : 0
-                    const onRowClick = e.uid ? () => navigate(`/admin/users?uid=${e.uid}`) : undefined
+                    const singleRepUid = e.reps.length === 1 ? e.reps[0].uid : null
+                    const onRowClick = singleRepUid ? () => navigate(`/admin/users?uid=${singleRepUid}`) : undefined
+                    const repNames = e.reps.map(r => r.name).filter(Boolean).join(', ')
                     return (
-                      <tr key={i}
+                      <tr key={e.key}
                         onClick={onRowClick}
-                        style={{ cursor: e.uid ? 'pointer' : 'default' }}
-                        title={e.uid ? 'View employer profile' : undefined}>
+                        style={{ cursor: singleRepUid ? 'pointer' : 'default' }}
+                        title={singleRepUid ? 'View employer profile' : undefined}>
                         <td style={{ fontWeight: 500, fontSize: 13 }}>
-                          {e.uid ? (
-                            <span className="user-name-link">{e.name}</span>
-                          ) : e.name}
+                          {singleRepUid ? (
+                            <span className="user-name-link">{e.company || '—'}</span>
+                          ) : (e.company || '—')}
+                          {repNames && (
+                            <div style={{ fontSize: 11, color: 'var(--nriva-text-light)', fontWeight: 400, marginTop: 2 }}>{repNames}</div>
+                          )}
                         </td>
-                        <td style={{ fontSize: 13 }}>{e.company || '—'}</td>
+                        <td style={{ fontSize: 13 }}>{e.reps.length}</td>
+                        <td style={{ fontSize: 13 }}>{e.postings}</td>
                         <td style={{ fontSize: 13 }}>{e.apps}</td>
                         <td>
                           <span style={{ fontWeight: 600, color: reviewRate >= 80 ? '#15803d' : reviewRate >= 50 ? '#ca8a04' : '#dc2626', fontSize: 13 }}>

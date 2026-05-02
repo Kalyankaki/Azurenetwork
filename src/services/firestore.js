@@ -411,6 +411,11 @@ export async function updateApplicationStatus(id, status, actorEmail = '') {
   logActivity('application_status_changed', { applicationId: id, newStatus: status, actorEmail })
 }
 
+export async function deleteApplication(id, actorEmail = '') {
+  await deleteDoc(doc(db, 'applications', id))
+  logActivity('application_deleted', { applicationId: id, actorEmail })
+}
+
 // Atomic single-offer acceptance.
 // 1) Batches: write users/{uid}.placedInternshipId... + applications/{id}.status = 'offer_accepted'.
 //    Server-side rules require these to land together for a first-time acceptance.
