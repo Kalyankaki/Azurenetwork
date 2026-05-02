@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useUsers } from '../../hooks/useFirestore'
 import { updateUserRoles, updateUserCoordinator, deleteUser, approveEmployer, isSuperAdmin, getApplicationCount, getInternshipCount } from '../../services/firestore'
@@ -32,6 +33,25 @@ export default function AdminUsers() {
   const [profileModal, setProfileModal] = useState(null)
   const [profileStats, setProfileStats] = useState({ apps: null, postings: null })
   const [coordForm, setCoordForm] = useState({ name: '', email: '', phone: '' })
+  const [searchParams, setSearchParams] = useSearchParams()
+  const uidParam = searchParams.get('uid')
+
+  // Deep link: open the profile modal when ?uid=<id> is in the URL.
+  useEffect(() => {
+    if (!uidParam || !users.length) return
+    if (profileModal?.id === uidParam) return
+    const found = users.find(u => u.id === uidParam)
+    if (found) setProfileModal(found)
+  }, [uidParam, users, profileModal?.id])
+
+  const closeProfile = () => {
+    setProfileModal(null)
+    if (searchParams.has('uid')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('uid')
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   useEffect(() => {
     if (!profileModal) { setProfileStats({ apps: null, postings: null }); return }
@@ -475,11 +495,11 @@ export default function AdminUsers() {
 
       {/* User Profile Modal */}
       {profileModal && (
-        <div className="modal-overlay" onClick={() => setProfileModal(null)}>
+        <div className="modal-overlay" onClick={closeProfile}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
             <div className="modal-header">
               <h2>User Profile</h2>
-              <button onClick={() => setProfileModal(null)} aria-label="Close"
+              <button onClick={closeProfile} aria-label="Close"
                 style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>✕</button>
             </div>
             <div className="modal-body">
@@ -735,7 +755,7 @@ export default function AdminUsers() {
               )}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setProfileModal(null)}>Close</button>
+              <button className="btn btn-outline" onClick={closeProfile}>Close</button>
             </div>
           </div>
         </div>

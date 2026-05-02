@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useInternships, useApplications, useMessages, useUsers } from '../../hooks/useFirestore'
 import { INTERNSHIP_STATUSES, isSuperAdmin } from '../../services/firestore'
 import { statusLabel } from '../../utils/status'
@@ -12,6 +12,7 @@ function daysSince(ts) {
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate()
   const { data: internships } = useInternships()
   const { data: applications } = useApplications()
   const { data: messages } = useMessages()
@@ -54,7 +55,13 @@ export default function AdminDashboard() {
   const employerMap = {}
   internships.forEach(i => {
     const key = i.employerUid || i.employerName || 'unknown'
-    if (!employerMap[key]) employerMap[key] = { name: i.employerName || 'Unknown', postings: 0, apps: 0, reviewed: 0, offered: 0, accepted: 0 }
+    if (!employerMap[key]) employerMap[key] = {
+      uid: i.employerUid || null,
+      name: i.employerName || 'Unknown',
+      company: i.company || '',
+      postings: 0, apps: 0, reviewed: 0, offered: 0, accepted: 0,
+    }
+    if (!employerMap[key].company && i.company) employerMap[key].company = i.company
     employerMap[key].postings++
   })
   applications.forEach(a => {
@@ -189,13 +196,22 @@ export default function AdminDashboard() {
           ) : (
             <div className="table-wrapper">
               <table>
-                <thead><tr><th>Employer</th><th>Apps</th><th>Reviewed</th><th>Offers</th></tr></thead>
+                <thead><tr><th>Employer</th><th>Company</th><th>Apps</th><th>Reviewed</th><th>Offers</th></tr></thead>
                 <tbody>
                   {employers.slice(0, 8).map((e, i) => {
                     const reviewRate = e.apps > 0 ? Math.round((e.reviewed / e.apps) * 100) : 0
+                    const onRowClick = e.uid ? () => navigate(`/admin/users?uid=${e.uid}`) : undefined
                     return (
-                      <tr key={i}>
-                        <td style={{ fontWeight: 500, fontSize: 13 }}>{e.name}</td>
+                      <tr key={i}
+                        onClick={onRowClick}
+                        style={{ cursor: e.uid ? 'pointer' : 'default' }}
+                        title={e.uid ? 'View employer profile' : undefined}>
+                        <td style={{ fontWeight: 500, fontSize: 13 }}>
+                          {e.uid ? (
+                            <span className="user-name-link">{e.name}</span>
+                          ) : e.name}
+                        </td>
+                        <td style={{ fontSize: 13 }}>{e.company || '—'}</td>
                         <td style={{ fontSize: 13 }}>{e.apps}</td>
                         <td>
                           <span style={{ fontWeight: 600, color: reviewRate >= 80 ? '#15803d' : reviewRate >= 50 ? '#ca8a04' : '#dc2626', fontSize: 13 }}>

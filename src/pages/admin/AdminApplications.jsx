@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useApplications } from '../../hooks/useFirestore'
 import { updateApplicationStatus } from '../../services/firestore'
 import { formatDate } from '../../utils/date'
 import { statusLabel, statusBadgeClass, APPLICATION_STATUS_LABELS } from '../../utils/status'
+
+const linkCellStyle = { color: 'var(--nriva-primary)', cursor: 'pointer', textDecoration: 'none' }
 import Toast from '../../components/Toast'
 
 const STALE_DAYS = 7
@@ -173,10 +176,18 @@ export default function AdminApplications() {
                           onChange={() => toggleSelect(app.id)} />
                       </td>
                       <td>
-                        <div style={{ fontWeight: 500, fontSize: 14 }}>{app.applicantName || '—'}</div>
+                        <div style={{ fontWeight: 500, fontSize: 14 }}>
+                          {app.applicantUid ? (
+                            <Link to={`/admin/users?uid=${app.applicantUid}`} style={linkCellStyle}>{app.applicantName || '—'}</Link>
+                          ) : (app.applicantName || '—')}
+                        </div>
                         <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{app.email || '—'}</div>
                       </td>
-                      <td style={{ fontSize: 13 }}>{app.internshipTitle || '—'}</td>
+                      <td style={{ fontSize: 13 }}>
+                        {app.internshipId ? (
+                          <Link to={`/admin/internships?id=${app.internshipId}`} style={linkCellStyle}>{app.internshipTitle || '—'}</Link>
+                        ) : (app.internshipTitle || '—')}
+                      </td>
                       <td style={{ fontSize: 13 }}>{app.school || '—'}</td>
                       <td style={{ fontSize: 13 }}>{formatDate(app.appliedDate)}</td>
                       <td>
