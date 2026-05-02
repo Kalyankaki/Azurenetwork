@@ -27,6 +27,9 @@ Add new entries here as PRs merge. Format:
 - admin: Manage Users — added a category-count chip dashboard at the top of the page (All / Pending / Interns / Employers / Admins, plus an `⚠ Awaiting employer approval` chip when relevant) for one-click filtering, and a yellow `Pending` badge on rows with no roles so admins don't miss them. Replaces the role dropdown. Closes [#55](https://github.com/Kalyankaki/Azurenetwork/issues/55).
 - admin: Manage Users — added `Registered` and `Incomplete` chips next to `All` to separate users who finished onboarding from those who signed in but never completed `/select-role`. Closes [#57](https://github.com/Kalyankaki/Azurenetwork/issues/57).
 
+### Fixed
+- platform: dashboard math. Admin + intern dashboards now sum the `positions` field for "Open Positions" instead of counting postings; admin shows postings count as a subtitle. Employer dashboard's Total Applicants / Shortlisted / Offers Sent now scope to *that* employer's postings instead of leaking platform-wide totals. Admin Reports overview's "Avg Applicants/Position" divides by total positions, not posting count. Closes [#59](https://github.com/Kalyankaki/Azurenetwork/issues/59).
+
 ---
 
 ## 2026-04-30
