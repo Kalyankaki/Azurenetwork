@@ -78,7 +78,10 @@ export default function InternDashboard() {
         </div>
         <div className="stat-card">
           <div className="stat-label">Open Positions</div>
-          <div className="stat-value">{openInternships.length}</div>
+          <div className="stat-value">{openInternships.reduce((sum, i) => sum + (parseInt(i.positions, 10) || 1), 0)}</div>
+          <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 4 }}>
+            across {openInternships.length} posting{openInternships.length === 1 ? '' : 's'}
+          </div>
         </div>
       </div>
 

@@ -163,7 +163,7 @@ export default function AdminReports() {
             <div className="stat-card">
               <div className="stat-label">Avg. Applicants/Position</div>
               <div className="stat-value">
-                {internships.length > 0 ? safeDiv(totalApplicants, internships.length).toFixed(1) : 'N/A'}
+                {totalPositions > 0 ? safeDiv(totalApplicants, totalPositions).toFixed(1) : 'N/A'}
               </div>
             </div>
             <div className="stat-card">

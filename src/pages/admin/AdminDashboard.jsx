@@ -18,7 +18,9 @@ export default function AdminDashboard() {
   const { data: users } = useUsers()
 
   // Counts
-  const openPositions = internships.filter(i => i.status === 'open').length
+  const openInternships = internships.filter(i => i.status === 'open')
+  const openInternshipCount = openInternships.length
+  const openPositionsTotal = openInternships.reduce((sum, i) => sum + (parseInt(i.positions, 10) || 1), 0)
   const pendingApprovals = internships.filter(i => i.status === INTERNSHIP_STATUSES.PENDING_APPROVAL).length
   const openMessages = messages.filter(m => m.status === 'open').length
   const resolvedMessages = messages.filter(m => m.status === 'resolved').length
@@ -122,9 +124,11 @@ export default function AdminDashboard() {
       {/* Key stats */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-label">Open Internships</div>
-          <div className="stat-value">{openPositions}</div>
-          <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 4 }}>of {internships.length} total</div>
+          <div className="stat-label">Open Positions</div>
+          <div className="stat-value">{openPositionsTotal}</div>
+          <div style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 4 }}>
+            across {openInternshipCount} posting{openInternshipCount === 1 ? '' : 's'} · {internships.length} total listings
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Total Applications</div>
