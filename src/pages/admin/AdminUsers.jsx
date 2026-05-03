@@ -5,7 +5,7 @@ import { useUsers } from '../../hooks/useFirestore'
 import { updateUserRoles, updateUserCoordinator, deleteUser, approveEmployer, isSuperAdmin, getApplicationCount, getInternshipCount } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
-const VALID_CATEGORIES = ['all', 'registered', 'incomplete', 'pending', 'intern', 'employer', 'admin', 'awaiting_approval']
+const VALID_CATEGORIES = ['all', 'registered', 'incomplete', 'intern', 'employer', 'admin', 'awaiting_approval']
 
 // Renders a Firestore Timestamp / ISO string / millis as e.g. "Apr 28, 2026"
 function formatDate(value) {
@@ -95,7 +95,6 @@ export default function AdminUsers() {
     acc.all += 1
     if (u.onboarded === true) acc.registered += 1
     else acc.incomplete += 1
-    if (roles.length === 0 && !isSuper) acc.pending += 1
     if (roles.includes('intern')) acc.intern += 1
     if (roles.includes('employer')) {
       acc.employer += 1
@@ -103,13 +102,13 @@ export default function AdminUsers() {
     }
     if (roles.includes('admin') || isSuper) acc.admin += 1
     return acc
-  }, { all: 0, registered: 0, incomplete: 0, pending: 0, intern: 0, employer: 0, admin: 0, awaiting_approval: 0 })
+  }, { all: 0, registered: 0, incomplete: 0, intern: 0, employer: 0, admin: 0, awaiting_approval: 0 })
 
-  // Sort: pending users (no roles) first, then by createdAt desc
+  // Sort: incomplete-signup users first, then by createdAt desc.
   const sorted = [...users].sort((a, b) => {
-    const aHasRoles = (a.roles || []).length > 0 || isSuperAdmin(a.email)
-    const bHasRoles = (b.roles || []).length > 0 || isSuperAdmin(b.email)
-    if (aHasRoles !== bHasRoles) return aHasRoles ? 1 : -1
+    const aIncomplete = a.onboarded !== true && !isSuperAdmin(a.email)
+    const bIncomplete = b.onboarded !== true && !isSuperAdmin(b.email)
+    if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1
     const aTime = a.createdAt?.seconds || 0
     const bTime = b.createdAt?.seconds || 0
     return bTime - aTime
@@ -122,7 +121,6 @@ export default function AdminUsers() {
       case 'all': return true
       case 'registered': return u.onboarded === true
       case 'incomplete': return u.onboarded !== true
-      case 'pending': return roles.length === 0 && !isSuper
       case 'intern': return roles.includes('intern')
       case 'employer': return roles.includes('employer')
       case 'admin': return roles.includes('admin') || isSuper
@@ -212,8 +210,6 @@ export default function AdminUsers() {
           active={categoryFilter === 'registered'} onClick={() => setCategoryFilter('registered')} />
         <CategoryChip label="Incomplete" count={counts.incomplete} tone="warning"
           active={categoryFilter === 'incomplete'} onClick={() => setCategoryFilter('incomplete')} />
-        <CategoryChip label="Pending" count={counts.pending} tone="warning"
-          active={categoryFilter === 'pending'} onClick={() => setCategoryFilter('pending')} />
         <CategoryChip label="Interns" count={counts.intern} tone="intern"
           active={categoryFilter === 'intern'} onClick={() => setCategoryFilter('intern')} />
         <CategoryChip label="Employers" count={counts.employer} tone="employer"
@@ -549,11 +545,6 @@ export default function AdminUsers() {
                         {r}
                       </span>
                     ))}
-                    {(profileModal.roles || []).length === 0 && (
-                      <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
-                        Pending role
-                      </span>
-                    )}
                     {profileModal.requestedRole && (
                       <span style={{
                         fontSize: 11, fontWeight: 600,

@@ -25,9 +25,9 @@ export default function AdminDashboard() {
   const pendingApprovals = internships.filter(i => i.status === INTERNSHIP_STATUSES.PENDING_APPROVAL).length
   const openMessages = messages.filter(m => m.status === 'open').length
   const resolvedMessages = messages.filter(m => m.status === 'resolved').length
-  const pendingUsers = users.filter(u => {
+  const incompleteSignups = users.filter(u => {
     if (isSuperAdmin(u.email)) return false
-    return !(u.roles || []).length
+    return u.onboarded !== true
   }).length
 
   // Pipeline funnel
@@ -139,11 +139,11 @@ export default function AdminDashboard() {
           title={`${pendingOffers.length} offer${pendingOffers.length === 1 ? '' : 's'} waiting for intern response`}
           subtitle={pendingOffers.slice(0, 3).map(a => a.applicantName).join(', ')} badge={`${pendingOffers.length} pending`} />
       )}
-      {pendingUsers > 0 && (
-        <Link to="/admin/users?category=pending" style={{ textDecoration: 'none' }}>
+      {incompleteSignups > 0 && (
+        <Link to="/admin/users?category=incomplete" style={{ textDecoration: 'none' }}>
           <AlertBanner icon="👤" color="#7c3aed" bg="#f5f3ff" border="#a78bfa"
-            title={`${pendingUsers} user${pendingUsers === 1 ? '' : 's'} awaiting role assignment`}
-            subtitle="Sign up completed but no roles assigned" badge={`${pendingUsers} pending`} />
+            title={`${incompleteSignups} incomplete signup${incompleteSignups === 1 ? '' : 's'}`}
+            subtitle="Signed in but never finished onboarding" badge={`${incompleteSignups} to chase`} />
         </Link>
       )}
       {openMessages > 0 && (

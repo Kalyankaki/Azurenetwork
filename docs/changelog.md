@@ -44,6 +44,9 @@ Add new entries here as PRs merge. Format:
 ### Fixed
 - admin: dashboard "users awaiting role assignment" banner used to land on `/admin/users` with the new `Registered` default filter, hiding most pending users. The banner now deep-links to `/admin/users?category=pending`, and AdminUsers honours the `?category=` URL param across all chip values (`all / registered / incomplete / pending / intern / employer / admin / awaiting_approval`). Closes [#81](https://github.com/Kalyankaki/Azurenetwork/issues/81).
 
+### Removed
+- admin: the `Pending` user-status concept is gone. The Pending chip and its filter case are removed from `/admin/users`, the "Pending role" badge is removed from the profile-modal header, and the dashboard banner has been repointed at `/admin/users?category=incomplete` with new copy ("N incomplete signups"). Incomplete is now the single signal for "didn't finish signup". Closes [#83](https://github.com/Kalyankaki/Azurenetwork/issues/83).
+
 ---
 
 ## 2026-04-30
