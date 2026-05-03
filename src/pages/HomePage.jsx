@@ -118,9 +118,19 @@ export default function HomePage() {
           display: 'inline-block', background: 'rgba(255,160,64,0.15)',
           border: '1px solid rgba(255,160,64,0.3)', borderRadius: 20,
           padding: '6px 18px', fontSize: 13, color: '#ffa040',
-          fontWeight: 500, marginBottom: 28,
+          fontWeight: 500, marginBottom: 8,
         }}>
           Open to students in 10th grade through college
+        </div>
+
+        <div style={{
+          display: 'inline-block', background: 'rgba(255,255,255,0.10)',
+          border: '1px solid rgba(255,255,255,0.25)', borderRadius: 20,
+          padding: '6px 18px', fontSize: 13, color: 'rgba(255,255,255,0.9)',
+          fontWeight: 500, marginBottom: 28,
+        }}
+          title="The portal is independent of NRIVA membership accounts. Any student or employer can sign up directly.">
+          No NRIVA membership required &mdash; open to all students and employers
         </div>
 
         <div style={{
