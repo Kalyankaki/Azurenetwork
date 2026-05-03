@@ -41,6 +41,9 @@ Add new entries here as PRs merge. Format:
 - admin: the row-level "Pending" badge on Manage Users moved out of the Roles column and now renders as `Incomplete` next to the user's name. Trigger switched from "no roles" to "not onboarded", so it stays in lock-step with the existing Incomplete chip filter. Closes [#77](https://github.com/Kalyankaki/Azurenetwork/issues/77).
 - admin: Manage Users now defaults to the `Registered` chip on load (was `All`). Closes [#79](https://github.com/Kalyankaki/Azurenetwork/issues/79).
 
+### Fixed
+- admin: dashboard "users awaiting role assignment" banner used to land on `/admin/users` with the new `Registered` default filter, hiding most pending users. The banner now deep-links to `/admin/users?category=pending`, and AdminUsers honours the `?category=` URL param across all chip values (`all / registered / incomplete / pending / intern / employer / admin / awaiting_approval`). Closes [#81](https://github.com/Kalyankaki/Azurenetwork/issues/81).
+
 ---
 
 ## 2026-04-30

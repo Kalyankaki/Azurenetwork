@@ -5,6 +5,8 @@ import { useUsers } from '../../hooks/useFirestore'
 import { updateUserRoles, updateUserCoordinator, deleteUser, approveEmployer, isSuperAdmin, getApplicationCount, getInternshipCount } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
+const VALID_CATEGORIES = ['all', 'registered', 'incomplete', 'pending', 'intern', 'employer', 'admin', 'awaiting_approval']
+
 // Renders a Firestore Timestamp / ISO string / millis as e.g. "Apr 28, 2026"
 function formatDate(value) {
   if (!value) return null
@@ -25,7 +27,12 @@ export default function AdminUsers() {
   const { data: users, loading, error, retry } = useUsers()
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('registered')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialCategory = (() => {
+    const c = searchParams.get('category')
+    return c && VALID_CATEGORIES.includes(c) ? c : 'registered'
+  })()
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory)
   const [locationFilter, setLocationFilter] = useState('all')
   const [confirmAction, setConfirmAction] = useState(null)
   const [coordinatorModal, setCoordinatorModal] = useState(null)
@@ -33,8 +40,15 @@ export default function AdminUsers() {
   const [profileModal, setProfileModal] = useState(null)
   const [profileStats, setProfileStats] = useState({ apps: null, postings: null })
   const [coordForm, setCoordForm] = useState({ name: '', email: '', phone: '' })
-  const [searchParams, setSearchParams] = useSearchParams()
   const uidParam = searchParams.get('uid')
+  const categoryParam = searchParams.get('category')
+
+  // Deep link: keep the chip filter in sync with ?category=<chip>.
+  useEffect(() => {
+    if (categoryParam && VALID_CATEGORIES.includes(categoryParam) && categoryParam !== categoryFilter) {
+      setCategoryFilter(categoryParam)
+    }
+  }, [categoryParam])
 
   // Deep link: open the profile modal when ?uid=<id> is in the URL.
   useEffect(() => {
