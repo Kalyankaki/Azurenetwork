@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useInternships, useApplications, useMessages, useUsers } from '../../hooks/useFirestore'
-import { INTERNSHIP_STATUSES, isSuperAdmin } from '../../services/firestore'
+import { INTERNSHIP_STATUSES, isSuperAdmin, approveEmployer } from '../../services/firestore'
 import { statusLabel } from '../../utils/status'
+import Toast from '../../components/Toast'
 
 const STALE_DAYS = 7
 
@@ -29,6 +31,27 @@ export default function AdminDashboard() {
     if (isSuperAdmin(u.email)) return false
     return u.onboarded !== true
   }).length
+
+  // Employers awaiting approval — surfaced as an inline action card below.
+  const pendingEmployers = users.filter(u =>
+    !isSuperAdmin(u.email) &&
+    (u.roles || []).includes('employer') &&
+    u.employerApproved !== true
+  )
+
+  const [toast, setToast] = useState(null)
+  const [approving, setApproving] = useState(null)
+  const handleApprove = async (employer) => {
+    setApproving(employer.id)
+    try {
+      await approveEmployer(employer.id)
+      setToast(`Approved ${employer.companyName || employer.displayName || employer.email}`)
+    } catch (err) {
+      setToast('Error: ' + (err?.message || 'Could not approve'))
+    } finally {
+      setApproving(null)
+    }
+  }
 
   // Pipeline funnel
   const pipeline = {
@@ -153,6 +176,54 @@ export default function AdminDashboard() {
             subtitle={`${openMessages} open · ${resolvedMessages} resolved`}
             badge={openMessages > 0 ? `${openMessages} need attention` : null} />
         </Link>
+      )}
+
+      {/* Employers awaiting approval — inline action card */}
+      {pendingEmployers.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1b5e20' }}>
+              ✅ Employers Awaiting Approval ({pendingEmployers.length})
+            </h3>
+            <Link to="/admin/users?category=awaiting_approval" style={{ color: 'var(--nriva-primary)', fontSize: 13, fontWeight: 500 }}>
+              View all →
+            </Link>
+          </div>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Employer</th>
+                  <th>Company</th>
+                  <th>Email</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingEmployers.slice(0, 6).map(e => (
+                  <tr key={e.id}>
+                    <td style={{ fontSize: 13 }}>
+                      <Link to={`/admin/users?uid=${e.id}`} className="user-name-link">
+                        {e.displayName || e.email?.split('@')[0] || '—'}
+                      </Link>
+                    </td>
+                    <td style={{ fontSize: 13 }}>{e.companyName || '—'}</td>
+                    <td style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>{e.email}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        className="btn btn-sm btn-success"
+                        onClick={() => handleApprove(e)}
+                        disabled={approving === e.id}
+                        style={{ fontSize: 12, padding: '4px 12px' }}>
+                        {approving === e.id ? 'Approving…' : 'Approve'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* Key stats */}
@@ -299,6 +370,8 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {toast && <Toast message={toast} type="success" onClose={() => setToast(null)} />}
     </div>
   )
 }

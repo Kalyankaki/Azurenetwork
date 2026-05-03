@@ -47,6 +47,9 @@ Add new entries here as PRs merge. Format:
 ### Removed
 - admin: the `Pending` user-status concept is gone. The Pending chip and its filter case are removed from `/admin/users`, the "Pending role" badge is removed from the profile-modal header, and the dashboard banner has been repointed at `/admin/users?category=incomplete` with new copy ("N incomplete signups"). Incomplete is now the single signal for "didn't finish signup". Closes [#83](https://github.com/Kalyankaki/Azurenetwork/issues/83).
 
+### Added
+- admin: an "Employers Awaiting Approval" card on `/admin` lists pending employers with per-row Approve buttons, so admins can clear the queue without leaving the dashboard. Click the name to open their profile, click Approve to flip `employerApproved`. Closes [#85](https://github.com/Kalyankaki/Azurenetwork/issues/85).
+
 ---
 
 ## 2026-04-30
