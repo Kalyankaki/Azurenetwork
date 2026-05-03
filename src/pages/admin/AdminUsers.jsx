@@ -25,7 +25,7 @@ export default function AdminUsers() {
   const { data: users, loading, error, retry } = useUsers()
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('registered')
   const [locationFilter, setLocationFilter] = useState('all')
   const [confirmAction, setConfirmAction] = useState(null)
   const [coordinatorModal, setCoordinatorModal] = useState(null)
