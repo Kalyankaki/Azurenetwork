@@ -281,6 +281,16 @@ export default function AdminUsers() {
                               >
                                 {user.displayName || user.email?.split('@')[0] || user.email || '—'}
                               </button>
+                              {!isSuper && user.onboarded !== true && (
+                                <span style={{
+                                  marginLeft: 8, fontSize: 10, background: '#fef3c7', color: '#92400e',
+                                  padding: '1px 6px', borderRadius: 4, fontWeight: 700,
+                                  textTransform: 'uppercase', letterSpacing: 0.4,
+                                }}
+                                  title="This user signed in but never finished onboarding (matches the Incomplete chip filter).">
+                                  Incomplete
+                                </span>
+                              )}
                               {isSuper && (
                                 <span style={{
                                   marginLeft: 8, fontSize: 10, background: '#ff6f00', color: 'white',
@@ -307,13 +317,6 @@ export default function AdminUsers() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {!isSuper && (user.roles || []).length === 0 && (
-                            <span style={{
-                              background: '#fef3c7', color: '#92400e',
-                              fontSize: 11, fontWeight: 700,
-                              padding: '3px 8px', borderRadius: 999,
-                            }}>Pending</span>
-                          )}
                           {ALL_ROLES.map(role => {
                             const hasRole = isSuper || (user.roles || []).includes(role)
                             return (
