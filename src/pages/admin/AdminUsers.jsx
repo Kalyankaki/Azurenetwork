@@ -34,6 +34,7 @@ export default function AdminUsers() {
   })()
   const [categoryFilter, setCategoryFilter] = useState(initialCategory)
   const [locationFilter, setLocationFilter] = useState('all')
+  const [roleFilter, setRoleFilter] = useState(() => new Set())
   const [confirmAction, setConfirmAction] = useState(null)
   const [coordinatorModal, setCoordinatorModal] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
@@ -130,6 +131,14 @@ export default function AdminUsers() {
     }
   }
 
+  const matchRoleSet = (u) => {
+    if (roleFilter.size === 0) return true
+    const isSuper = isSuperAdmin(u.email)
+    const userRoles = isSuper ? ['admin', 'intern', 'employer'] : (u.roles || [])
+    for (const r of roleFilter) if (userRoles.includes(r)) return true
+    return false
+  }
+
   const filtered = sorted.filter(u => {
     const q = search.toLowerCase()
     const matchSearch = !q || (u.email || '').toLowerCase().includes(q) ||
@@ -137,8 +146,16 @@ export default function AdminUsers() {
       (u.city || u.chapter || u.school || '').toLowerCase().includes(q)
     const matchLocation = locationFilter === 'all' ||
       (u.chapter || u.location || u.city || '') === locationFilter
-    return matchSearch && matchCategory(u) && matchLocation
+    return matchSearch && matchCategory(u) && matchLocation && matchRoleSet(u)
   })
+
+  const toggleRoleFilter = (role) => {
+    setRoleFilter(prev => {
+      const next = new Set(prev)
+      next.has(role) ? next.delete(role) : next.add(role)
+      return next
+    })
+  }
 
   const toggleRole = async (user, role) => {
     if (isSuperAdmin(user.email)) return
@@ -219,6 +236,37 @@ export default function AdminUsers() {
         {counts.awaiting_approval > 0 && (
           <CategoryChip label="⚠ Awaiting employer approval" count={counts.awaiting_approval} tone="alert"
             active={categoryFilter === 'awaiting_approval'} onClick={() => setCategoryFilter('awaiting_approval')} />
+        )}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12, fontSize: 13 }}>
+        <span style={{ color: 'var(--nriva-text-light)', fontWeight: 500 }}>Filter by role:</span>
+        {ALL_ROLES.map(role => {
+          const active = roleFilter.has(role)
+          const palette = role === 'admin' ? '#b71c1c' : role === 'employer' ? '#1b5e20' : '#1a237e'
+          return (
+            <button key={role} type="button" onClick={() => toggleRoleFilter(role)}
+              style={{
+                padding: '4px 14px', borderRadius: 999, fontSize: 12, fontWeight: 500,
+                cursor: 'pointer', textTransform: 'capitalize',
+                border: `1px solid ${active ? palette : 'var(--nriva-border)'}`,
+                background: active ? palette : 'white',
+                color: active ? 'white' : 'var(--nriva-text-light)',
+                transition: 'all 0.15s',
+              }}>
+              {role}
+            </button>
+          )
+        })}
+        {roleFilter.size > 0 && (
+          <button type="button" onClick={() => setRoleFilter(new Set())}
+            style={{
+              background: 'none', border: 0, padding: 0,
+              color: 'var(--nriva-primary)', cursor: 'pointer',
+              fontSize: 12, fontWeight: 500, textDecoration: 'underline',
+            }}>
+            Clear roles
+          </button>
         )}
       </div>
 

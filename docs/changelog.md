@@ -49,6 +49,7 @@ Add new entries here as PRs merge. Format:
 
 ### Added
 - admin: an "Employers Awaiting Approval" card on `/admin` lists pending employers with per-row Approve buttons, so admins can clear the queue without leaving the dashboard. Click the name to open their profile, click Approve to flip `employerApproved`. Closes [#85](https://github.com/Kalyankaki/Azurenetwork/issues/85).
+- admin: Manage Users — new multi-select **Filter by role** pill row (Intern / Employer / Admin) sits below the chip dashboard. Selecting one or more roles narrows the visible users to those whose `roles` array intersects the selection (logical OR within the set), composing with the existing category chip and search/location filters. A "Clear roles" link resets it. Closes [#87](https://github.com/Kalyankaki/Azurenetwork/issues/87).
 
 ---
 
