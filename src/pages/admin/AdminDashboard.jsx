@@ -140,7 +140,7 @@ export default function AdminDashboard() {
           subtitle={pendingOffers.slice(0, 3).map(a => a.applicantName).join(', ')} badge={`${pendingOffers.length} pending`} />
       )}
       {pendingUsers > 0 && (
-        <Link to="/admin/users" style={{ textDecoration: 'none' }}>
+        <Link to="/admin/users?category=pending" style={{ textDecoration: 'none' }}>
           <AlertBanner icon="👤" color="#7c3aed" bg="#f5f3ff" border="#a78bfa"
             title={`${pendingUsers} user${pendingUsers === 1 ? '' : 's'} awaiting role assignment`}
             subtitle="Sign up completed but no roles assigned" badge={`${pendingUsers} pending`} />
