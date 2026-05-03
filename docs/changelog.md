@@ -38,6 +38,7 @@ Add new entries here as PRs merge. Format:
 - admin: AdminUsers profile modal — new "Applied for: \<role\>" capsule near the role badges (driven by `requestedRole`), plus Placed-at green pill, Terms-accepted version + date, Onboarded-at, and Last-updated fields surfaced from existing user-doc fields. Closes [#69](https://github.com/Kalyankaki/Azurenetwork/issues/69).
 - platform: home page now carries a callout below the existing eligibility pill making clear that portal sign-in is separate from `nriva.org`'s own login (the portal is iframed there). Closes [#71](https://github.com/Kalyankaki/Azurenetwork/issues/71), [#73](https://github.com/Kalyankaki/Azurenetwork/issues/73).
 - security: `firestore.rules` `isAdmin()` now compares super-admin emails case-insensitively. Previously a signed-in super admin whose stored email had any uppercase characters silently failed the bootstrap allowlist check, which blocked admin-only writes such as deleting an application. **Requires `firebase deploy --only firestore:rules`** to take effect. Closes [#75](https://github.com/Kalyankaki/Azurenetwork/issues/75).
+- admin: the row-level "Pending" badge on Manage Users moved out of the Roles column and now renders as `Incomplete` next to the user's name. Trigger switched from "no roles" to "not onboarded", so it stays in lock-step with the existing Incomplete chip filter. Closes [#77](https://github.com/Kalyankaki/Azurenetwork/issues/77).
 
 ---
 
