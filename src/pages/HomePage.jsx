@@ -129,8 +129,8 @@ export default function HomePage() {
           padding: '6px 18px', fontSize: 13, color: 'rgba(255,255,255,0.9)',
           fontWeight: 500, marginBottom: 28,
         }}
-          title="The portal is independent of NRIVA membership accounts. Any student or employer can sign up directly.">
-          No NRIVA membership required &mdash; open to all students and employers
+          title="The portal has its own login. Even if you're signed into nriva.org, you'll sign up or sign in here separately.">
+          Sign-in here is separate from your nriva.org login &mdash; students and employers sign up directly
         </div>
 
         <div style={{
