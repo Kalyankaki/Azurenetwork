@@ -50,6 +50,7 @@ Add new entries here as PRs merge. Format:
 ### Added
 - admin: an "Employers Awaiting Approval" card on `/admin` lists pending employers with per-row Approve buttons, so admins can clear the queue without leaving the dashboard. Click the name to open their profile, click Approve to flip `employerApproved`. Closes [#85](https://github.com/Kalyankaki/Azurenetwork/issues/85).
 - admin: Manage Users — new multi-select **Filter by role** pill row (Intern / Employer / Admin) sits below the chip dashboard. Selecting one or more roles narrows the visible users to those whose `roles` array intersects the selection (logical OR within the set), composing with the existing category chip and search/location filters. A "Clear roles" link resets it. Closes [#87](https://github.com/Kalyankaki/Azurenetwork/issues/87).
+- admin: an internship can now be reassigned to another registered employer from the AdminInternships manage modal — pick the new employer from a dropdown, confirm in a modal, and the doc's `employerUid / employerName / company / contactEmail` get updated. Logs `internship_employer_reassigned` with old + new ids. Useful when a rep leaves a company. Closes [#89](https://github.com/Kalyankaki/Azurenetwork/issues/89).
 
 ---
 

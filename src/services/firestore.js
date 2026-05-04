@@ -363,6 +363,35 @@ export async function deleteInternship(id) {
   logActivity('internship_deleted', { internshipId: id })
 }
 
+// Admin-only: shift an internship from one employer rep to another.
+// Updates employerUid + the denormalised employer/company fields on the
+// internship doc and logs the change. Existing applications under this
+// internship keep their original employerUid snapshot (set at apply-time)
+// — see issue #89 for follow-up if historical apps need to follow the rep.
+export async function reassignInternshipEmployer({
+  internshipId, newEmployerUid, newEmployerName, newCompany,
+  newContactEmail, oldEmployerUid, actorEmail = '',
+}) {
+  if (!internshipId || !newEmployerUid) {
+    throw new Error('reassignInternshipEmployer: internshipId + newEmployerUid required')
+  }
+  await updateDoc(doc(db, 'internships', internshipId), {
+    employerUid: newEmployerUid,
+    employerName: newEmployerName || '',
+    company: newCompany || '',
+    contactEmail: newContactEmail || '',
+    updatedAt: serverTimestamp(),
+  })
+  logActivity('internship_employer_reassigned', {
+    internshipId,
+    oldEmployerUid: oldEmployerUid || null,
+    newEmployerUid,
+    newEmployerName: newEmployerName || '',
+    newCompany: newCompany || '',
+    actorEmail,
+  })
+}
+
 export function subscribeInternships(onData, filters = {}, onError) {
   let q = collection(db, 'internships')
   const constraints = []

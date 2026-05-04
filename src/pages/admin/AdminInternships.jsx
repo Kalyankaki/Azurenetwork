@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useInternships, useApplications } from '../../hooks/useFirestore'
+import { useInternships, useApplications, useUsers } from '../../hooks/useFirestore'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   updateInternship as updateInternshipDB,
   deleteInternship as deleteInternshipDB,
-  approveInternship, rejectInternship, INTERNSHIP_STATUSES,
+  approveInternship, rejectInternship, reassignInternshipEmployer,
+  INTERNSHIP_STATUSES, isSuperAdmin,
 } from '../../services/firestore'
 import { formatDate } from '../../utils/date'
 import Toast from '../../components/Toast'
@@ -14,10 +15,20 @@ export default function AdminInternships() {
   const { user } = useAuth()
   const { data: internships } = useInternships()
   const { data: allApplications } = useApplications()
+  const { data: allUsers } = useUsers()
+  const employerUsers = useMemo(
+    () => allUsers
+      .filter(u => isSuperAdmin(u.email) || (u.roles || []).includes('employer'))
+      .sort((a, b) => (a.companyName || a.displayName || a.email || '').localeCompare(b.companyName || b.displayName || b.email || '')),
+    [allUsers],
+  )
   const appCountMap = {}
   allApplications.forEach(a => { appCountMap[a.internshipId] = (appCountMap[a.internshipId] || 0) + 1 })
   const [selected, setSelected] = useState(null)
   const [toast, setToast] = useState(null)
+  const [reassignTo, setReassignTo] = useState('')
+  const [reassignConfirm, setReassignConfirm] = useState(null)
+  const [reassigning, setReassigning] = useState(false)
   const [search, setSearch] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
   const idParam = searchParams.get('id')
@@ -29,6 +40,40 @@ export default function AdminInternships() {
     const found = internships.find(i => i.id === idParam)
     if (found) setSelected(found)
   }, [idParam, internships, selected?.id])
+
+  // Reset reassign dropdown when modal opens to a different internship
+  useEffect(() => {
+    setReassignTo(selected?.employerUid || '')
+  }, [selected?.id, selected?.employerUid])
+
+  const handleReassignConfirm = async () => {
+    if (!selected || !reassignConfirm) return
+    setReassigning(true)
+    try {
+      await reassignInternshipEmployer({
+        internshipId: selected.id,
+        oldEmployerUid: selected.employerUid || null,
+        newEmployerUid: reassignConfirm.id,
+        newEmployerName: reassignConfirm.displayName || reassignConfirm.email || '',
+        newCompany: reassignConfirm.companyName || '',
+        newContactEmail: reassignConfirm.email || '',
+        actorEmail: user?.email || '',
+      })
+      setSelected({
+        ...selected,
+        employerUid: reassignConfirm.id,
+        employerName: reassignConfirm.displayName || reassignConfirm.email || '',
+        company: reassignConfirm.companyName || '',
+        contactEmail: reassignConfirm.email || '',
+      })
+      setToast(`Internship reassigned to ${reassignConfirm.displayName || reassignConfirm.email}`)
+      setReassignConfirm(null)
+    } catch (err) {
+      setToast('Error: ' + (err?.message || 'Could not reassign'))
+    } finally {
+      setReassigning(false)
+    }
+  }
 
   const closeSelected = () => {
     setSelected(null)
@@ -313,6 +358,32 @@ export default function AdminInternships() {
                 </div>
               )}
 
+              <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Reassign Employer</h4>
+              <p style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginBottom: 8 }}>
+                Currently posted by <strong>{selected.employerName || 'Unknown'}</strong>{selected.company ? ` (${selected.company})` : ''}.
+                Pick a different registered employer to take over this listing.
+              </p>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
+                <select className="form-control" value={reassignTo}
+                  onChange={(e) => setReassignTo(e.target.value)}
+                  style={{ flex: 1, minWidth: 240, fontSize: 13 }}>
+                  <option value="">Select an employer…</option>
+                  {employerUsers.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {(u.displayName || u.email || '—')}{u.companyName ? ` — ${u.companyName}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="btn btn-sm btn-outline"
+                  disabled={!reassignTo || reassignTo === selected.employerUid}
+                  onClick={() => {
+                    const target = employerUsers.find(u => u.id === reassignTo)
+                    if (target) setReassignConfirm(target)
+                  }}>
+                  Reassign
+                </button>
+              </div>
+
               <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Update Status</h4>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
                 {['open', 'closed', 'filled'].map(s => (
@@ -402,6 +473,35 @@ export default function AdminInternships() {
             <div className="modal-footer">
               <button className="btn btn-outline" onClick={() => setConfirmDelete(null)}>Cancel</button>
               <button className="btn btn-danger" onClick={() => deletePosting(confirmDelete)}>Yes, Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reassignConfirm && (
+        <div className="modal-overlay" onClick={() => !reassigning && setReassignConfirm(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
+            <div className="modal-header"><h2>Reassign Employer</h2></div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, lineHeight: 1.5, marginBottom: 12 }}>
+                Move <strong>{selected?.title}</strong> from <strong>{selected?.employerName || 'Unknown'}</strong>{selected?.company ? ` (${selected.company})` : ''} to:
+              </p>
+              <div style={{ background: '#f8fafc', borderRadius: 8, padding: '12px 14px', fontSize: 13 }}>
+                <div style={{ fontWeight: 600 }}>{reassignConfirm.displayName || reassignConfirm.email}</div>
+                <div style={{ color: 'var(--nriva-text-light)' }}>{reassignConfirm.companyName || '—'}</div>
+                <div style={{ color: 'var(--nriva-text-light)', fontSize: 12 }}>{reassignConfirm.email}</div>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginTop: 12, lineHeight: 1.5 }}>
+                Updates the internship&apos;s <code>employerUid</code>, <code>employerName</code>, <code>company</code>, and <code>contactEmail</code>.
+                Existing applications keep their original snapshot of the employer; this only affects who can manage the listing going forward.
+                Logged as <code>internship_employer_reassigned</code>.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setReassignConfirm(null)} disabled={reassigning}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleReassignConfirm} disabled={reassigning}>
+                {reassigning ? 'Reassigning…' : 'Confirm Reassign'}
+              </button>
             </div>
           </div>
         </div>
