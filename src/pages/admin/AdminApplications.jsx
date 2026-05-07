@@ -23,6 +23,8 @@ export default function AdminApplications() {
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [sortField, setSortField] = useState('appliedDate')
+  const [sortDir, setSortDir] = useState('desc')
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(null)
@@ -41,6 +43,39 @@ export default function AdminApplications() {
       : true
     return matchSearch && matchStatus && matchStale
   })
+
+  const sortValue = (app) => {
+    switch (sortField) {
+      case 'applicantName': return (app.applicantName || '').toLowerCase()
+      case 'internshipTitle': return (app.internshipTitle || '').toLowerCase()
+      case 'school': return (app.school || '').toLowerCase()
+      case 'status': return (app.status || '').toLowerCase()
+      case 'age': return daysSince(app.appliedDate)
+      case 'appliedDate':
+      default: {
+        const ts = app.appliedDate
+        if (!ts) return 0
+        if (ts.toDate) return ts.toDate().getTime()
+        if (ts.seconds) return ts.seconds * 1000
+        return new Date(ts).getTime() || 0
+      }
+    }
+  }
+
+  const sorted = [...filtered].sort((a, b) => {
+    const av = sortValue(a)
+    const bv = sortValue(b)
+    if (av < bv) return sortDir === 'asc' ? -1 : 1
+    if (av > bv) return sortDir === 'asc' ? 1 : -1
+    return 0
+  })
+
+  const toggleSort = (field) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDir(field === 'appliedDate' || field === 'age' ? 'desc' : 'asc') }
+  }
+  const sortIndicator = (field) =>
+    sortField === field ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''
 
   const updateStatus = async (id, status) => {
     try {
@@ -169,22 +204,34 @@ export default function AdminApplications() {
                     <input type="checkbox" checked={selectedIds.size === filtered.length && filtered.length > 0}
                       onChange={toggleAll} />
                   </th>
-                  <th>Applicant</th>
-                  <th>Position</th>
-                  <th>School</th>
-                  <th>Applied</th>
-                  <th>Age</th>
-                  <th>Status</th>
+                  <th onClick={() => toggleSort('applicantName')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    Applicant{sortIndicator('applicantName')}
+                  </th>
+                  <th onClick={() => toggleSort('internshipTitle')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    Position{sortIndicator('internshipTitle')}
+                  </th>
+                  <th onClick={() => toggleSort('school')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    School{sortIndicator('school')}
+                  </th>
+                  <th onClick={() => toggleSort('appliedDate')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    Applied{sortIndicator('appliedDate')}
+                  </th>
+                  <th onClick={() => toggleSort('age')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    Age{sortIndicator('age')}
+                  </th>
+                  <th onClick={() => toggleSort('status')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    Status{sortIndicator('status')}
+                  </th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 && (
+                {sorted.length === 0 && (
                   <tr><td colSpan="8" style={{ textAlign: 'center', padding: 40, color: 'var(--nriva-text-light)' }}>
                     No applications found.
                   </td></tr>
                 )}
-                {filtered.map(app => {
+                {sorted.map(app => {
                   const age = daysSince(app.appliedDate)
                   const isStale = (app.status === 'pending' || app.status === 'under_review') && age > STALE_DAYS
                   return (
