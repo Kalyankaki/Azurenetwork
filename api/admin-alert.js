@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   if (rateLimit(req, res, { maxRequests: 30 })) return
 
   const resendKey = process.env.RESEND_API_KEY
-  const adminEmails = (process.env.ADMIN_ALERT_EMAILS || process.env.SUPER_ADMIN_EMAILS || 'kalyank.123@gmail.com')
+  const adminEmails = (process.env.ADMIN_ALERT_EMAILS || process.env.SUPER_ADMIN_EMAILS || 'abhikaki123@gmail.com')
     .split(',').map(s => s.trim()).filter(Boolean)
 
   if (!resendKey) {
