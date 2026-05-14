@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   const { userName, userEmail, requestedRole, nrivaMembership } = req.body || {}
-  const adminEmail = 'kalyank.123@gmail.com'
+  const adminEmail = 'abhikaki123@gmail.com'
 
   // Try Resend if configured
   const resendKey = process.env.RESEND_API_KEY
