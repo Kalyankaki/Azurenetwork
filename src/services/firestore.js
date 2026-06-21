@@ -518,23 +518,30 @@ export async function acceptOffer({ applicationId, applicantUid, internshipId, i
   await batch.commit()
   logActivity('offer_accepted', { applicationId, applicantUid, internshipId })
 
-  // Auto-decline other open offers. Best-effort.
+  // Auto-decline every other open application by this intern.
+  // We close pending / under_review / shortlisted / offered apps so employers
+  // don't keep evaluating an intern who is no longer available. Terminal
+  // statuses (offer_accepted, prior offer_declined, rejected) are untouched.
+  // Best-effort: failures here don't roll back the acceptance.
+  const NON_TERMINAL = ['pending', 'under_review', 'shortlisted', 'offered']
   try {
     const others = await getDocs(query(
       collection(db, 'applications'),
       where('applicantUid', '==', applicantUid),
-      where('status', '==', 'offered'),
+      where('status', 'in', NON_TERMINAL),
     ))
     for (const d of others.docs) {
       if (d.id === applicationId) continue
+      const previousStatus = d.data().status
       try {
         await updateDoc(d.ref, {
           status: 'offer_declined',
           autoDeclined: true,
           autoDeclinedReason: 'Accepted another offer',
+          autoDeclinedFromStatus: previousStatus,
           updatedAt: serverTimestamp(),
         })
-        logActivity('offer_auto_declined', { applicationId: d.id, applicantUid })
+        logActivity('offer_auto_declined', { applicationId: d.id, applicantUid, previousStatus })
       } catch { /* ignore individual failures */ }
     }
   } catch { /* swallow — acceptance already committed */ }

@@ -44,8 +44,8 @@ export default function InternApplications() {
           padding: '14px 18px', marginBottom: 16, fontSize: 14, color: '#166534',
         }}>
           🎉 <strong>You&apos;re placed at {placedAt || 'an internship'}.</strong>{' '}
-          You&apos;ve already accepted an offer; an intern can only accept one. Other open offers
-          have been auto-declined.
+          You&apos;ve already accepted an offer; an intern can only accept one. All your other
+          open applications have been auto-declined.
         </div>
       )}
 
@@ -184,7 +184,7 @@ export default function InternApplications() {
                     </p>
                   ) : (
                     <p style={{ fontSize: 11, color: '#166534', marginBottom: 12, fontStyle: 'italic' }}>
-                      Reminder: you can only accept one offer. Accepting will auto-decline your other open offers.
+                      Reminder: you can only accept one offer. Accepting will auto-decline <strong>all</strong> your other open applications (pending, under review, shortlisted, and offered).
                     </p>
                   )}
                   {acceptError && (

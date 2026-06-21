@@ -477,8 +477,9 @@ function OnboardingForm({ user, logout, navigate, selectRole, refreshRoles, subm
               padding: '12px 14px', marginBottom: 16, fontSize: 12, color: '#1e3a8a', lineHeight: 1.55,
             }}>
               <strong>Heads up:</strong> you can apply to up to {MAX_INTERN_APPLICATIONS} internships,
-              but you can only accept <strong>one</strong> offer. Once you accept, your other open offers will be
-              auto-declined — choose carefully.
+              but you can only accept <strong>one</strong> offer. Once you accept, every other application
+              you have open (pending, under review, shortlisted, or offered) will be auto-declined — choose
+              carefully.
             </div>
             <h3 style={sectionTitle}>What kind of internships interest you?</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
