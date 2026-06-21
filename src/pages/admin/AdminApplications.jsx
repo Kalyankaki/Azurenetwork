@@ -32,6 +32,12 @@ export default function AdminApplications() {
   const [deleting, setDeleting] = useState(false)
 
   const companyOptions = [...new Set(applications.map(a => (a.company || '').trim()).filter(Boolean))].sort()
+  // Pre-narrowed pool used by the status tiles and stale count so they
+  // reflect the selected company. Status / search / sort filters apply
+  // on top of this.
+  const companyScoped = applications.filter(a =>
+    companyFilter === 'all' || (a.company || '').trim() === companyFilter
+  )
 
   const filtered = applications.filter(app => {
     const name = (app.applicantName || '').toLowerCase()
@@ -131,7 +137,7 @@ export default function AdminApplications() {
     }
   }
 
-  const staleCount = applications.filter(a =>
+  const staleCount = companyScoped.filter(a =>
     (a.status === 'pending' || a.status === 'under_review') && daysSince(a.appliedDate) > STALE_DAYS
   ).length
 
@@ -165,7 +171,7 @@ export default function AdminApplications() {
       {/* Stats */}
       <div className="stats-grid" style={{ marginBottom: 16 }}>
         {Object.entries(APPLICATION_STATUS_LABELS).map(([key, label]) => {
-          const count = applications.filter(a => a.status === key).length
+          const count = companyScoped.filter(a => a.status === key).length
           if (count === 0 && !['pending', 'offered', 'offer_accepted'].includes(key)) return null
           return (
             <div key={key} className="stat-card" style={{ cursor: 'pointer', padding: 14 }}
