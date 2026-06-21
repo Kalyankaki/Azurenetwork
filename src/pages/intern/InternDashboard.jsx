@@ -66,7 +66,7 @@ export default function InternDashboard() {
           padding: '14px 18px', marginBottom: 16, fontSize: 14, color: '#166534',
         }}>
           🎉 <strong>You&apos;re placed at {userProfile.placedCompany || userProfile.placedInternshipTitle || 'an internship'}.</strong>{' '}
-          Other open offers were auto-declined.
+          All your other open applications were auto-declined.
         </div>
       )}
 
