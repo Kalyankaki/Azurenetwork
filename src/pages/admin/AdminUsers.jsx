@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useUsers } from '../../hooks/useFirestore'
-import { updateUserRoles, updateUserCoordinator, deleteUser, approveEmployer, isSuperAdmin, getApplicationCount, getInternshipCount } from '../../services/firestore'
+import { updateUserRoles, updateUserCoordinator, deleteUser, approveEmployer, isSuperAdmin, getApplicationCount, getInternshipCount, adminUpdateUserContact } from '../../services/firestore'
 import Toast from '../../components/Toast'
 
 const VALID_CATEGORIES = ['all', 'registered', 'incomplete', 'intern', 'employer', 'admin', 'awaiting_approval']
@@ -41,6 +41,9 @@ export default function AdminUsers() {
   const [profileModal, setProfileModal] = useState(null)
   const [profileStats, setProfileStats] = useState({ apps: null, postings: null })
   const [coordForm, setCoordForm] = useState({ name: '', email: '', phone: '' })
+  const [editContact, setEditContact] = useState(null)
+  const [editContactForm, setEditContactForm] = useState({ email: '', companyName: '', companyWebsite: '', backfillInternships: true })
+  const [editContactSaving, setEditContactSaving] = useState(false)
   const uidParam = searchParams.get('uid')
   const categoryParam = searchParams.get('category')
 
@@ -181,6 +184,44 @@ export default function AdminUsers() {
   const openCoordinatorModal = (user) => {
     setCoordinatorModal(user)
     setCoordForm(user.coordinator || { name: '', email: '', phone: '' })
+  }
+
+  const openEditContact = (u) => {
+    setEditContact(u)
+    setEditContactForm({
+      email: u.email || '',
+      companyName: u.companyName || '',
+      companyWebsite: u.companyWebsite || '',
+      backfillInternships: true,
+    })
+  }
+
+  const saveEditContact = async () => {
+    if (!editContact) return
+    setEditContactSaving(true)
+    try {
+      const { updated, internshipsBackfilled } = await adminUpdateUserContact({
+        uid: editContact.id,
+        email: editContactForm.email.trim(),
+        companyName: editContactForm.companyName.trim(),
+        companyWebsite: editContactForm.companyWebsite.trim(),
+        backfillInternships: editContactForm.backfillInternships,
+        actorEmail: currentUser?.email || '',
+      })
+      if (updated) {
+        const tail = internshipsBackfilled > 0
+          ? ` · ${internshipsBackfilled} posting${internshipsBackfilled === 1 ? '' : 's'} backfilled`
+          : ''
+        setToast(`Contact info updated for ${editContact.displayName || editContact.email}${tail}`)
+      } else {
+        setToast('No changes to save')
+      }
+      setEditContact(null)
+    } catch (err) {
+      setToast(`Error: ${err?.message || 'Could not update contact'}`)
+    } finally {
+      setEditContactSaving(false)
+    }
   }
 
   const saveCoordinator = async () => {
@@ -856,7 +897,57 @@ export default function AdminUsers() {
               )}
             </div>
             <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => openEditContact(profileModal)}>
+                Edit contact info
+              </button>
               <button className="btn btn-outline" onClick={closeProfile}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editContact && (
+        <div className="modal-overlay" onClick={() => !editContactSaving && setEditContact(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <div className="modal-header"><h2>Edit Contact Info</h2></div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--nriva-text-light)', marginBottom: 14 }}>
+                Update the contact info for <strong>{editContact.displayName || editContact.email}</strong>.
+              </p>
+              <div className="form-group">
+                <label>Email</label>
+                <input className="form-control" type="email" value={editContactForm.email}
+                  onChange={(e) => setEditContactForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label>Company Name</label>
+                <input className="form-control" type="text" value={editContactForm.companyName}
+                  onChange={(e) => setEditContactForm(f => ({ ...f, companyName: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label>Company Website</label>
+                <input className="form-control" type="url" value={editContactForm.companyWebsite}
+                  onChange={(e) => setEditContactForm(f => ({ ...f, companyWebsite: e.target.value }))}
+                  placeholder="https://example.com" />
+              </div>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, marginTop: 8 }}>
+                <input type="checkbox" checked={editContactForm.backfillInternships}
+                  onChange={(e) => setEditContactForm(f => ({ ...f, backfillInternships: e.target.checked }))}
+                  style={{ marginTop: 3 }} />
+                <span>
+                  Also update <code style={{ fontSize: 11 }}>contactEmail</code> / <code style={{ fontSize: 11 }}>company</code> on every internship owned by this user.
+                </span>
+              </label>
+              <p style={{ fontSize: 11, color: 'var(--nriva-text-light)', marginTop: 12, lineHeight: 1.5 }}>
+                <strong>Note:</strong> this updates the Firestore user doc only. The Firebase Auth login email
+                stays unchanged — update it in the Firebase Console if needed.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setEditContact(null)} disabled={editContactSaving}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveEditContact} disabled={editContactSaving}>
+                {editContactSaving ? 'Saving…' : 'Save'}
+              </button>
             </div>
           </div>
         </div>

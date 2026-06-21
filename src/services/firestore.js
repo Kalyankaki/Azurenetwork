@@ -243,6 +243,67 @@ export async function approveEmployer(uid) {
   logActivity('employer_approved', { userUid: uid })
 }
 
+// Admin-only: update a user's contact fields (email / companyName /
+// companyWebsite) on their Firestore doc. Does NOT touch Firebase Auth's
+// login email — that requires the Admin SDK or a user-initiated re-auth.
+//
+// When backfillInternships is true and the email actually changed, every
+// internship owned by this user gets its contactEmail (and `company` if
+// the company name changed) rewritten so listings stay in sync.
+export async function adminUpdateUserContact({
+  uid, email, companyName, companyWebsite,
+  backfillInternships = true, actorEmail = '',
+}) {
+  if (!uid) throw new Error('adminUpdateUserContact: uid required')
+
+  // Read the current values so we can compute a diff + decide whether to backfill.
+  const userRef = doc(db, 'users', uid)
+  const snap = await getDoc(userRef)
+  if (!snap.exists()) throw new Error('User not found')
+  const current = snap.data() || {}
+
+  const patch = { updatedAt: serverTimestamp() }
+  const diff = {}
+  if (email !== undefined && email !== current.email) { patch.email = email; diff.email = { from: current.email || '', to: email } }
+  if (companyName !== undefined && companyName !== current.companyName) {
+    patch.companyName = companyName
+    diff.companyName = { from: current.companyName || '', to: companyName }
+  }
+  if (companyWebsite !== undefined && companyWebsite !== current.companyWebsite) {
+    patch.companyWebsite = companyWebsite
+    diff.companyWebsite = { from: current.companyWebsite || '', to: companyWebsite }
+  }
+
+  if (Object.keys(diff).length === 0) {
+    return { updated: false, internshipsBackfilled: 0 }
+  }
+
+  await updateDoc(userRef, patch)
+
+  let internshipsBackfilled = 0
+  if (backfillInternships && (diff.email || diff.companyName)) {
+    try {
+      const intSnap = await getDocs(query(collection(db, 'internships'), where('employerUid', '==', uid)))
+      const docs = intSnap.docs
+      for (let i = 0; i < docs.length; i += 450) {
+        const slice = docs.slice(i, i + 450)
+        const batch = writeBatch(db)
+        for (const d of slice) {
+          const update = { updatedAt: serverTimestamp() }
+          if (diff.email) update.contactEmail = email
+          if (diff.companyName) update.company = companyName
+          batch.update(d.ref, update)
+        }
+        await batch.commit()
+        internshipsBackfilled += slice.length
+      }
+    } catch { /* best-effort */ }
+  }
+
+  logActivity('admin_user_contact_updated', { userUid: uid, diff, internshipsBackfilled, actorEmail })
+  return { updated: true, internshipsBackfilled }
+}
+
 export async function deleteUser(uid) {
   await deleteDoc(doc(db, 'users', uid))
   logActivity('user_deleted', { userUid: uid })
