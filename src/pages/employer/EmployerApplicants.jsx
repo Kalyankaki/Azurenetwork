@@ -30,7 +30,11 @@ const statusBadgeClass = {
 
 export default function EmployerApplicants() {
   const { user, employerApproved } = useAuth()
-  const { data: applications } = useApplications()
+  // Filter the listener to this employer's apps so the query matches the
+  // Firestore read rule (resource.data.employerUid == request.auth.uid).
+  // Without this filter Firestore rejects the whole subscription for any
+  // non-admin employer.
+  const { data: applications } = useApplications({ employerUid: user?.uid })
   const { data: internships } = useInternships({ employerUid: user?.uid })
   const [selected, setSelected] = useState(null)
   const [toast, setToast] = useState(null)

@@ -12,7 +12,9 @@ export default function EmployerDashboard() {
   const { user, employerApproved } = useAuth()
   const navigate = useNavigate()
   const { data: myPostings } = useInternships({ employerUid: user?.uid })
-  const { data: allApps } = useApplications()
+  // Scope to this employer's apps so the listener matches the Firestore
+  // read rule (resource.data.employerUid == request.auth.uid).
+  const { data: allApps } = useApplications({ employerUid: user?.uid })
   const { data: allUsers } = useUsers()
   const [selectedPostingId, setSelectedPostingId] = useState('')
   const [candidateTab, setCandidateTab] = useState('top')
