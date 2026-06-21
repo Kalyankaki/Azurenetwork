@@ -23,12 +23,15 @@ export default function AdminApplications() {
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [companyFilter, setCompanyFilter] = useState('all')
   const [sortField, setSortField] = useState('appliedDate')
   const [sortDir, setSortDir] = useState('desc')
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [deleting, setDeleting] = useState(false)
+
+  const companyOptions = [...new Set(applications.map(a => (a.company || '').trim()).filter(Boolean))].sort()
 
   const filtered = applications.filter(app => {
     const name = (app.applicantName || '').toLowerCase()
@@ -41,7 +44,8 @@ export default function AdminApplications() {
     const matchStale = statusFilter === 'stale'
       ? (app.status === 'pending' || app.status === 'under_review') && daysSince(app.appliedDate) > STALE_DAYS
       : true
-    return matchSearch && matchStatus && matchStale
+    const matchCompany = companyFilter === 'all' || (app.company || '').trim() === companyFilter
+    return matchSearch && matchStatus && matchStale && matchCompany
   })
 
   const sortValue = (app) => {
@@ -150,6 +154,12 @@ export default function AdminApplications() {
             <option key={key} value={key}>{label}</option>
           ))}
         </select>
+        {companyOptions.length > 0 && (
+          <select className="filter-select" value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)}>
+            <option value="all">All Companies</option>
+            {companyOptions.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
       </div>
 
       {/* Stats */}
