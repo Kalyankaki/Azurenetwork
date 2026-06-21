@@ -76,7 +76,7 @@ export function useApplications(filters = {}) {
   return useFirestoreSubscription(
     subscribeApplications,
     filters,
-    [filters.applicantUid, filters.internshipId]
+    [filters.applicantUid, filters.employerUid, filters.internshipId]
   )
 }
 

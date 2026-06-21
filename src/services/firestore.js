@@ -390,6 +390,40 @@ export async function reassignInternshipEmployer({
     newCompany: newCompany || '',
     actorEmail,
   })
+
+  // Backfill historical applications so the new rep can read them under
+  // the existing 'resource.data.employerUid == request.auth.uid' rule.
+  // Chunk under the 500-write batch cap. Best-effort: a failure here
+  // doesn't undo the internship reassign.
+  try {
+    const appsSnap = await getDocs(query(
+      collection(db, 'applications'),
+      where('internshipId', '==', internshipId),
+    ))
+    let updated = 0
+    for (let i = 0; i < appsSnap.docs.length; i += 450) {
+      const slice = appsSnap.docs.slice(i, i + 450)
+      const batch = writeBatch(db)
+      for (const d of slice) {
+        batch.update(d.ref, {
+          employerUid: newEmployerUid,
+          employerName: newEmployerName || '',
+          company: newCompany || '',
+          updatedAt: serverTimestamp(),
+        })
+      }
+      await batch.commit()
+      updated += slice.length
+    }
+    if (updated > 0) {
+      logActivity('applications_reassigned', {
+        internshipId,
+        newEmployerUid,
+        applicationsUpdated: updated,
+        actorEmail,
+      })
+    }
+  } catch { /* swallow — the internship reassign already committed */ }
 }
 
 export function subscribeInternships(onData, filters = {}, onError) {
@@ -551,6 +585,7 @@ export function subscribeApplications(onData, filters = {}, onError) {
   let q = collection(db, 'applications')
   const constraints = []
   if (filters.applicantUid) constraints.push(where('applicantUid', '==', filters.applicantUid))
+  if (filters.employerUid) constraints.push(where('employerUid', '==', filters.employerUid))
   if (filters.internshipId) constraints.push(where('internshipId', '==', filters.internshipId))
   if (constraints.length > 0) q = query(q, ...constraints)
   return onSnapshot(
