@@ -9,13 +9,18 @@ import { useAIConsent } from '../../hooks/useAIConsent'
 import AIConsentModal from '../../components/AIConsentModal'
 
 export default function EmployerDashboard() {
-  const { user, employerApproved } = useAuth()
+  const { user, employerApproved, availableRoles } = useAuth()
   const navigate = useNavigate()
+  const isAdminUser = (availableRoles || []).includes('admin')
   const { data: myPostings } = useInternships({ employerUid: user?.uid })
   // Scope to this employer's apps so the listener matches the Firestore
   // read rule (resource.data.employerUid == request.auth.uid).
   const { data: allApps } = useApplications({ employerUid: user?.uid })
-  const { data: allUsers } = useUsers()
+  // Subscribe to all users only when an admin is on this page. The users
+  // collection's read rule is own-doc + admin; a non-admin listener would
+  // be rejected wholesale and the candidate-matching tab would error out.
+  // Non-admins fall back to a candidate list derived from applications.
+  const { data: allUsers } = useUsers({ enabled: isAdminUser })
   const [selectedPostingId, setSelectedPostingId] = useState('')
   const [candidateTab, setCandidateTab] = useState('top')
   const [aiQuery, setAiQuery] = useState('')
@@ -47,42 +52,48 @@ export default function EmployerDashboard() {
 
   const topCandidates = ranked.slice(0, 5)
 
-  // All interns (from users collection) with match scoring
+  // Candidate pool for the All-candidates tab.
+  //   Admin: every registered intern, scored against the posting (rich
+  //   discovery — includes interns who haven't applied yet).
+  //   Non-admin employer: derived from applications they own. Same shape
+  //   so the table / filters / AI search render unchanged.
   const allInterns = useMemo(() => {
     if (!activePosting) return []
-    const appliedUids = new Set(appsForPosting.map(a => a.applicantUid))
-    return allUsers
-      .filter(u => (u.roles || []).includes('intern'))
-      .map(u => {
-        const application = appsForPosting.find(a => a.applicantUid === u.uid)
-        // Build a profile-like object for scoring
-        const profile = {
-          applicantName: u.displayName || u.email || '—',
-          email: u.email,
-          school: u.school || '',
-          gradeLevel: u.gradeLevel || '',
-          linkedIn: u.linkedIn || '',
-          portfolio: u.portfolio || '',
-          resumeUrl: u.resumeUrl || null,
-          profileSkills: u.skills || [],
-          profileInterests: u.interests || [],
-          nrivaMembership: u.nrivaMembership || '',
-          availableFrom: application?.availableFrom || '',
-          availableTo: application?.availableTo || '',
-          hoursPerDay: application?.hoursPerDay || u.availability || '',
-          relevantSkills: application?.relevantSkills || '',
-          priorExperience: application?.priorExperience || u.experienceSummary || '',
-          whyInterested: application?.whyInterested || '',
-          status: application?.status || null,
-          applicationId: application?.id || null,
-          applied: !!application,
-          uid: u.uid,
-        }
-        const match = scoreCandidate(profile, activePosting)
-        return { ...profile, match }
-      })
-      .sort((a, b) => b.match.overall - a.match.overall)
-  }, [allUsers, activePosting, appsForPosting])
+    if (allUsers.length > 0) {
+      return allUsers
+        .filter(u => (u.roles || []).includes('intern'))
+        .map(u => {
+          const application = appsForPosting.find(a => a.applicantUid === u.uid)
+          const profile = {
+            applicantName: u.displayName || u.email || '—',
+            email: u.email,
+            school: u.school || '',
+            gradeLevel: u.gradeLevel || '',
+            linkedIn: u.linkedIn || '',
+            portfolio: u.portfolio || '',
+            resumeUrl: u.resumeUrl || null,
+            profileSkills: u.skills || [],
+            profileInterests: u.interests || [],
+            nrivaMembership: u.nrivaMembership || '',
+            availableFrom: application?.availableFrom || '',
+            availableTo: application?.availableTo || '',
+            hoursPerDay: application?.hoursPerDay || u.availability || '',
+            relevantSkills: application?.relevantSkills || '',
+            priorExperience: application?.priorExperience || u.experienceSummary || '',
+            whyInterested: application?.whyInterested || '',
+            status: application?.status || null,
+            applicationId: application?.id || null,
+            applied: !!application,
+            uid: u.uid,
+          }
+          const match = scoreCandidate(profile, activePosting)
+          return { ...profile, match }
+        })
+        .sort((a, b) => b.match.overall - a.match.overall)
+    }
+    // Non-admin fallback: just the ranked applicants for this posting.
+    return ranked.map(c => ({ ...c, applied: true }))
+  }, [allUsers, activePosting, appsForPosting, ranked])
 
   // Filtered from all interns
   const allFiltered = useMemo(() => {
@@ -246,7 +257,7 @@ export default function EmployerDashboard() {
             🏆 Top 5
           </button>
           <button className={`tab ${candidateTab === 'all' ? 'active' : ''}`} onClick={() => setCandidateTab('all')}>
-            📋 All Interns ({allInterns.length})
+            📋 {isAdminUser ? 'All Interns' : 'All Applicants'} ({allInterns.length})
           </button>
         </div>
 
@@ -298,6 +309,12 @@ export default function EmployerDashboard() {
         ) : (
           /* All Candidates tab with filters + AI search */
           <div>
+            {!isAdminUser && (
+              <p style={{ fontSize: 12, color: 'var(--nriva-text-light)', marginBottom: 10, lineHeight: 1.5 }}>
+                Showing everyone who applied to this posting, scored and filterable.
+                Admins can also see registered interns who haven&apos;t applied yet.
+              </p>
+            )}
             {/* Filters row */}
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
               <input placeholder="Location / School" value={filters.location}

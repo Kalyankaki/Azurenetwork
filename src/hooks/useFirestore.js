@@ -9,13 +9,19 @@ import {
 
 const TIMEOUT_MS = 10000
 
-function useFirestoreSubscription(subscribeFn, filters, deps) {
+function useFirestoreSubscription(subscribeFn, filters, deps, enabled = true) {
   const [data, setData] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(enabled)
   const [error, setError] = useState(null)
   const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
+    if (!enabled) {
+      setData([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     setLoading(true)
     setError(null)
     let unsubscribe = null
@@ -57,7 +63,7 @@ function useFirestoreSubscription(subscribeFn, filters, deps) {
       clearTimeout(timer)
       if (unsubscribe) unsubscribe()
     }
-  }, [...deps, retryCount])
+  }, [...deps, retryCount, enabled])
 
   const retry = () => setRetryCount(c => c + 1)
 
@@ -80,8 +86,8 @@ export function useApplications(filters = {}) {
   )
 }
 
-export function useUsers() {
-  return useFirestoreSubscription(subscribeUsers, {}, [])
+export function useUsers({ enabled = true } = {}) {
+  return useFirestoreSubscription(subscribeUsers, {}, [], enabled)
 }
 
 export function useMessages(filters = {}) {
