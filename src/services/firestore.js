@@ -531,7 +531,11 @@ export async function createApplication(data) {
 }
 
 export async function updateApplicationStatus(id, status, actorEmail = '') {
-  await updateDoc(doc(db, 'applications', id), { status, updatedAt: serverTimestamp() })
+  const patch = { status, updatedAt: serverTimestamp() }
+  // Stamp the moment the offer was extended so dashboards can age it
+  // independently of any subsequent updatedAt bumps.
+  if (status === 'offered') patch.offeredAt = serverTimestamp()
+  await updateDoc(doc(db, 'applications', id), patch)
   logActivity('application_status_changed', { applicationId: id, newStatus: status, actorEmail })
 }
 
