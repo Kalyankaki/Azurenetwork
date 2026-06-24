@@ -4,7 +4,10 @@ import { useApplications, useInternships } from '../../hooks/useFirestore'
 import { updateApplicationStatus } from '../../services/firestore'
 import { rankCandidates } from '../../utils/matching'
 import { formatDate } from '../../utils/date'
+import { downloadResumesZip } from '../../utils/zipResumes'
 import Toast from '../../components/Toast'
+
+const MAX_BULK_RESUME_DOWNLOAD = 50
 
 const statusLabels = {
   pending: 'Pending',
@@ -41,6 +44,8 @@ export default function EmployerApplicants() {
   const [selectedInternshipId, setSelectedInternshipId] = useState('')
   const [activeTab, setActiveTab] = useState('top') // 'top' | 'all'
   const [filters, setFilters] = useState({ minMatch: 50, minAvail: 0, search: '' })
+  const [selectedResumeIds, setSelectedResumeIds] = useState(() => new Set())
+  const [downloading, setDownloading] = useState(false)
 
   // Auto-pick first internship if none selected
   const activeInternshipId = selectedInternshipId || internships[0]?.id || ''
@@ -74,6 +79,52 @@ export default function EmployerApplicants() {
       if (selected?.id === id) setSelected({ ...selected, status: newStatus })
     } catch (err) {
       setToast('Error: ' + err.message)
+    }
+  }
+
+  const toggleResumeSelect = (id) => {
+    setSelectedResumeIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+  const selectAllResumesInList = (list) => {
+    const withResume = list.filter(c => c.resumeUrl).map(c => c.id)
+    setSelectedResumeIds(prev => {
+      const allSelected = withResume.every(id => prev.has(id)) && withResume.length > 0
+      if (allSelected) {
+        const next = new Set(prev)
+        for (const id of withResume) next.delete(id)
+        return next
+      }
+      return new Set([...prev, ...withResume])
+    })
+  }
+  const clearResumeSelection = () => setSelectedResumeIds(new Set())
+
+  const downloadSelectedResumes = async () => {
+    if (selectedResumeIds.size === 0 || downloading) return
+    if (selectedResumeIds.size > MAX_BULK_RESUME_DOWNLOAD) {
+      setToast(`Pick at most ${MAX_BULK_RESUME_DOWNLOAD} at a time`)
+      return
+    }
+    const picked = ranked.filter(c => selectedResumeIds.has(c.id))
+    setDownloading(true)
+    try {
+      const safeTitle = (activeInternship?.title || 'posting').replace(/[^\w-]+/g, '-').slice(0, 40)
+      const safeCompany = (activeInternship?.company || 'company').replace(/[^\w-]+/g, '-').slice(0, 30)
+      const today = new Date().toISOString().slice(0, 10)
+      const zipName = `${safeCompany}-${safeTitle}-resumes-${today}.zip`
+      const { downloaded, skipped } = await downloadResumesZip(picked, zipName)
+      if (downloaded === 0) setToast('No resumes could be downloaded')
+      else if (skipped > 0) setToast(`Downloaded ${downloaded} resume${downloaded === 1 ? '' : 's'} (${skipped} skipped)`)
+      else setToast(`Downloaded ${downloaded} resume${downloaded === 1 ? '' : 's'}`)
+      clearResumeSelection()
+    } catch (err) {
+      setToast('Download failed: ' + (err?.message || 'unknown error'))
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -152,7 +203,13 @@ export default function EmployerApplicants() {
       ) : activeTab === 'top' ? (
         <TopCandidates candidates={top5} onSelect={setSelected} onUpdateStatus={updateStatus} />
       ) : (
-        <AllMatches candidates={allMatches} filters={filters} setFilters={setFilters} onSelect={setSelected} />
+        <AllMatches candidates={allMatches} filters={filters} setFilters={setFilters} onSelect={setSelected}
+          selectedResumeIds={selectedResumeIds}
+          onToggleResume={toggleResumeSelect}
+          onToggleAllResumes={selectAllResumesInList}
+          onClearResumes={clearResumeSelection}
+          onDownloadResumes={downloadSelectedResumes}
+          downloading={downloading} />
       )}
 
       {selected && (
@@ -302,7 +359,14 @@ function TopCandidates({ candidates, onSelect, onUpdateStatus }) {
   )
 }
 
-function AllMatches({ candidates, filters, setFilters, onSelect }) {
+function AllMatches({ candidates, filters, setFilters, onSelect,
+  selectedResumeIds, onToggleResume, onToggleAllResumes,
+  onClearResumes, onDownloadResumes, downloading,
+}) {
+  const candidatesWithResume = candidates.filter(c => c.resumeUrl)
+  const allSelectedInList = candidatesWithResume.length > 0 &&
+    candidatesWithResume.every(c => selectedResumeIds.has(c.id))
+  const someSelectedInList = candidatesWithResume.some(c => selectedResumeIds.has(c.id))
   return (
     <>
       <div className="filter-bar">
@@ -322,11 +386,38 @@ function AllMatches({ candidates, filters, setFilters, onSelect }) {
         </select>
       </div>
 
+      {selectedResumeIds.size > 0 && (
+        <div style={{
+          background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10,
+          padding: '10px 14px', marginBottom: 12, display: 'flex',
+          alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#4338ca' }}>
+            {selectedResumeIds.size} resume{selectedResumeIds.size === 1 ? '' : 's'} selected
+          </span>
+          <button className="btn btn-sm btn-primary"
+            onClick={onDownloadResumes} disabled={downloading}>
+            {downloading ? 'Zipping…' : `Download ${selectedResumeIds.size} resume${selectedResumeIds.size === 1 ? '' : 's'}`}
+          </button>
+          <button className="btn btn-sm btn-outline" onClick={onClearResumes} disabled={downloading}>
+            Clear
+          </button>
+        </div>
+      )}
+
       <div className="card">
         <div className="table-wrapper">
           <table>
             <thead>
               <tr>
+                <th style={{ width: 32 }}>
+                  <input type="checkbox"
+                    checked={allSelectedInList}
+                    ref={el => { if (el) el.indeterminate = !allSelectedInList && someSelectedInList }}
+                    disabled={candidatesWithResume.length === 0}
+                    onChange={() => onToggleAllResumes(candidates)}
+                    title="Select all candidates with a resume in this view" />
+                </th>
                 <th>Candidate</th>
                 <th>Match</th>
                 <th>Availability</th>
@@ -338,12 +429,19 @@ function AllMatches({ candidates, filters, setFilters, onSelect }) {
             </thead>
             <tbody>
               {candidates.length === 0 && (
-                <tr><td colSpan="7" style={{ textAlign: 'center', padding: 40, color: 'var(--nriva-text-light)' }}>
+                <tr><td colSpan="8" style={{ textAlign: 'center', padding: 40, color: 'var(--nriva-text-light)' }}>
                   No candidates meet the filter criteria.
                 </td></tr>
               )}
               {candidates.map(c => (
                 <tr key={c.id}>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox"
+                      checked={selectedResumeIds.has(c.id)}
+                      disabled={!c.resumeUrl}
+                      onChange={() => onToggleResume(c.id)}
+                      title={c.resumeUrl ? 'Include in resume bulk download' : 'No resume on file'} />
+                  </td>
                   <td>
                     <div style={{ fontWeight: 500, fontSize: 14 }}>{c.applicantName}</div>
                     <div style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>
