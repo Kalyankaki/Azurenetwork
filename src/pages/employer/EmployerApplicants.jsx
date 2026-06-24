@@ -32,13 +32,20 @@ const statusBadgeClass = {
 }
 
 export default function EmployerApplicants() {
-  const { user, employerApproved } = useAuth()
-  // Filter the listener to this employer's apps so the query matches the
-  // Firestore read rule (resource.data.employerUid == request.auth.uid).
+  const { user, employerApproved, availableRoles } = useAuth()
+  const isAdminUser = (availableRoles || []).includes('admin')
+  // Filter the listeners to this employer's apps / postings so the query
+  // matches the Firestore read rule (employerUid == request.auth.uid).
   // Without this filter Firestore rejects the whole subscription for any
   // non-admin employer.
-  const { data: applications } = useApplications({ employerUid: user?.uid })
-  const { data: internships } = useInternships({ employerUid: user?.uid })
+  //
+  // Admins fall through to the unfiltered query — isAdmin() in the rule
+  // permits it, and super-admins don't own postings so the filter would
+  // otherwise return nothing.
+  const appFilter = isAdminUser ? {} : { employerUid: user?.uid }
+  const internshipFilter = isAdminUser ? {} : { employerUid: user?.uid }
+  const { data: applications } = useApplications(appFilter)
+  const { data: internships } = useInternships(internshipFilter)
   const [selected, setSelected] = useState(null)
   const [toast, setToast] = useState(null)
   const [selectedInternshipId, setSelectedInternshipId] = useState('')
