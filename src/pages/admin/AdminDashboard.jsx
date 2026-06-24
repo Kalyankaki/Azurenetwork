@@ -74,6 +74,15 @@ export default function AdminDashboard() {
   // Offers pending response
   const pendingOffers = applications.filter(a => a.status === 'offered')
 
+  // Stale offers: status === 'offered' AND age beyond STALE_DAYS. Prefer
+  // offeredAt (stamped when the status flipped) and fall back to updatedAt
+  // for legacy applications that didn't record offeredAt.
+  const staleOfferThreshold = STALE_DAYS
+  const staleOffers = pendingOffers
+    .map(a => ({ ...a, _waiting: daysSince(a.offeredAt || a.updatedAt || a.appliedDate) }))
+    .filter(a => a._waiting > staleOfferThreshold)
+    .sort((a, b) => b._waiting - a._waiting)
+
   // Employer performance — pivoted to company.
   // Group by company name (trimmed). When a company is missing, fall back to
   // the individual employerName. Track distinct reps so we can show how many
@@ -176,6 +185,67 @@ export default function AdminDashboard() {
             subtitle={`${openMessages} open · ${resolvedMessages} resolved`}
             badge={openMessages > 0 ? `${openMessages} need attention` : null} />
         </Link>
+      )}
+
+      {/* Stale offers — interns sitting on offers > STALE_DAYS days */}
+      {staleOffers.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#b45309' }}>
+              ⏳ Interns sitting on an offer &gt; {staleOfferThreshold} days ({staleOffers.length})
+            </h3>
+            <Link to="/admin/applications?status=offered" style={{ color: 'var(--nriva-primary)', fontSize: 13, fontWeight: 500 }}>
+              View all →
+            </Link>
+          </div>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Applicant</th>
+                  <th>Posting</th>
+                  <th>Offered</th>
+                  <th style={{ textAlign: 'right' }}>Waiting</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staleOffers.slice(0, 8).map(a => (
+                  <tr key={a.id}>
+                    <td style={{ fontSize: 13 }}>
+                      {a.applicantUid ? (
+                        <Link to={`/admin/users?uid=${a.applicantUid}`} className="user-name-link">
+                          {a.applicantName || a.email || '—'}
+                        </Link>
+                      ) : (a.applicantName || a.email || '—')}
+                    </td>
+                    <td style={{ fontSize: 13 }}>
+                      {a.internshipId ? (
+                        <Link to={`/admin/internships?id=${a.internshipId}`} style={{ color: 'var(--nriva-primary)', textDecoration: 'none' }}>
+                          {a.internshipTitle || '—'}
+                        </Link>
+                      ) : (a.internshipTitle || '—')}
+                      {a.company && (
+                        <div style={{ fontSize: 11, color: 'var(--nriva-text-light)' }}>{a.company}</div>
+                      )}
+                    </td>
+                    <td style={{ fontSize: 12, color: 'var(--nriva-text-light)' }}>
+                      {(() => {
+                        const ts = a.offeredAt || a.updatedAt
+                        if (!ts) return '—'
+                        const d = ts.toDate ? ts.toDate() : ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts)
+                        return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                      })()}
+                    </td>
+                    <td style={{ textAlign: 'right', fontSize: 13, fontWeight: 700,
+                      color: a._waiting > 14 ? '#dc2626' : '#b45309' }}>
+                      {a._waiting}d
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* Employers awaiting approval — inline action card */}
