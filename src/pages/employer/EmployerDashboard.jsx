@@ -7,6 +7,10 @@ import { formatDate } from '../../utils/date'
 import { statusLabel, statusBadgeClass } from '../../utils/status'
 import { useAIConsent } from '../../hooks/useAIConsent'
 import AIConsentModal from '../../components/AIConsentModal'
+import Toast from '../../components/Toast'
+import { downloadResumesZip } from '../../utils/zipResumes'
+
+const MAX_BULK_RESUME_DOWNLOAD = 50
 
 export default function EmployerDashboard() {
   const { user, employerApproved, availableRoles } = useAuth()
@@ -27,6 +31,9 @@ export default function EmployerDashboard() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResults, setAiResults] = useState(null)
   const [filters, setFilters] = useState({ location: '', availability: '', education: '', gpa: '' })
+  const [selectedResumeIds, setSelectedResumeIds] = useState(() => new Set())
+  const [downloading, setDownloading] = useState(false)
+  const [toast, setToast] = useState(null)
   const aiConsent = useAIConsent()
 
   const activePosting = selectedPostingId
@@ -51,6 +58,61 @@ export default function EmployerDashboard() {
   }, [appsForPosting, activePosting])
 
   const topCandidates = ranked.slice(0, 5)
+
+  // ---- Bulk resume selection / download ----
+  const toggleResumeSelect = (id) => {
+    setSelectedResumeIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+  const selectAllResumesInList = (list) => {
+    const withResume = list.filter(c => c.resumeUrl).map(c => c.id || c.applicationId).filter(Boolean)
+    setSelectedResumeIds(prev => {
+      const allSelected = withResume.length > 0 && withResume.every(id => prev.has(id))
+      if (allSelected) {
+        const next = new Set(prev)
+        for (const id of withResume) next.delete(id)
+        return next
+      }
+      return new Set([...prev, ...withResume])
+    })
+  }
+  const clearResumeSelection = () => setSelectedResumeIds(new Set())
+  const downloadSelectedResumes = async () => {
+    if (selectedResumeIds.size === 0 || downloading) return
+    if (selectedResumeIds.size > MAX_BULK_RESUME_DOWNLOAD) {
+      setToast(`Pick at most ${MAX_BULK_RESUME_DOWNLOAD} at a time`)
+      return
+    }
+    const idMatches = (c) => selectedResumeIds.has(c.id) || selectedResumeIds.has(c.applicationId)
+    // Build pool from both the ranked applicants and the all-interns list so
+    // we cover selections made on either tab.
+    const seen = new Set()
+    const pool = [...ranked, ...allInterns].filter(c => {
+      const id = c.id || c.applicationId
+      if (!id || seen.has(id)) return false
+      seen.add(id)
+      return idMatches(c)
+    })
+    setDownloading(true)
+    try {
+      const safeTitle = (activePosting?.title || 'posting').replace(/[^\w-]+/g, '-').slice(0, 40)
+      const safeCompany = (activePosting?.company || 'company').replace(/[^\w-]+/g, '-').slice(0, 30)
+      const today = new Date().toISOString().slice(0, 10)
+      const zipName = `${safeCompany}-${safeTitle}-resumes-${today}.zip`
+      const { downloaded, skipped } = await downloadResumesZip(pool, zipName)
+      if (downloaded === 0) setToast('No resumes could be downloaded')
+      else if (skipped > 0) setToast(`Downloaded ${downloaded} resume${downloaded === 1 ? '' : 's'} (${skipped} skipped)`)
+      else setToast(`Downloaded ${downloaded} resume${downloaded === 1 ? '' : 's'}`)
+      clearResumeSelection()
+    } catch (err) {
+      setToast('Download failed: ' + (err?.message || 'unknown error'))
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   // Candidate pool for the All-candidates tab.
   //   Admin: every registered intern, scored against the posting (rich
@@ -239,6 +301,24 @@ export default function EmployerDashboard() {
         </div>
       ) : (
       <div className="card">
+        {selectedResumeIds.size > 0 && (
+          <div style={{
+            background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10,
+            padding: '10px 14px', marginBottom: 12, display: 'flex',
+            alignItems: 'center', gap: 12, flexWrap: 'wrap',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#4338ca' }}>
+              {selectedResumeIds.size} resume{selectedResumeIds.size === 1 ? '' : 's'} selected
+            </span>
+            <button className="btn btn-sm btn-primary"
+              onClick={downloadSelectedResumes} disabled={downloading}>
+              {downloading ? 'Zipping…' : `Download ${selectedResumeIds.size} resume${selectedResumeIds.size === 1 ? '' : 's'}`}
+            </button>
+            <button className="btn btn-sm btn-outline" onClick={clearResumeSelection} disabled={downloading}>
+              Clear
+            </button>
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600 }}>
             Candidates for: {activePosting?.title || 'Select a posting'}
@@ -274,6 +354,13 @@ export default function EmployerDashboard() {
                     display: 'flex', alignItems: 'center', gap: 14,
                     padding: '14px 16px', border: '1px solid var(--nriva-border)', borderRadius: 10,
                   }}>
+                    <input type="checkbox"
+                      checked={selectedResumeIds.has(c.id)}
+                      disabled={!c.resumeUrl}
+                      onChange={(e) => toggleResumeSelect(c.id)}
+                      onClick={(e) => { e.stopPropagation() }}
+                      title={c.resumeUrl ? 'Include in resume bulk download' : 'No resume on file'}
+                      style={{ flexShrink: 0 }} />
                     <div style={{
                       width: 36, height: 36, borderRadius: '50%',
                       background: idx === 0 ? '#fef3c7' : '#e8eaf6',
@@ -383,6 +470,19 @@ export default function EmployerDashboard() {
                 <table>
                   <thead>
                     <tr>
+                      <th style={{ width: 32 }}>
+                        {(() => {
+                          const withResume = allFiltered.filter(c => c.resumeUrl)
+                          const allSel = withResume.length > 0 && withResume.every(c => selectedResumeIds.has(c.applicationId || c.uid))
+                          return (
+                            <input type="checkbox"
+                              checked={allSel}
+                              disabled={withResume.length === 0}
+                              onChange={() => selectAllResumesInList(allFiltered.map(c => ({ ...c, id: c.applicationId || c.uid })))}
+                              title="Select all candidates with a resume in this view" />
+                          )
+                        })()}
+                      </th>
                       <th>Candidate</th>
                       <th>Match</th>
                       <th>School</th>
@@ -392,8 +492,17 @@ export default function EmployerDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {allFiltered.map(c => (
-                      <tr key={c.id}>
+                    {allFiltered.map(c => {
+                      const rowId = c.applicationId || c.uid
+                      return (
+                      <tr key={c.id || rowId}>
+                        <td>
+                          <input type="checkbox"
+                            checked={!!rowId && selectedResumeIds.has(rowId)}
+                            disabled={!c.resumeUrl || !rowId}
+                            onChange={() => rowId && toggleResumeSelect(rowId)}
+                            title={c.resumeUrl ? 'Include in resume bulk download' : 'No resume on file'} />
+                        </td>
                         <td>
                           <div style={{ fontWeight: 500, fontSize: 14 }}>{c.applicantName}</div>
                           <div style={{ fontSize: 11, color: 'var(--nriva-text-light)', display: 'flex', gap: 6 }}>
@@ -424,7 +533,7 @@ export default function EmployerDashboard() {
                           )}
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>
@@ -435,6 +544,7 @@ export default function EmployerDashboard() {
       )}
 
       <AIConsentModal open={aiConsent.promptOpen} onAccept={aiConsent.accept} onDecline={aiConsent.decline} />
+      {toast && <Toast message={toast} type="success" onClose={() => setToast(null)} />}
     </div>
   )
 }

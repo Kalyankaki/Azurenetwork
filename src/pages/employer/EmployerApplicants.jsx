@@ -195,21 +195,40 @@ export default function EmployerApplicants() {
         </button>
       </div>
 
+      {appsForInternship.length > 0 && selectedResumeIds.size > 0 && (
+        <div style={{
+          background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10,
+          padding: '10px 14px', marginBottom: 12, display: 'flex',
+          alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#4338ca' }}>
+            {selectedResumeIds.size} resume{selectedResumeIds.size === 1 ? '' : 's'} selected
+          </span>
+          <button className="btn btn-sm btn-primary"
+            onClick={downloadSelectedResumes} disabled={downloading}>
+            {downloading ? 'Zipping…' : `Download ${selectedResumeIds.size} resume${selectedResumeIds.size === 1 ? '' : 's'}`}
+          </button>
+          <button className="btn btn-sm btn-outline" onClick={clearResumeSelection} disabled={downloading}>
+            Clear
+          </button>
+        </div>
+      )}
+
       {appsForInternship.length === 0 ? (
         <div className="empty-state">
           <h3>No applications yet</h3>
           <p>Applications for this internship will appear here.</p>
         </div>
       ) : activeTab === 'top' ? (
-        <TopCandidates candidates={top5} onSelect={setSelected} onUpdateStatus={updateStatus} />
+        <TopCandidates candidates={top5} onSelect={setSelected} onUpdateStatus={updateStatus}
+          selectedResumeIds={selectedResumeIds}
+          onToggleResume={toggleResumeSelect}
+          onToggleAllResumes={selectAllResumesInList} />
       ) : (
         <AllMatches candidates={allMatches} filters={filters} setFilters={setFilters} onSelect={setSelected}
           selectedResumeIds={selectedResumeIds}
           onToggleResume={toggleResumeSelect}
-          onToggleAllResumes={selectAllResumesInList}
-          onClearResumes={clearResumeSelection}
-          onDownloadResumes={downloadSelectedResumes}
-          downloading={downloading} />
+          onToggleAllResumes={selectAllResumesInList} />
       )}
 
       {selected && (
@@ -237,16 +256,35 @@ function MatchBar({ score, label }) {
   )
 }
 
-function TopCandidates({ candidates, onSelect, onUpdateStatus }) {
+function TopCandidates({ candidates, onSelect, onUpdateStatus,
+  selectedResumeIds, onToggleResume, onToggleAllResumes,
+}) {
   if (candidates.length === 0) {
     return <div className="empty-state"><p>No candidates to rank yet.</p></div>
   }
+  const candidatesWithResume = candidates.filter(c => c.resumeUrl)
+  const allSelectedInList = candidatesWithResume.length > 0 &&
+    candidatesWithResume.every(c => selectedResumeIds.has(c.id))
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {candidatesWithResume.length > 0 && (
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--nriva-text-light)' }}>
+          <input type="checkbox"
+            checked={allSelectedInList}
+            onChange={() => onToggleAllResumes(candidates)} />
+          Select all with resume ({candidatesWithResume.length})
+        </label>
+      )}
       {candidates.map((c, idx) => (
         <div key={c.id} className="card" style={{ padding: '20px 24px' }}>
           {/* Header: rank + name + match */}
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
+            <input type="checkbox"
+              checked={selectedResumeIds.has(c.id)}
+              disabled={!c.resumeUrl}
+              onChange={() => onToggleResume(c.id)}
+              title={c.resumeUrl ? 'Include in resume bulk download' : 'No resume on file'}
+              style={{ marginTop: 14, flexShrink: 0 }} />
             <div style={{
               width: 48, height: 48, borderRadius: '50%',
               background: idx === 0 ? '#fef3c7' : idx < 3 ? '#e8eaf6' : '#f1f5f9',
@@ -361,7 +399,6 @@ function TopCandidates({ candidates, onSelect, onUpdateStatus }) {
 
 function AllMatches({ candidates, filters, setFilters, onSelect,
   selectedResumeIds, onToggleResume, onToggleAllResumes,
-  onClearResumes, onDownloadResumes, downloading,
 }) {
   const candidatesWithResume = candidates.filter(c => c.resumeUrl)
   const allSelectedInList = candidatesWithResume.length > 0 &&
@@ -385,25 +422,6 @@ function AllMatches({ candidates, filters, setFilters, onSelect,
           <option value={80}>Availability ≥ 80%</option>
         </select>
       </div>
-
-      {selectedResumeIds.size > 0 && (
-        <div style={{
-          background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10,
-          padding: '10px 14px', marginBottom: 12, display: 'flex',
-          alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#4338ca' }}>
-            {selectedResumeIds.size} resume{selectedResumeIds.size === 1 ? '' : 's'} selected
-          </span>
-          <button className="btn btn-sm btn-primary"
-            onClick={onDownloadResumes} disabled={downloading}>
-            {downloading ? 'Zipping…' : `Download ${selectedResumeIds.size} resume${selectedResumeIds.size === 1 ? '' : 's'}`}
-          </button>
-          <button className="btn btn-sm btn-outline" onClick={onClearResumes} disabled={downloading}>
-            Clear
-          </button>
-        </div>
-      )}
 
       <div className="card">
         <div className="table-wrapper">
