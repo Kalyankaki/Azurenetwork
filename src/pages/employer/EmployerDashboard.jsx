@@ -16,10 +16,15 @@ export default function EmployerDashboard() {
   const { user, employerApproved, availableRoles } = useAuth()
   const navigate = useNavigate()
   const isAdminUser = (availableRoles || []).includes('admin')
-  const { data: myPostings } = useInternships({ employerUid: user?.uid })
-  // Scope to this employer's apps so the listener matches the Firestore
-  // read rule (resource.data.employerUid == request.auth.uid).
-  const { data: allApps } = useApplications({ employerUid: user?.uid })
+  // Scope listeners to this employer's postings / apps so they match the
+  // Firestore read rule (employerUid == request.auth.uid). Admins fall
+  // through to unfiltered queries — the rule's isAdmin() branch allows
+  // them, and super-admins typically have no postings of their own so the
+  // filter would otherwise hide everything.
+  const myPostingsFilter = isAdminUser ? {} : { employerUid: user?.uid }
+  const allAppsFilter = isAdminUser ? {} : { employerUid: user?.uid }
+  const { data: myPostings } = useInternships(myPostingsFilter)
+  const { data: allApps } = useApplications(allAppsFilter)
   // Subscribe to all users only when an admin is on this page. The users
   // collection's read rule is own-doc + admin; a non-admin listener would
   // be rejected wholesale and the candidate-matching tab would error out.
